@@ -8,9 +8,9 @@
 //   mumps: target R0 11, measured 10.99 ± 0.203 over 50 seeds, 250 index cases
 //   rubella: target R0 5, measured 4.997 ± 0.0879 over 50 seeds, 600 index cases
 //   pertussis: target R0 5.5, measured 5.506 ± 0.0871 over 70 seeds, 770 index cases
-//   smallpox: target R0 5, measured 4.998 ± 0.0892 over 50 seeds, 600 index cases
-//   ebola: target R0 1.8, measured 1.795 ± 0.03 over 60 seeds, 1980 index cases
-//   marburg: target R0 1.59, measured 1.591 ± 0.0268 over 60 seeds, 2280 index cases
+//   smallpox: target R0 5, measured 4.997 ± 0.0846 over 60 seeds, 720 index cases
+//   ebola: target R0 1.8, measured 1.801 ± 0.0302 over 60 seeds, 1980 index cases
+//   marburg: target R0 1.59, measured 1.59 ± 0.0292 over 50 seeds, 1900 index cases
 import type { DiseaseCalibration, DiseaseId } from '../sim/types';
 
 export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
@@ -79,27 +79,27 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		indexCases: 770
 	},
 	smallpox: {
-		beta: 0.004625,
+		beta: 0.004522,
 		transmissionRadius: 8,
-		measuredR0: 4.998,
-		standardError: 0.0892,
-		seeds: 50,
-		indexCases: 600
+		measuredR0: 4.997,
+		standardError: 0.0846,
+		seeds: 60,
+		indexCases: 720
 	},
 	ebola: {
-		beta: 0.002594,
+		beta: 0.002633,
 		transmissionRadius: 8,
-		measuredR0: 1.795,
-		standardError: 0.03,
+		measuredR0: 1.801,
+		standardError: 0.0302,
 		seeds: 60,
 		indexCases: 1980
 	},
 	marburg: {
-		beta: 0.002992,
+		beta: 0.002923,
 		transmissionRadius: 8,
-		measuredR0: 1.591,
-		standardError: 0.0268,
-		seeds: 60,
-		indexCases: 2280
+		measuredR0: 1.59,
+		standardError: 0.0292,
+		seeds: 50,
+		indexCases: 1900
 	}
 };

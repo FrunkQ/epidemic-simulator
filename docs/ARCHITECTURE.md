@@ -224,7 +224,7 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 1. Headless engine: constants, rng, agents, grid, disease, in-region movement, calibration script, citations file, determinism, speed and herd-immunity tests; a bare canvas page to watch it.
 1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2.
 2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card's live healthcare and behaviour sliders, 4.2), legend, charts.
-3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; engine hooks for per-region compliance and live capacity changes; lesson tests 2 to 6, 12 and 13.
+3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; engine hooks for per-region compliance and live capacity changes; lesson tests 2 to 6, 10 (moved from 1b, since it needs travel and illness timing), 12 and 13.
 4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets and "Similar to"); lesson test 7.
 5. Impact panel, About page with full citations, polish, deploy.
 

@@ -21,31 +21,16 @@ export interface Sourced<T = number> {
 	sources: string[];
 }
 
-export type DiseaseId =
-	| 'measles'
-	| 'flu'
-	| 'covid19'
-	| 'chickenpox'
-	| 'mumps'
-	| 'rubella'
-	| 'pertussis'
-	| 'polio'
-	| 'smallpox'
-	| 'ebola'
-	| 'marburg';
-
-/** How the disease picker groups diseases, in plain words. */
-export type DiseaseGroup = 'common' | 'eradicated' | 'deadly';
-
-export const DISEASE_GROUP_LABELS: Record<DiseaseGroup, string> = {
-	common: 'Common',
-	eradicated: 'Wiped out by vaccines',
-	deadly: 'Deadly but burns out fast'
-};
+/**
+ * Disease ids and picker groups come from config, so adding a disease never touches the engine.
+ * (Type-only imports: no runtime dependency on config.)
+ */
+export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
+export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
 
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
-	id: DiseaseId;
+	id: string;
 	name: string;
 	group: DiseaseGroup;
 	/** One plain-language line for the disease picker. */
@@ -91,7 +76,7 @@ export interface DiseaseCalibration {
 
 /** Disease settings converted to ticks, used by the engine. */
 export interface DiseaseRuntime {
-	id: DiseaseId;
+	id: string;
 	r0: number;
 	silentTicks: number;
 	illTicks: number;

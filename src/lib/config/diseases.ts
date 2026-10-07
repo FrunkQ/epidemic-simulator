@@ -1,10 +1,18 @@
-import type { DiseaseConfig, DiseaseId } from '../sim/types';
+import type { DiseaseConfig } from '../sim/types';
+
+/** How the disease picker groups diseases, in plain words. */
+export const DISEASE_GROUPS = {
+	common: 'Common',
+	eradicated: 'Wiped out by vaccines',
+	deadly: 'Deadly but burns out fast'
+} as const;
+export type DiseaseGroup = keyof typeof DISEASE_GROUPS;
 
 /**
  * Disease presets. Every number carries the ids of its sources in citations.ts.
  * Durations are in days; the engine converts them to ticks once, at load.
  */
-export const DISEASES: Record<DiseaseId, DiseaseConfig> = {
+export const DISEASES = {
 	measles: {
 		id: 'measles',
 		name: 'Measles',
@@ -265,4 +273,4 @@ export const DISEASES: Record<DiseaseId, DiseaseConfig> = {
 		partialEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
 		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] }
 	}
-};
+} satisfies Record<string, DiseaseConfig>;
