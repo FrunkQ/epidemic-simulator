@@ -1054,5 +1054,21 @@ export const CITATIONS: Citation[] = [
 		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line.',
 		context: 'US, 2010-11 to 2024-25 seasons.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
+	},
+	{
+		id: 'nhs-england-kh03-bed-occupancy-2024',
+		authors: 'NHS England',
+		title: 'Bed Availability and Occupancy (KH03), Quarter 3 2023/24: Statistical Press Notice',
+		journal: 'NHS England Official Statistics',
+		year: 2024,
+		url: 'https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2024/02/KH03-Q3-2023-24-Statistical-Press-Notice-FINAL.pdf',
+		usedFor: ['behaviour.spareBedShare'],
+		quote:
+			'The average occupancy rate for general and acute beds open overnight was 91.6% in Quarter 3 2023/24 compared with 89.7% in Quarter 2 2023/24 and 92.0% in Quarter 3 2022/23.',
+		location: "'Occupancy Rates' section, main findings",
+		why: 'Worked out: 1 minus the non-winter occupancy of 89.7% leaves about 10% of beds free, which is the share an outbreak could use. The winter figure (91.6%) leaves about 8%, so 10% is the generous end.',
+		context:
+			'NHS England, general and acute beds only. No EU-wide occupancy figure could be opened, so this stands in for one; bed numbers themselves come from the EU average.',
+		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	}
 ];

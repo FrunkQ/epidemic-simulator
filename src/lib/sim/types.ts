@@ -134,6 +134,7 @@ export interface RegionTelemetry {
 	dots: number;
 	counts: Counts;
 	overloaded: boolean;
+	/** Spare hospital beds, in dots. Multiply by peoplePerDot to show people. */
 	capacity: number;
 	lockedDown: boolean;
 	fatiguedShare: number;

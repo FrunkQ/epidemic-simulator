@@ -80,6 +80,8 @@ export class Simulation {
 	private counters!: TelemetryCounters;
 	private radii!: Float32Array;
 	private regionDots: number[] = [];
+	/** Spare hospital beds per region, in dots. */
+	private bedCapacity: number[] = [];
 	private peoplePerDot = DEFAULT_PEOPLE_PER_DOT;
 	private mortalityMultiplier!: Float32Array;
 	private readonly renderer: Renderer;
@@ -149,6 +151,11 @@ export class Simulation {
 		const { dots, peoplePerDot } = allocateDots(regions, this.agents.capacity);
 		this.regionDots = dots;
 		this.peoplePerDot = peoplePerDot;
+		// Beds an outbreak could use, in dots (the same unit as the counts), so a small population
+		// still gets a fraction of a bed rather than none. The UI multiplies by peoplePerDot.
+		this.bedCapacity = dots.map(
+			(count, r) => (count * regions[r].hospitalBedsPerThousand * BEHAVIOUR.spareBedShare.value) / 1000
+		);
 		this.spawn();
 		this.grid = new SpatialGrid(
 			regions.map((reg, r) => [reg.cx, reg.cy, this.radii[r]]),
@@ -296,7 +303,7 @@ export class Simulation {
 			dots: this.regionDots[r],
 			counts: c.regionCounts(r),
 			overloaded: false,
-			capacity: Math.round((reg.population * reg.hospitalBedsPerThousand) / 1000),
+			capacity: this.bedCapacity[r],
 			lockedDown: false,
 			fatiguedShare: 0,
 			testCooldown: 0

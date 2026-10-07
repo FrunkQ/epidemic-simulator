@@ -51,7 +51,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - The starting microcosm is guaranteed, not left to chance: the default start seed comes from a short curated list whose start area has an island and a mainland separated by one strait narrow enough for a ferry, with the 3 cities placed there. A test checks every curated seed meets this.
 - Camera: pan and zoom (wheel, pinch, and on-screen buttons), starting framed on the microcosm. All drawing goes through the camera transform. Dots outside the view are skipped when drawing but still simulated. Coastlines are cached `Path2D` shapes drawn each frame, not one giant offscreen bitmap. The engine exposes `worldToScreen` and `screenToWorld` including the camera; overlays and clicks use them, never raw pixels.
 - Scenario (`config/scenarios.ts`): map seed, `regions`, `routes`.
-- Region: `{ id, name, kind: 'city' | 'rural', cx, cy, population, density, radius (derived), hasAirport, vaccinatedFull, vaccinatedPartial, hospitalCapacity, hub? }`.
+- Region: `{ id, name, kind: 'city' | 'rural', cx, cy, population, density, radius (derived), hasAirport, vaccinatedFull, vaccinatedPartial, hospitalBedsPerThousand, hub? }`.
   - Radius comes from the number of dots and a sim density: `radius = sqrt(dots / (simDensity x PI))`, with `simDensity` in dots per world unit², clamped to a sensible range. Using dots (not people) keeps the contact rate at the calibrated level whatever `peoplePerDot` is. Real density (people per km²) maps to `simDensity` as in 4.1. City default: dense, has an airport and a gathering hub. Rural default: small, sparse, no airport, no hub.
   - Density acts only through how often dots meet. Never add a density multiplier to the infection chance. Sparse rural areas spread slower because dots meet less.
 - Adding a population (Setup mode): the user picks city or rural, clicks a spot on land, and sets size and density. Validation: centre on land, disc mostly on land, no overlap with other discs, total population at most MAX_AGENTS (the UI shows the remaining budget). Users can also remove or resize populations.
@@ -106,7 +106,9 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Cities have a hub point. For part of each sim day (e.g. day fraction 0.4 to 0.6) moving dots get a weak pull toward the hub, then disperse. Clamp speed. Off under lockdown.
 
 ### 6.6 Hospital load
-- The engine counts SYMPTOMATIC dots per region each tick. `overloaded = count > hospitalCapacity` (a share of the region's population, never an absolute number, so it scales when people add or resize populations; the default share is sourced, and step 4 can take hospital beds per 1,000 people from World Bank data). Telemetry carries the flag and capacity; the UI flashes a warning and the chart draws the capacity line.
+- Each region has `hospitalBedsPerThousand` (sourced; default 5.07, Eurostat 2024; step 4 can take country values from World Bank data). Only spare beds count: `capacity = dots x hospitalBedsPerThousand / 1000 x spareBedShare`, where `spareBedShare` (1 minus normal bed occupancy) is sourced too. Capacity is in dots, the same unit as the counts; the UI may show it in people by multiplying by `peoplePerDot`.
+- Each disease has a sourced `hospitalisedShare` (the share of symptomatic cases needing a hospital bed). The engine counts SYMPTOMATIC dots per region each tick; `overloaded = symptomatic x hospitalisedShare > capacity`. Telemetry carries the flag and capacity; the UI flashes a warning and the chart draws the capacity line.
+- Step 3 must show the line is meaningful in the default scenario: with no interventions, at least one common disease (e.g. measles or COVID-19) crosses it, and flattening the curve with lockdown keeps it under for at least part of the run. If real numbers can't show that, report it to Alex rather than fudging the numbers.
 
 ### 6.7 Mass testing (per region)
 - Finds every SILENT dot infected more than 1 day ago (including asymptomatic ones) and sets `isolated = 1`: speed 0, no travel, drawn red. Their illness course and death chance do not change.
@@ -135,6 +137,14 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Double-check rule: every citation is verified by a separate pass that did not gather it. The checker opens the source itself and confirms the DOI or link resolves to that paper, that title, authors and year match, that the quoted value is really there at `location`, and that the paper has not been retracted. Anything that fails or can't be opened is removed or replaced, never kept unverified. A test fails if any entry has `verified.ok !== true`.
 - Before numbers are locked in step 1, the evidence is also written up as a plain table for Alex to review at /mnt/project-files/research/evidence.md: number, value used, source, quote, why.
 - "Every research-derived number" includes behaviour constants (lockdown fatigue, hospital share, gathering timing), not just disease parameters: they live in sourced config, never as bare constants. The citation test scans all config, fails on any research number that isn't in `{ value, sources }` form, and checks every required field (`usedFor` keys exist; `why`, `context`, `verified.by`, `verified.on` are non-empty). COVID-era entries use exactly `context: 'COVID-19 era'`. When a value is worked out rather than quoted, `quote` holds the facts it's worked from and `why` says how.
+
+### 6.11 Disease catalogue
+- Diseases are pure config: adding one never touches engine code. Each needs the full sourced profile (R0, silent days, ill days, asymptomatic share, mortality, vaccine efficacy full and partial or "no vaccine", waning), verified per 6.10, calibrated per 6.9, and a one-line plain description.
+- Catalogue (Alex, 7 Oct): the most common well-known diseases (e.g. measles, flu, COVID-19, chickenpox, mumps, rubella, whooping cough, polio), eradicated or historical ones (e.g. smallpox), and at least one very deadly, fast-acting disease (e.g. Ebola) to show that diseases which make people very ill very fast tend to burn out, because sick people stop moving and die before passing it far.
+- The dropdown groups them in plain words: "Common", "Wiped out by vaccines", "Deadly but burns out fast".
+- Mortality can be high (tens of percent). The model keeps one simple rule set: deceased dots never infect. Real exceptions (e.g. Ebola spreading at funerals) are named in plain words on the About page, not modelled.
+- Wording must stay true. The lesson is "spreads less far", never "harmless": the About page notes that such diseases still cause deadly outbreaks where care is poor.
+- Eradicated diseases start with today's reality (almost no one vaccinated against smallpox), which is itself a what-if worth showing.
 
 ## 7. Engine API (all that Svelte sees)
 ```ts
@@ -187,10 +197,14 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
   7. The same population at low density has a lower attack rate than at high density by day 60.
   8. Map generation is identical for the same seed.
   9. Every curated start seed yields the microcosm: island plus mainland, one ferry-width strait, 3 cities in the start view.
+  10. Deadly but fast (e.g. Ebola) versus measles, same starting city, flights on: the deadly disease reaches fewer other regions in at least 80% of seeds.
+  11. Every disease in the catalogue passes the R0 re-measure test from 6.9.
+- Test time budget: the full suite must stay under 5 minutes in CI. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
 - If a lesson test fails, fix the model or the calibration. Never loosen a threshold without updating this file and telling Alex.
 
 ## 11. Build order (one PR per step)
 1. Headless engine: constants, rng, agents, grid, disease, in-region movement, calibration script, citations file, determinism, speed and herd-immunity tests; a bare canvas page to watch it.
+1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2.
 2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards, legend, charts.
 3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; lesson tests 2 to 6.
 4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import); lesson test 7.
@@ -206,3 +220,4 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Setup changes restart the run; interventions are live.
 - Vaccines are all-or-nothing using each disease's published efficacy (the spec had green dots never catching it and partial cutting the chance by 60%). Partly vaccinated dots that catch it are ill half as long and never die. Alex chose real vaccine figures over simplified ones (7 Oct).
 - Regions use their own spatial grids instead of one whole-world grid, and disc size comes from dot count and sim density (7 Oct, after the step 1 review).
+- Hospital capacity comes from real beds per 1,000 people and normal occupancy, and overload counts only cases that need a bed (7 Oct).

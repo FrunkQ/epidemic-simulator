@@ -11,6 +11,8 @@ export interface BehaviourConfig {
 	lockdownFatigueSdDays: Sourced;
 	/** Default hospital beds per 1,000 people for a new population. */
 	hospitalBedsPerThousand: Sourced;
+	/** Share of those beds normally free, so only spare beds count as capacity. */
+	spareBedShare: Sourced;
 }
 
 export const BEHAVIOUR: BehaviourConfig = {
@@ -19,5 +21,6 @@ export const BEHAVIOUR: BehaviourConfig = {
 		sources: ['joshi2021-lockdown-mobility', 'goldstein2021-lockdown-fatigue']
 	},
 	lockdownFatigueSdDays: { value: 20, sources: ['petherick2021-pandemic-fatigue'] },
-	hospitalBedsPerThousand: { value: 5.07, sources: ['eurostat-beds-2024'] }
+	hospitalBedsPerThousand: { value: 5.07, sources: ['eurostat-beds-2024'] },
+	spareBedShare: { value: 0.1, sources: ['nhs-england-kh03-bed-occupancy-2024'] }
 };
