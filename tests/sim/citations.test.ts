@@ -120,4 +120,16 @@ describe('citations', () => {
 			if (c.mirrorUrl) expect(c.url ?? c.doi, `${c.id} has a mirror but no original`).toBeTruthy();
 		}
 	});
+	it('explains every number whose best source is only a review or one study', () => {
+		const byId = new Map(CITATIONS.map((c) => [c.id, c]));
+		const rank = (id: string) => EVIDENCE_RANK.indexOf(byId.get(id)!.evidence);
+		const firstWeak = EVIDENCE_RANK.indexOf('review');
+		for (const { key, value } of sourced) {
+			if (Math.min(...value.sources.map(rank)) < firstWeak) continue;
+			const reasons = value.sources.map((id) => byId.get(id)!.noReviewReason ?? '').filter(Boolean);
+			expect(reasons.length, `${key} rests on a review or one study; add a noReviewReason`).toBeGreaterThan(
+				0
+			);
+		}
+	});
 });

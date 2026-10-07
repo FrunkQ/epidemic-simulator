@@ -2,14 +2,14 @@
 // Seeds start at 1001; each seed runs `indexPerRun` index cases.
 //   measles: target R0 15, measured 15 ± 0.269 over 60 seeds, 240 index cases
 //   polio: target R0 6, measured 6.002 ± 0.101 over 50 seeds, 500 index cases
-//   flu: target R0 1.3, measured 1.301 ± 0.0217 over 60 seeds, 2760 index cases
+//   flu: target R0 1.3, measured 1.304 ± 0.022 over 60 seeds, 2760 index cases
 //   covid19: target R0 3.32, measured 3.321 ± 0.0548 over 60 seeds, 1080 index cases
 //   chickenpox: target R0 5, measured 5.013 ± 0.0928 over 50 seeds, 600 index cases
 //   mumps: target R0 11, measured 10.99 ± 0.203 over 50 seeds, 250 index cases
 //   rubella: target R0 5, measured 4.997 ± 0.0879 over 50 seeds, 600 index cases
 //   pertussis: target R0 5.5, measured 5.506 ± 0.0871 over 70 seeds, 770 index cases
 //   smallpox: target R0 5, measured 4.997 ± 0.0846 over 60 seeds, 720 index cases
-//   ebola: target R0 1.8, measured 1.801 ± 0.0302 over 60 seeds, 1980 index cases
+//   ebola: target R0 1.95, measured 1.947 ± 0.0326 over 60 seeds, 1860 index cases
 //   marburg: target R0 1.59, measured 1.59 ± 0.0292 over 50 seeds, 1900 index cases
 import type { DiseaseCalibration, DiseaseId } from '../sim/types';
 
@@ -31,10 +31,10 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		indexCases: 500
 	},
 	flu: {
-		beta: 0.003246,
+		beta: 0.003957,
 		transmissionRadius: 8,
-		measuredR0: 1.301,
-		standardError: 0.0217,
+		measuredR0: 1.304,
+		standardError: 0.022,
 		seeds: 60,
 		indexCases: 2760
 	},
@@ -87,12 +87,12 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		indexCases: 720
 	},
 	ebola: {
-		beta: 0.002633,
+		beta: 0.002889,
 		transmissionRadius: 8,
-		measuredR0: 1.801,
-		standardError: 0.0302,
+		measuredR0: 1.947,
+		standardError: 0.0326,
 		seeds: 60,
-		indexCases: 1980
+		indexCases: 1860
 	},
 	marburg: {
 		beta: 0.002923,

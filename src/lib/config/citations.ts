@@ -10,6 +10,8 @@ export interface Citation {
 	year: number;
 	/** How strong the evidence is; the About page and evidence table sort by this. */
 	evidence: Evidence;
+	/** Required when a number's best source is only a review or one study: why nothing stronger is used. */
+	noReviewReason?: string;
 	/** The public body behind an official source (required when evidence is 'official'). */
 	publisher?: string;
 	/** DOI (preferred) or a link to the original publisher. */
@@ -432,6 +434,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'Pathogens',
 		year: 2024,
 		evidence: 'review',
+		noReviewReason: 'No meta-analysis or systematic review of polio R0 was found (search, 7 Oct 2026).',
 		doi: '10.3390/pathogens13030183',
 		usedFor: ['polio.r0', 'polio.herdImmunityThreshold'],
 		quote:
@@ -709,12 +712,12 @@ export const CITATIONS: Citation[] = [
 		title: 'Time lines of infection and disease in human influenza: a review of volunteer challenge studies',
 		journal: 'American Journal of Epidemiology',
 		year: 2008,
-		evidence: 'review',
+		evidence: 'systematic-review',
 		doi: '10.1093/aje/kwm375',
 		usedFor: ['flu.illDays', 'flu.asymptomaticFraction'],
 		quote: 'duration of viral shedding averaged over 375 participants was 4.80 days',
 		location: 'abstract',
-		why: 'Classic review.',
+		why: 'Systematic review of volunteer challenge studies. Shedding lasts 4.8 days in all and starts about 1 day before symptoms, so illDays = 4.8 - 1 = about 4 (worked out).',
 		context: 'Challenge studies in healthy adults; 66.9% symptomatic.',
 		verified: {
 			by: 'independent verification pass',
@@ -730,6 +733,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'Clinical Infectious Diseases',
 		year: 2015,
 		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis measures how long flu is contagious before symptoms start; the pooled challenge-study review (Carrat 2008) times shedding from infection, not from symptoms.',
 		doi: '10.1093/cid/ciu924',
 		usedFor: ['flu.silentDays'],
 		quote: 'Viral shedding preceded symptoms by 12-24 hours',
@@ -1005,6 +1010,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'Scientific Reports',
 		year: 2021,
 		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review of how long people keep to a lockdown exists (search, 7 Oct 2026).',
 		doi: '10.1038/s41598-021-02133-1',
 		usedFor: ['behaviour.lockdownFatigueMeanDays'],
 		quote: 'lockdowns lose all their impact on mobility in 112.1 days',
@@ -1025,6 +1032,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'Nature Human Behaviour',
 		year: 2021,
 		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review of how long people keep to a lockdown exists (search, 7 Oct 2026).',
 		doi: '10.1038/s41562-021-01181-x',
 		usedFor: ['behaviour.lockdownFatigueSdDays'],
 		quote: 'less intense in countries with high interpersonal trust',
@@ -1163,6 +1172,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'Epidemics',
 		year: 2015,
 		evidence: 'study',
+		noReviewReason: 'No meta-analysis or systematic review of chickenpox R0 exists (search, 7 Oct 2026).',
 		doi: '10.1016/j.epidem.2014.12.005',
 		url: 'https://documentserver.uhasselt.be/bitstream/1942/18637/1/1-s2.0-S175543651500002X-main.pdf',
 		usedFor: ['chickenpox.r0'],
@@ -1304,6 +1314,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'BMJ',
 		year: 2005,
 		evidence: 'study',
+		noReviewReason: 'No meta-analysis or systematic review of mumps R0 exists (search, 7 Oct 2026).',
 		doi: '10.1136/bmj.330.7500.1132',
 		url: 'https://www.bmj.com/content/330/7500/1132',
 		usedFor: ['mumps.r0'],
@@ -1358,6 +1369,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'PLoS Medicine',
 		year: 2010,
 		evidence: 'study',
+		noReviewReason: 'No meta-analysis or systematic review of whooping cough R0 exists (search, 7 Oct 2026).',
 		doi: '10.1371/journal.pmed.1000291',
 		url: 'https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1000291',
 		usedFor: ['pertussis.r0', 'pertussis.asymptomaticFraction'],
@@ -1450,6 +1462,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'Nature Communications',
 		year: 2024,
 		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis of the share of all symptomatic cases admitted to hospital before vaccines was found (search, 7 Oct 2026).',
 		doi: '10.1038/s41467-024-47199-3',
 		url: 'https://www.nature.com/articles/s41467-024-47199-3',
 		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare'],
@@ -1717,6 +1731,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'PLoS Computational Biology',
 		year: 2022,
 		evidence: 'study',
+		noReviewReason: 'No meta-analysis or systematic review of rubella R0 exists (search, 7 Oct 2026).',
 		doi: '10.1371/journal.pcbi.1008858',
 		url: 'https://researchonline.lshtm.ac.uk/id/eprint/4666072/',
 		usedFor: ['rubella.r0'],
@@ -1856,6 +1871,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'The Journal of Infectious Diseases',
 		year: 2018,
 		evidence: 'study',
+		noReviewReason:
+			'No review of how long immunity lasts after Ebola was found; this long follow-up study is the best evidence.',
 		doi: '10.1093/infdis/jix584',
 		url: 'https://academic.oup.com/jid/article-lookup/doi/10.1093/infdis/jix584',
 		usedFor: ['ebola.waningDays'],
@@ -1928,6 +1945,8 @@ export const CITATIONS: Citation[] = [
 		journal: 'Clinical and Vaccine Immunology',
 		year: 2016,
 		evidence: 'study',
+		noReviewReason:
+			'No review of how long immunity lasts after Marburg was found; this follow-up study is the best evidence.',
 		doi: '10.1128/CVI.00107-16',
 		url: 'https://journals.asm.org/doi/10.1128/CVI.00107-16',
 		usedFor: ['marburg.waningDays'],
@@ -1965,6 +1984,177 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: "Re-opened specifically for this quote: the isolation sentence and the supportive-care sentence both confirmed verbatim in the 'Treatment and vaccines' section; page title 'Marburg virus disease', dated 20 January 2025."
+		}
+	},
+	{
+		id: 'meyerowitzkatz2020-covid-ifr',
+		authors: 'Meyerowitz-Katz G, Merone L',
+		title:
+			'A systematic review and meta-analysis of published research data on COVID-19 infection fatality rates',
+		journal: 'International Journal of Infectious Diseases',
+		year: 2020,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.ijid.2020.09.1464',
+		usedFor: ['covid19.mortality'],
+		quote:
+			'The meta-analysis demonstrated a point estimate of IFR of 0.68% (0.53%-0.82%) with high heterogeneity (p < 0.001).',
+		location: 'Abstract (results)',
+		why: 'Meta-analysis of the infection fatality rate before vaccines. Worked out per symptomatic case: 0.68% / (1 - 0.2 asymptomatic) = 0.85%, so mortality 0.0085.',
+		context: 'Studies from many countries, 2020, before vaccines',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; doi.org resolved (302); no retraction found by web search.'
+		}
+	},
+	{
+		id: 'alene2021-covid-serial-incubation',
+		authors: 'Alene M, Yismaw L, Assemie MA, Ketema DB, Gietaneh W, Birhan TY',
+		title: 'Serial interval and incubation period of COVID-19: a systematic review and meta-analysis',
+		journal: 'BMC Infectious Diseases',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12879-021-05950-x',
+		usedFor: ['covid19.silentDays'],
+		quote: 'the weighted pooled mean serial interval of COVID-19 was 5.2 (95%CI: 4.9-5.5) days',
+		location:
+			'Abstract (results); the same abstract gives a pooled incubation period of 6.5 (95%CI: 5.9-7.1) days',
+		why: 'Meta-analysis: the pooled serial interval (5.2 days) is shorter than the incubation period (6.5 days), so people infect others about 1.3 days before symptoms. Supports a silent contagious phase of about 2 days.',
+		context: 'Studies from many countries, 2020',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; doi.org check rate-limited (429), DOI from Consensus record; no retraction found by web search.'
+		}
+	},
+	{
+		id: 'cevik2021-covid-shedding',
+		authors: 'Cevik M, Tate M, Lloyd O, Maraolo AE, Schafers J, Ho A',
+		title:
+			'SARS-CoV-2, SARS-CoV, and MERS-CoV viral load dynamics, duration of viral shedding, and infectiousness: a systematic review and meta-analysis',
+		journal: 'The Lancet Microbe',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1016/s2666-5247(20)30172-5',
+		usedFor: ['covid19.illDays'],
+		quote:
+			'No study detected live virus beyond day 9 of illness, despite persistently high viral loads, which were inferred from cycle threshold values.',
+		location: 'Abstract (findings)',
+		why: 'Systematic review and meta-analysis: no live virus after day 9 of illness, which supports about 8 contagious days after symptoms start.',
+		context: 'Studies from many countries, 2020',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; doi.org resolved (302); no retraction found by web search. Published online 2020, issue 2021.'
+		}
+	},
+	{
+		id: 'stein2023-covid-past-infection',
+		authors: 'COVID-19 Forecasting Team (Stein C, Nassereldine H, Sorensen RJD, et al.)',
+		title: 'Past SARS-CoV-2 infection protection against re-infection: a systematic review and meta-analysis',
+		journal: 'The Lancet',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1016/s0140-6736(22)02465-5',
+		usedFor: ['covid19.waningDays'],
+		quote:
+			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks.',
+		location: 'Abstract (findings)',
+		why: 'Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (660 days).',
+		context: 'Studies from many countries, pre-Omicron variants',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; doi.org resolved (302); no retraction found by web search.'
+		}
+	},
+	{
+		id: 'muzembo2024-ebola-r0',
+		authors: 'Muzembo BA, Kitahara K, Ntontolo NP, Ohno A, Khatiwada J, Dutta S, Miyoshi SI',
+		title: 'The basic reproduction number (R0) of ebola virus disease: a systematic review and meta-analysis',
+		journal: 'Travel Medicine and Infectious Disease',
+		year: 2024,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.tmaid.2023.102685',
+		usedFor: ['ebola.r0'],
+		quote: 'The overall pooled mean Ebola R0 was 1.95 (95 % CI 1.74-2.15)',
+		location: 'Abstract (results)',
+		why: 'Meta-analysis of Ebola R0 estimates; the pooled mean 1.95 is used.',
+		context: 'Ebola outbreaks in Africa, 1976-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; doi.org check rate-limited (429), DOI from Consensus record; no retraction found by web search.'
+		}
+	},
+	{
+		id: 'costantino2018-smallpox-r0',
+		authors: 'Costantino V, Kunasekaran MP, Chughtai AA, MacIntyre CR',
+		title:
+			'How Valid Are Assumptions About Re-emerging Smallpox? A Systematic Review of Parameters Used in Smallpox Mathematical Models',
+		journal: 'Military Medicine',
+		year: 2018,
+		evidence: 'systematic-review',
+		doi: '10.1093/milmed/usx092',
+		usedFor: ['smallpox.r0'],
+		quote:
+			'In 25/34 studies, R0 ranged between 3 and 5, generally lower than the R0 calculated from past outbreaks.',
+		location: 'Abstract (results)',
+		why: 'Systematic review of smallpox models: most used R0 between 3 and 5. The value 5 sits at the top of that range, matching Gani 2001 from historical outbreaks in unvaccinated populations.',
+		context: 'Modelling studies of smallpox in modern populations',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; no retraction found by web search; doi.org not checked separately.'
+		}
+	},
+	{
+		id: 'dean2016-ebola-asymptomatic',
+		authors: 'Dean NE, Halloran ME, Yang Y, Longini IM',
+		title:
+			'Transmissibility and Pathogenicity of Ebola Virus: A Systematic Review and Meta-analysis of Household Secondary Attack Rate and Asymptomatic Infection',
+		journal: 'Clinical Infectious Diseases',
+		year: 2016,
+		evidence: 'meta-analysis',
+		doi: '10.1093/cid/ciw114',
+		usedFor: ['ebola.asymptomaticFraction'],
+		quote: 'We estimate that 27.1% (95% CI, 14.5%-39.6%) of Ebola infections are asymptomatic.',
+		location: 'Abstract (results)',
+		why: 'Meta-analysis: about 27% of Ebola infections have no symptoms, but there is no evidence those people pass it on. The model sets asymptomaticFraction to 0 because it only counts cases that spread the disease; the About page says so.',
+		context: 'Ebola serosurveys, Africa',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote rechecked in Consensus abstract; no retraction found by web search; doi.org not checked separately.'
+		}
+	},
+	{
+		id: 'cuomodannenburg2024-marburg-review',
+		authors: 'Cuomo-Dannenburg G, McCain K, McCabe R, Unwin HJT, Doohan P, Nash RK, et al.',
+		title:
+			'Marburg virus disease outbreaks, mathematical models, and disease parameters: a systematic review',
+		journal: 'The Lancet Infectious Diseases',
+		year: 2024,
+		evidence: 'systematic-review',
+		doi: '10.1016/s1473-3099(23)00515-7',
+		usedFor: ['marburg.r0'],
+		quote: 'Only one study presented a mathematical model of Marburg virus transmission.',
+		location:
+			'Abstract; the main text (full-text excerpt) adds "Reproduction number estimates were reported in two studies"',
+		why: 'Systematic review of Marburg parameters: it confirms there is no pooled R0, only two studies reporting one, so the single-study value stays.',
+		context: 'Marburg outbreaks, 1967-2023',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote checked in full-text excerpt via Consensus; indexed in PubMed (38040006) and PMC (PMC7615873) per web search, no retraction found; doi.org not checked separately.'
 		}
 	}
 ];

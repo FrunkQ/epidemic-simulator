@@ -112,7 +112,7 @@ export const DISEASES = {
 			value: 1,
 			sources: ['memoli2015-flu-challenge', 'suess2012-flu-shedding-germany', 'lau2010-flu-shedding-hk']
 		},
-		illDays: { value: 5, sources: ['carrat2008-flu-timelines-review', 'suess2012-flu-shedding-germany'] },
+		illDays: { value: 4, sources: ['carrat2008-flu-timelines-review', 'suess2012-flu-shedding-germany'] },
 		asymptomaticFraction: {
 			value: 0.2,
 			sources: [
@@ -149,11 +149,14 @@ export const DISEASES = {
 		blurb:
 			'The 2020 pandemic virus. Many people pass it on before they feel ill, or without ever feeling ill.',
 		r0: { value: 3.32, sources: ['alimohamadi-2020-covid-r0'] },
-		silentDays: { value: 2, sources: ['byrne-2020-infectious-period'] },
-		illDays: { value: 8, sources: ['byrne-2020-infectious-period'] },
+		silentDays: { value: 2, sources: ['alene2021-covid-serial-incubation', 'byrne-2020-infectious-period'] },
+		illDays: { value: 8, sources: ['cevik2021-covid-shedding', 'byrne-2020-infectious-period'] },
 		asymptomaticFraction: { value: 0.2, sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2'] },
-		mortality: { value: 0.012, sources: ['ward-2024-covid-ihr-ifr'] },
-		waningDays: { value: 660, sources: ['chemaitelly-2022-natural-immunity-waning'] },
+		mortality: { value: 0.0085, sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr'] },
+		waningDays: {
+			value: 660,
+			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
+		},
 		fullEfficacy: { value: 0.35, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
 		partialEfficacy: { value: 0.2, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
 		hospitalisedShare: { value: 0.042, sources: ['ward-2024-covid-ihr-ifr'] }
@@ -226,7 +229,7 @@ export const DISEASES = {
 		name: 'Smallpox',
 		group: 'eradicated',
 		blurb: 'Killed about 3 in 10 people it made ill. Wiped out in 1980, so almost no one is protected now.',
-		r0: { value: 5, sources: ['gani-2001-smallpox-r0'] },
+		r0: { value: 5, sources: ['costantino2018-smallpox-r0', 'gani-2001-smallpox-r0'] },
 		silentDays: { value: 0, sources: ['cdc-smallpox-signs-symptoms', 'cdc-smallpox-clinical-signs'] },
 		illDays: { value: 16, sources: ['cdc-smallpox-signs-symptoms', 'who-smallpox-qa'] },
 		asymptomaticFraction: { value: 0, sources: ['who-smallpox-eradication-subclinical'] },
@@ -243,10 +246,13 @@ export const DISEASES = {
 		group: 'deadly',
 		blurb:
 			'Kills about half of those who fall ill, but they are soon too sick to move about, so it spreads less far.',
-		r0: { value: 1.8, sources: ['vankerkhove-2015-ebola-parameters'] },
+		r0: { value: 1.95, sources: ['muzembo2024-ebola-r0', 'vankerkhove-2015-ebola-parameters'] },
 		silentDays: { value: 0, sources: ['who-ebola-factsheet'] },
 		illDays: { value: 10, sources: ['who-ebola-factsheet'] },
-		asymptomaticFraction: { value: 0, sources: ['glynn-2017-asymptomatic-ebola'] },
+		asymptomaticFraction: {
+			value: 0,
+			sources: ['dean2016-ebola-asymptomatic', 'glynn-2017-asymptomatic-ebola']
+		},
 		mortality: { value: 0.5, sources: ['who-ebola-factsheet', 'vankerkhove-2015-ebola-parameters'] },
 		waningDays: { value: null, sources: ['rimoin-2018-ebola-antibodies-40-years'] },
 		fullEfficacy: { value: 0.95, sources: ['cdc-ervebo-vaccine'] },
@@ -259,7 +265,7 @@ export const DISEASES = {
 		group: 'deadly',
 		blurb:
 			'A close cousin of Ebola. Very deadly and no vaccine, but it spreads mainly to people caring for the sick.',
-		r0: { value: 1.59, sources: ['ajelli-2012-marburg-transmission'] },
+		r0: { value: 1.59, sources: ['ajelli-2012-marburg-transmission', 'cuomodannenburg2024-marburg-review'] },
 		silentDays: { value: 0, sources: ['who-marburg-factsheet'] },
 		illDays: { value: 8, sources: ['who-marburg-factsheet', 'ajelli-2012-marburg-transmission'] },
 		asymptomaticFraction: {
