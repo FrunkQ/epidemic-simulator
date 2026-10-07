@@ -209,7 +209,7 @@ Alex: people think about their own area and don't grasp the bigger picture, so i
 - Engine needs (built in step 3, since it touches the engine anyway): explicit subsystem switches on `Scenario` that the tick order honours (deaths, hospital, ageBands, silentSpread, illStopsMovement, travel, waning, interventions), and an `infectedBy` Int32Array (-1 for none; 24KB at MAX_AGENTS) so the wizard can draw who caught it from whom.
 - Catalogue: a sourced `commonCold` (rhinovirus) entry under the usual citation rules (Lessler 2009 systematic review for incubation), in the vaccine-list PR or a small follow-up.
 
-### 6.15 Challenge mode: "Think you could have done better? Try it." (Alex, 7 Oct: "a serious game built on serious data"; version 2)
+### 6.15 Challenge mode (version 2, not built in version 1): "Think you could have done better? Try it." (Alex, 7 Oct: "a serious game built on serious data")
 - What makes it honest and hard: the player sees only what officials saw at the time: reported cases from the testing subsystem with a reporting delay, hospital numbers and deaths. True infections stay hidden; the disease starts as "a new virus" whose identity and numbers are revealed at the end, with the true picture replayed beside the player's view.
 - Scorecard: three numbers side by side: deaths, days hospitals were overwhelmed, and person-days under restrictions, each compared with two reference runs in the same model: "do nothing" and "lock down early and never lift". No single blended score unless its weights are shown and adjustable (a deaths-only score teaches permanent lockdown; a freedom-only score teaches "let it rip").
 - A challenge is pure data: `{ scenario, hidden disease, what the player can see, controls, time limit, reference runs }`. No challenge-specific engine code; the reporting-delay buffer lives in telemetry/UI.
@@ -291,7 +291,8 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 3b. Two diseases at once (6.12): per-slot arrays in use, shared pressure, shapes and legend; lesson test 18.
 5. Impact panel (including `HarmComparison` with vaccine harm, disease harm, the counterfactual worker and baseline deaths, 6.13), About page with full citations, polish, deploy.
 6. Guided mode (6.14): chapters as data, prediction prompts, camera pull-back, a lesson test per narrated claim. After step 5, because the vaccine chapter needs the honest-risk panel.
-7. Challenge mode (6.15), version 2: hidden disease, delayed reported cases, three-number scorecard against two reference runs, shareable seeded replays.
+
+Version 1 ends at step 6. Challenge mode (6.15) is a version 2 design, written down but not built: version 1 builds only what it needs anyway (the seeded deterministic engine, reported-cases telemetry from testing, chapters as data), which already makes it cheap. The reporting-delay buffer and the scorecard wait for version 2.
 
 ## 12. Decisions that change the original spec
 - The infection chance per tick is calibrated to R0 (the spec treated R0 as a per-collision probability).
