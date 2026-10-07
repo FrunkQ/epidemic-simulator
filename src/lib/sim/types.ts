@@ -21,6 +21,22 @@ export interface Sourced<T = number> {
 	sources: string[];
 }
 
+/** One value per age band: 0-14, 15-64, 65+ (the World Bank bands). */
+export type Bands = [number, number, number];
+
+/** What a banded rate is counted per. */
+export type BandUnit = 'infection' | 'symptomatic-case' | 'person-year';
+
+/**
+ * A sourced rate by age band. `reference` is the source's own population or case mix (shares
+ * summing to 1) and `overall` its published all-ages figure, so the bands can be checked.
+ */
+export interface Banded extends Sourced<Bands> {
+	per: BandUnit;
+	reference: Bands;
+	overall: number;
+}
+
 /**
  * Disease ids and picker groups come from config, so adding a disease never touches the engine.
  * (Type-only imports: no runtime dependency on config.)
@@ -62,6 +78,10 @@ export interface DiseaseConfig {
 	 * is then worked out from it with `perSymptomatic`, so the two can't drift apart.
 	 */
 	infectionFatalityRate?: Sourced;
+	/** Deaths by age band (the engine reads them from step 3; until then it uses `mortality`). */
+	mortalityByAge?: Banded;
+	/** Hospital admissions by age band. */
+	hospitalisedByAge?: Banded;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */

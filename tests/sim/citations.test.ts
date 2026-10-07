@@ -3,10 +3,11 @@ import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
 import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
+import { POPULATION } from '../../src/lib/config/population';
 import type { DiseaseConfig, DiseaseId, Sourced } from '../../src/lib/sim/types';
 
 /** Every research-backed config object, keyed by the prefix citations use in usedFor. */
-const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR };
+const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR, population: POPULATION };
 /** Fields that are not research numbers (names, labels). */
 const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
 

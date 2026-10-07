@@ -48,7 +48,8 @@ export const OFFICIAL_PUBLISHERS = [
 	'Eurostat',
 	'NHS England',
 	'World Bank',
-	'UN'
+	'UN',
+	'US Public Health Service'
 ] as const;
 
 export const CITATIONS: Citation[] = [
@@ -1088,12 +1089,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/flu-burden/php/data-vis/2022-2023.html',
-		usedFor: ['flu.hospitalisedShare'],
+		usedFor: ['flu.hospitalisedShare', 'flu1918.hospitalisedShare'],
 		quote:
 			'an estimated 31 million flu-related illnesses, 14 million flu-related medical visits, 360,000 flu-related hospitalizations, and 21,000 flu-related deaths',
 		location:
 			'Summary paragraph; Table 1, all ages: 31,914,978 symptomatic illnesses, 369,372 hospitalizations',
-		why: 'Hospitalisations divided by symptomatic illnesses is 1.16%, rounded to 1.2%.',
+		why: 'Hospitalisations divided by symptomatic illnesses is 1.16%, rounded to 1.2%. Also used for 1918 flu as an assumption: no 1918 hospital figure exists, and the About page says so.',
 		context: 'US, all ages, 2022-23 season.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
@@ -1106,11 +1107,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/flu-burden/php/about/index.html',
-		usedFor: ['flu.hospitalisedShare'],
+		usedFor: ['flu.hospitalisedShare', 'flu1918.hospitalisedShare'],
 		quote:
 			'flu has resulted in 9.4 million – 51 million illnesses, 120,000 – 710,000 hospitalizations and 6,300 – 52,000 deaths annually between 2010 and 2025',
 		location: 'Main text',
-		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line.',
+		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line. Also used for 1918 flu as an assumption: no 1918 hospital figure exists, and the About page says so.',
 		context: 'US, 2010-11 to 2024-25 seasons.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
@@ -2155,6 +2156,441 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Quote checked in full-text excerpt via Consensus; indexed in PubMed (38040006) and PMC (PMC7615873) per web search, no retraction found; doi.org not checked separately.'
+		}
+	},
+	{
+		id: 'perez-guzman-2023-omicron',
+		authors: 'Perez-Guzman PN, Knock E, Imai N, et al.',
+		title: 'Epidemiological drivers of transmissibility and severity of SARS-CoV-2 in England',
+		journal: 'Nature Communications',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis gives Omicron R0 or severity in people with no immunity; pooled severity studies compare Omicron with Delta in partly immune populations.',
+		doi: '10.1038/s41467-023-39661-5',
+		usedFor: [
+			'covid19omicron.r0',
+			'covid19omicron.infectionFatalityRate',
+			'covid19omicron.hospitalisedShare'
+		],
+		quote:
+			'Omicron (BA.1) had the highest basic reproduction number at 8.4 (95% credible interval (CrI) 7.8-9.1).',
+		location:
+			'Abstract, as corrected by the Author Correction (Nat Commun 2023, doi 10.1038/s41467-023-44062-9); the same abstract gives the basic infection fatality ratio as 1.2% for wildtype and 0.7% for Omicron',
+		why: 'R0 8.4 from the corrected abstract. Severity: Omicron infection fatality = original x (0.7 / 1.2) = 0.583, applied to the original-virus infection fatality and hospital rates (worked out). Applying the same ratio to hospital admission is an assumption; the About page says so.',
+		context: 'England, 2020-2022, adjusted for immunity',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote taken from the Author Correction, which changes R0 from 8.3 to 8.4 and keeps the 1.2% and 0.7% figures.'
+		}
+	},
+	{
+		id: 'liu-rocklov-2022-omicron-r',
+		authors: 'Liu Y, Rocklöv J',
+		title:
+			'The effective reproductive number of the Omicron variant of SARS-CoV-2 is several times relative to Delta',
+		journal: 'Journal of Travel Medicine',
+		year: 2022,
+		evidence: 'review',
+		doi: '10.1093/jtm/taac037',
+		usedFor: ['covid19omicron.r0'],
+		quote: 'The Omicron variant has an average basic and effective reproduction number of 8.2 and 3.6.',
+		location: 'Abstract',
+		why: 'Review that agrees with an Omicron R0 of about 8.',
+		context: 'Studies of Omicron, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched title, authors, year, DOI and quote. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'wu-2022-incubation-variants',
+		authors: 'Wu Y, Kang L, Guo Z, Liu J, Liu M, Liang W',
+		title:
+			'Incubation Period of COVID-19 Caused by Unique SARS-CoV-2 Strains: A Systematic Review and Meta-analysis',
+		journal: 'JAMA Network Open',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1001/jamanetworkopen.2022.28008',
+		usedFor: ['covid19omicron.silentDays'],
+		quote: '3.42 days (95% CI, 2.88-3.96 days) for the Omicron variant',
+		location: 'Abstract, Results',
+		why: 'Pooled Omicron incubation period, 3.42 days. Together with the pooled serial interval (Madewell 2023, 3.2 days) it gives the gap behind silentDays.',
+		context: 'Studies from many countries, 2020-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'shang-2022-omicron-asymptomatic',
+		authors: 'Shang W, Kang L, Cao G, et al.',
+		title:
+			'Percentage of Asymptomatic Infections among SARS-CoV-2 Omicron Variant-Positive Individuals: A Systematic Review and Meta-Analysis',
+		journal: 'Vaccines',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.3390/vaccines10071049',
+		usedFor: ['covid19omicron.asymptomaticFraction'],
+		quote:
+			'The pooled percentage of asymptomatic infections was 32.40% (95% CI: 25.30−39.51%) among SARS-CoV-2 Omicron variant-positive individuals.',
+		location: 'Abstract, Results',
+		why: '0.324 directly.',
+		context: 'Studies from many countries, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'mohammed-2023-omicron-ve',
+		authors: 'Mohammed H, Pham-Tran DD, Yeoh ZYM, et al.',
+		title:
+			'A Systematic Review and Meta-Analysis on the Real-World Effectiveness of COVID-19 Vaccines against Infection, Symptomatic and Severe COVID-19 Disease Caused by the Omicron Variant (B.1.1.529)',
+		journal: 'Vaccines',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.3390/vaccines11020224',
+		usedFor: ['covid19omicron.fullEfficacy'],
+		quote:
+			'23.4% (95%CI: 13.5-33.3%) against symptomatic infection ... VE against severe Omicron infection following the primary course was 63.6% (95%CI: 57.5-69.7%) at three months',
+		location: 'Abstract, Results',
+		why: 'Pooled protection of a full course of the original vaccine against symptomatic Omicron infection: 0.234.',
+		context: 'Studies from many countries, 2021-2022, original-strain vaccines',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'tan-2022-omicron-children-partial',
+		authors: 'Tan SHX, et al.',
+		title: 'Effectiveness of BNT162b2 Vaccine against Omicron in Children 5 to 11 Years of Age',
+		journal: 'The New England Journal of Medicine',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis gives one-dose protection of the original vaccine against Omicron infection.',
+		doi: '10.1056/nejmoa2203209',
+		usedFor: ['covid19omicron.partialEfficacy'],
+		quote:
+			'Among partially vaccinated children, vaccine effectiveness was 13.6% (95% confidence interval [CI], 11.7 to 15.5) against all SARS-CoV-2 infections, 24.3% (95% CI, 19.5 to 28.9) against PCR-confirmed SARS-CoV-2 infection, and 42.3% (95% CI, 24.9 to 55.7) against Covid-19-related hospitalization',
+		location: 'Abstract, Results',
+		why: 'Protection of one dose of the original vaccine against Omicron infection: 0.136. Only children were studied.',
+		context: 'Singapore, children aged 5-11, 2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Quote checked in full-text excerpt via Consensus (abstract; the discussion repeats 42.3% for 'partial vaccination with one dose'). Title, journal, year and DOI match the record. Only the first author was confirmed, so the rest are given as et al. No retraction notice seen."
+		}
+	},
+	{
+		id: 'biggerstaff-2014-flu-r',
+		authors: 'Biggerstaff M, Cauchemez S, Reed C, Gambhir M, Finelli L',
+		title:
+			'Estimates of the reproduction number for seasonal, pandemic, and zoonotic influenza: a systematic review of the literature',
+		journal: 'BMC Infectious Diseases',
+		year: 2014,
+		evidence: 'systematic-review',
+		doi: '10.1186/1471-2334-14-480',
+		usedFor: ['flu1918.r0'],
+		quote: 'The median R value for 1918 was 1.80 (interquartile range [IQR]: 1.47-2.27).',
+		location: 'Abstract, Results',
+		why: 'r0 1.80.',
+		context: 'Estimates from the 1918 pandemic',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'britten-1932-phr-1918-canvass',
+		authors: 'Britten RH',
+		title:
+			'The Incidence of Epidemic Influenza, 1918-19: A Further Analysis According to Age, Sex, and Color of the Records of Morbidity and Mortality Obtained in Surveys of 12 Localities',
+		journal: 'Public Health Reports 47(6):303-337',
+		year: 1932,
+		evidence: 'official',
+		noReviewReason:
+			'No meta-analysis or systematic review gives numeric age-specific 1918 case fatality; this canvass is the primary dataset behind the published curves.',
+		publisher: 'US Public Health Service',
+		url: 'https://stacks.cdc.gov/view/cdc/68997/cdc_68997_DS1.pdf',
+		usedFor: ['flu1918.mortality', 'flu1918.mortalityByAge'],
+		quote:
+			'Fatality of influenza and of pneumonia by age, in all surveyed localities during epidemic of 1918-19 (percentage of cases which died)',
+		location:
+			"Table 28, p. 332 (fatality by age); Table 7, p. 311 (cases by age: 'Incidence of influenza among canvassed persons in each age group in all surveyed localities during the epidemic of 1918-19')",
+		why: 'Deaths per case by age from Table 28, banded with the case counts in Table 7: 0-14 0.0115, 15-64 0.0195, 65+ 0.0410 (worked out); overall 1.7% as published. The W shape (peaks under 1, at 25-29 and at 70+) shows only at single ages.',
+		context: 'US house-to-house canvass of 1918-19 (about 130,000 people in 18 localities)',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Scanned PDF on CDC Stacks read twice through text extraction. The Table 28 rows matched on both reads. The table title is quoted from the extraction. Article title and pages 303-337 confirmed. Morabia 2021 independently confirms the 25-29 (~3%), 45-49 (<1.5%), 70+ (5.1%) and 'Table 28, p332' values. Table 7 check: the 65-69 count was read once as 332 and once as 392; 332 fits the printed rate of 135/1,000 (332/2,456 = 0.135) and is used. The 40-44 count printed as 2,219 does not fit its rate of 256/1,000, and age rows sum to 42,354 against 42,920; effect on band values is under 0.01 percentage points. No DOI was found; no retraction applies to a 1932 government report."
+		}
+	},
+	{
+		id: 'morabia-2021-1918-canvass',
+		authors: 'Morabia A',
+		title:
+			'The US Public Health Service House-to-House Canvass Survey of the Morbidity and Mortality of the 1918 Influenza Pandemic',
+		journal: 'American Journal of Public Health 111(3):438-445',
+		year: 2021,
+		evidence: 'study',
+		doi: '10.2105/ajph.2020.306025',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7893349/',
+		usedFor: ['flu1918.mortality', 'flu1918.mortalityByAge'],
+		quote:
+			'The CFR rose to nearly 3% in the group aged 25 to 29 years and fell to less than 1.5% among those aged 45 to 49 years, but in people aged 70 years and older it rose again, reaching 5.1%.',
+		location: 'Results of the National House-to-House Surveys (citing Britten, Table 28, p332)',
+		why: 'Peer-reviewed reanalysis that confirms the Britten Table 28 values used for the bands.',
+		context: 'Reanalysis of the US 1918-19 canvass',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'PMC page read twice. Quote word for word, with the paragraph around it. Journal, volume, pages and DOI read from PMC. No correction or retraction notice shown.'
+		}
+	},
+	{
+		id: 'cdc-1918-pandemic-page',
+		authors: 'US Centers for Disease Control and Prevention',
+		title: '1918 Pandemic (H1N1 virus)',
+		journal: 'CDC (archived web page)',
+		year: 2019,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://archive.cdc.gov/www_cdc_gov/flu/pandemic-resources/1918-pandemic-h1n1.html',
+		usedFor: ['flu1918.fullEfficacy', 'flu1918.partialEfficacy'],
+		quote:
+			'With no vaccine to protect against influenza infection and no antibiotics to treat secondary bacterial infections that can be associated with influenza infections, control efforts worldwide were limited to non-pharmaceutical interventions.',
+		location: 'Main text',
+		why: 'No vaccine existed in 1918, so both efficacies are 0.',
+		context: 'Worldwide, 1918-1919',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Page opened twice; both quotes present. Official page.'
+		}
+	},
+	{
+		id: 'fraser-2011-1918-households',
+		authors: 'Fraser C, Cummings DAT, Klinkenberg D, Burke DS, Ferguson NM',
+		title: 'Influenza transmission in households during the 1918 pandemic.',
+		journal: 'American Journal of Epidemiology',
+		year: 2011,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis estimates the asymptomatic share in 1918; this household analysis is the only estimate.',
+		doi: '10.1093/aje/kwr122',
+		usedFor: ['flu1918.asymptomaticFraction'],
+		quote:
+			'The authors estimated a very low probability of asymptomatic infection, a previously unknown parameter for this pandemic, consistent with an unusually virulent virus.',
+		location: 'Abstract',
+		why: 'The authors estimate a very low chance of infection without symptoms; no number is given, so the model uses 0.',
+		context: 'US households, 1918',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'white-pagano-2008-1918-serial',
+		authors: 'White LF, et al.',
+		title: 'Transmissibility of the Influenza Virus in the 1918 Pandemic',
+		journal: 'PLoS ONE',
+		year: 2008,
+		evidence: 'study',
+		noReviewReason: 'No systematic review estimates 1918-specific latent or infectious periods.',
+		doi: '10.1371/journal.pone.0001498',
+		usedFor: ['flu1918.silentDays', 'flu1918.illDays'],
+		quote:
+			'The results that we have presented suggest that the average serial interval for pandemic influenza in 1918 was consistently between three and four, regardless of the setting.',
+		location: 'Discussion',
+		why: '1918 serial interval of 3-4 days. No 1918-specific contagious periods exist, so the seasonal flu timings (1 day silent, 4 days ill) are used as an assumption; this serial interval shows they are reasonable.',
+		context: 'US and European 1918 outbreaks',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Quote checked in full-text excerpt via Consensus. The Consensus record lists 'L. White et al.'; only the first author was confirmed, so the rest are given as et al. Title, journal, year and DOI match. No retraction notice seen."
+		}
+	},
+	{
+		id: 'vink-2014-serial-intervals',
+		authors: 'Vink MA, Bootsma MCJ, Wallinga J',
+		title: 'Serial intervals of respiratory infectious diseases: a systematic review and analysis',
+		journal: 'American Journal of Epidemiology',
+		year: 2014,
+		evidence: 'systematic-review',
+		doi: '10.1093/aje/kwu209',
+		usedFor: ['flu1918.silentDays', 'flu1918.illDays'],
+		quote:
+			'The reported values of the mean serial interval of influenza A(H1N1) and pandemic influenza A(H1N1)pdm09 ranged from 1.9 to 5 days (Table 2).',
+		location: 'Results, Influenza',
+		why: 'Pooled context: H1N1 serial intervals of 1.9-5 days (pooled pdm09 mean 2.8 days), consistent with the 1918 estimate of 3-4 days.',
+		context: 'Influenza A(H1N1) outbreaks',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Quote checked in full-text excerpt via Consensus. The PDF text breaks 'influenza' with a ligature ('in /uniFB02 uenza'), which is normalised here. Authors from the title-page excerpt. No retraction notice seen."
+		}
+	},
+	{
+		id: 'worldbank-pop-0014',
+		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
+		title:
+			'Population ages 0-14 (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP0014TOZSWLD, SPPOP0014TOZSEUU, SPPOP0014TOZSGBR, SPPOP0014TOZSNGA, SPPOP0014TOZSJPN)',
+		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.0014.TO.ZS)',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.POP.0014.TO.ZS',
+		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP0014TOZSWLD',
+		usedFor: ['population.ageMix'],
+		quote:
+			'2025: World 24.40906; European Union 14.20743; United Kingdom 16.96477; Nigeria 40.51972; Japan 11.23840',
+		location: 'FRED series pages, latest observation (2025)',
+		why: 'EU share aged 0-14: 14.21% (the general default population; UK 16.96% is kept for the step 4 preset).',
+		context: 'European Union, 2025',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Values read from the FRED mirror of the World Bank indicator, opened twice.'
+		}
+	},
+	{
+		id: 'worldbank-pop-65up',
+		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
+		title:
+			'Population ages 65 and above (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP65UPTOZSWLD, SPPOP65UPTOZSEUU, SPPOP65UPTOZSGBR, SPPOP65UPTOZSNGA, SPPOP65UPTOZSJPN)',
+		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.65UP.TO.ZS)',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.TO.ZS',
+		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP65UPTOZSWLD',
+		usedFor: ['population.ageMix'],
+		quote:
+			'2025: World 10.40243; European Union 22.44279; United Kingdom 19.70269; Nigeria 3.06954; Japan 29.99410',
+		location: 'FRED series pages, latest observation (2025)',
+		why: 'EU share aged 65+: 22.44%. The 15-64 share is the rest: 100 - 14.21 - 22.44 = 63.35% (worked out).',
+		context: 'European Union, 2025',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Values read from the FRED mirror of the World Bank indicator, opened twice.'
+		}
+	},
+	{
+		id: 'eurostat-deaths-pop-2023',
+		authors: 'Eurostat',
+		title:
+			'Deaths by age and sex (demo_magec); Population on 1 January by broad age group and sex (demo_pjanbroad)',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_magec?format=JSON&geo=EU27_2020&sex=T&time=2023&lang=EN',
+		usedFor: ['population.backgroundDeathRate'],
+		quote:
+			'TOTAL=4856197; population EU27_2020 1 Jan 2023: Y_LT15 66,433,028; Y15-64 285,755,090; Y_GE65 95,507,232',
+		location:
+			'demo_magec EU27_2020, 2023, all single ages; demo_pjanbroad https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjanbroad?format=JSON&geo=EU27_2020&sex=T&time=2023&lang=EN',
+		why: 'Worked out: summed single-age deaths 0-14 = 19,177, 15-64 = 699,423, 65+ = 4,137,597 (sum 4,856,197 = published total). Dividing by population gives 0.000289, 0.00245 and 0.0433 per person per year.',
+		context: 'EU-27, 2023',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Y_LT15 population and death TOTAL re-confirmed. A second full read gave values shifted by one age, so the Y14 value was checked with a single-code query (654, matching the first read). Other single ages were not re-queried because of a rate limit.'
+		}
+	},
+	{
+		id: 'eurostat-uk-deaths-2018-5yr',
+		authors: 'Eurostat',
+		title: 'Deaths by age group, sex and NUTS 3 region (demo_r_magec3), United Kingdom, 2018',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_r_magec3?format=JSON&geo=UK&sex=T&time=2018&lang=EN',
+		usedFor: ['population.ukBackgroundDeathRate'],
+		quote:
+			'Total 614,313; Less than 5 years 3,228; From 5 to 9 years 301; From 10 to 14 years 347; From 15 to 19 years 966; From 20 to 24 years 1,571; From 25 to 29 years 2,148; From 30 to 34 years 2,939; From 35 to 39 years 4,244; From 40 to 44 years 5,858; From 45 to 49 years 10,064; From 50 to 54 years 14,998; From 55 to 59 years 21,043; From 60 to 64 years 28,112; From 65 to 69 years 41,218; From 70 to 74 years 61,885; From 75 to 79 years 74,876; From 80 to 84 years 98,768; From 85 to 89 years 111,927; 90 years or over 129,820',
+		location: 'demo_r_magec3, geo=UK, sex=T, time=2018 (dataset updated 2026-09-22)',
+		why: 'Band sums: 0-14 3,876; 15-64 91,943; 65+ 518,494. These add to 614,313, exactly the published total. Divided by the mean of 1 Jan 2018 and 1 Jan 2019 population: 0.000326, 0.00217 and 0.0426 deaths per person per year.',
+		context: 'United Kingdom, 2018',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "API read twice. The second full read gave 61,885 for 65-69, a one-row shift; a third, single-category query (age=Y65-69) returned 41,218, matching the first read. The first read's rows sum exactly to the published total. Total, under 5, 10-14, 15-19, 40-44, 60-64, 85-89 and 90+ matched on both reads."
+		}
+	},
+	{
+		id: 'eurostat-uk-population-2018-2019-5yr',
+		authors: 'Eurostat',
+		title: 'Population on 1 January by age group and sex (demo_pjangroup), United Kingdom, 2018 and 2019',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjangroup?format=JSON&geo=UK&sex=T&time=2019&lang=EN',
+		usedFor: ['population.ukBackgroundDeathRate'],
+		quote:
+			'2019: Total 66,647,112; Less than 5 years 3,885,007; From 5 to 9 years 4,146,546; From 10 to 14 years 3,908,395; From 15 to 19 years 3,661,722; From 20 to 24 years 4,170,514; From 25 to 29 years 4,527,006; From 30 to 34 years 4,485,180; From 35 to 39 years 4,387,779; From 40 to 44 years 4,008,205; From 45 to 49 years 4,457,239; From 50 to 54 years 4,668,822; From 55 to 59 years 4,351,807; From 60 to 64 years 3,716,512; From 65 to 69 years 3,384,532; From 70 to 74 years 3,286,389; From 75 to 79 years 2,281,501; From 80 to 84 years 1,695,137; 85 years or over 1,624,819',
+		location:
+			'demo_pjangroup, geo=UK, sex=T, time=2019 and time=2018 (2018 total 66,273,576; bands 11,871,549 / 42,309,960 / 12,092,067)',
+		why: 'Denominator for the UK background death rates: the mean of the 1 January 2018 and 2019 populations by band.',
+		context: 'United Kingdom, 1 January 2018 and 2019',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'The 2019 band sums match demo_pjanbroad exactly (11,939,948 / 42,434,786 / 12,272,378, as cited in vaccine-risks.md). The 2018 total matches demo_pjanbroad (66,273,576), read separately. The 5-year groups were each read once; the matching sums act as the second check.'
+		}
+	},
+	{
+		id: 'cdc-flu-burden-2018-19',
+		authors: 'US Centers for Disease Control and Prevention',
+		title:
+			'Estimated Flu-Related Illnesses, Medical visits, Hospitalizations, and Deaths in the United States — 2018–2019 Flu Season',
+		journal: 'CDC (archived web page)',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://archive.cdc.gov/www_cdc_gov/flu/about/burden/2018-2019.html',
+		usedFor: ['flu.mortalityByAge', 'flu.hospitalisedByAge'],
+		quote: 'Older adults also accounted for 75% of flu-related deaths',
+		location:
+			'Table 1 (illnesses, medical visits, hospitalizations, deaths by age group) and the sentence below it',
+		why: 'Worked out from Table 1. Symptomatic illnesses / hospitalisations / deaths: 0-4 3,018,815 / 21,046 / 216; 5-17 6,622,851 / 18,159 / 156; 18-49 9,794,700 / 54,978 / 1,590; 50-64 7,224,769 / 76,617 / 4,396; 65+ 2,247,586 / 204,326 / 21,261; all 28,908,721 / 375,126 / 27,619. 0-17 (stands in for 0-14): deaths 372/9,641,666 = 0.0000386, hospital 39,205/9,641,666 = 0.004066. 18-64 (stands in for 15-64): deaths 5,986/17,019,469 = 0.0003517, hospital 131,595/17,019,469 = 0.007732. 65+: deaths 21,261/2,247,586 = 0.009459, hospital 204,326/2,247,586 = 0.09091. Denominator is symptomatic illness, so each value is a share of symptomatic cases.',
+		context: 'US, 2018-19 season; bands 0-17 and 18-64 stand in for 0-14 and 15-64',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Page opened twice; all table numbers matched. Official page; retraction not applicable.'
 		}
 	}
 ];
