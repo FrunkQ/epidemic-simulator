@@ -21,7 +21,8 @@ export interface Citation {
 	why: string;
 	/** Population, country and era the data comes from. */
 	context: string;
-	verified: { by: string; on: string; ok: boolean };
+	/** `note` records any caveat the verification pass found (e.g. which copy it could open). */
+	verified: { by: string; on: string; ok: boolean; note?: string };
 }
 
 export const CITATIONS: Citation[] = [
@@ -1070,5 +1071,798 @@ export const CITATIONS: Citation[] = [
 		context:
 			'NHS England, general and acute beds only. No EU-wide occupancy figure could be opened, so this stands in for one; bed numbers themselves come from the EU average.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
+	},
+	{
+		id: 'cdc-pinkbook-varicella',
+		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
+		title: 'Chapter 22: Varicella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2024,
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-22-varicella.html',
+		usedFor: [
+			'chickenpox.silentDays',
+			'chickenpox.illDays',
+			'chickenpox.mortality',
+			'chickenpox.waningDays',
+			'chickenpox.fullEfficacy',
+			'chickenpox.partialEfficacy',
+			'chickenpox.hospitalisedShare',
+			'chickenpox.about'
+		],
+		quote:
+			'The period of communicability extends from 1 to 2 days before the onset of rash until all lesions have formed crusts.',
+		location: "Section 'Varicella' / Epidemiology — Transmission; also Secular Trends, Vaccine Effectiveness",
+		why: "silentDays=2 read straight off this sentence. illDays=5 is my own pick: the page says infectiousness lasts 'until all lesions have formed crusts' but gives no day count, and crusting of all lesions typically takes a few days after the rash appears. mortality=0.00002 is worked out from the quoted fatality rates ('approximately 1 per 100,000 cases among children age 1 through 14 years, 6 per 100,000 cases among persons age 15 through 19 years, and 21 per 100,000 cases among adults') as a child-weighted average, since chickenpox is mostly a childhood disease. hospitalisedShare=0.0015 is the midpoint of 'approximately 1 to 2 per 1,000 cases among healthy children'. fullEfficacy/partialEfficacy taken from the quoted meta-analysis figures (92% two doses, 82% one dose). waningDays=null from 'Recovery from primary varicella infection usually results in lifetime immunity.'",
+		context:
+			'Official US reference text for vaccine-preventable diseases; the vaccine-effectiveness numbers it quotes come from Marin M et al., Pediatrics 2016, a systematic review and meta-analysis.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened and each quoted phrase confirmed verbatim ('1 to 2 days before the onset of rash', '61% and 100%', '1 per 100,000 cases', '1 to 2 per 1,000 cases', '82%', '92%', 'lifetime immunity'); page last reviewed May 9, 2024; no retraction or withdrawal notice."
+		}
+	},
+	{
+		id: 'santermans-2015-vzv-r0',
+		authors: 'Santermans E, Goeyvaerts N, Melegaro A, Edmunds WJ, Faes C, Aerts M, Beutels P, Hens N',
+		title:
+			'The social contact hypothesis under the assumption of endemic equilibrium: Elucidating the transmission potential of VZV in Europe',
+		journal: 'Epidemics',
+		year: 2015,
+		doi: '10.1016/j.epidem.2014.12.005',
+		url: 'https://documentserver.uhasselt.be/bitstream/1942/18637/1/1-s2.0-S175543651500002X-main.pdf',
+		usedFor: ['chickenpox.r0'],
+		quote: 'R0 ranging from 2.8 in England and Wales to 7.6 in The Netherlands',
+		location: 'Abstract',
+		why: 'r0=5 is roughly the middle of the quoted 2.8–7.6 range across 12 European countries, so a single preset number is representative rather than tied to one country.',
+		context:
+			'Estimates from 13 pre-vaccination serological datasets in 12 European countries combined with social-contact survey data; author-institution copy of the published Elsevier article.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: first author E. (Eva) Santermans, Epidemics vol. 11 (2015), DOI 10.1016/j.epidem.2014.12.005; quoted sentence present in the abstract; no retraction notice.'
+		}
+	},
+	{
+		id: 'gani-2001-smallpox-r0',
+		authors: 'Gani R, Leach S',
+		title: 'Transmission potential of smallpox in contemporary populations',
+		journal: 'Nature',
+		year: 2001,
+		doi: '10.1038/414748a',
+		url: 'https://www.nature.com/articles/414748a',
+		usedFor: ['smallpox.r0', 'smallpox.about', 'smallpox.coverageToday'],
+		quote:
+			'Should smallpox recur, such estimates of transmission potential (R0 from 3.5 to 6) predict a reasonably rapid epidemic rise before the implementation of public health interventions, because little residual herd immunity exists now that vaccination has ceased.',
+		location: 'Abstract',
+		why: "r0=5 is the upper-middle of the quoted 3.5–6 range. The same sentence supports the lesson that population immunity today is negligible. The paper's accompanying point that hospitals roughly doubled early transmission supports treating smallpox spread as concentrated where the very sick are cared for rather than spread evenly by people going about their lives.",
+		context:
+			'Epidemic modelling of isolated pre-20th-century populations plus 30 sporadic 20th-century European outbreaks; the most cited reconciliation of widely varying earlier R0 claims.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Nature 414:748–751 (2001), Gani & Leach; quoted abstract sentence confirmed verbatim. A corrigendum (28 February 2002) exists; it is a correction, not a retraction.'
+		}
+	},
+	{
+		id: 'cdc-smallpox-signs-symptoms',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Signs and Symptoms of Smallpox',
+		journal: 'CDC (cdc.gov)',
+		year: 2024,
+		url: 'https://www.cdc.gov/smallpox/signs-symptoms/index.html',
+		usedFor: ['smallpox.silentDays', 'smallpox.illDays', 'smallpox.hospitalisedShare', 'smallpox.about'],
+		quote: 'At this time, people are usually too sick to carry on their normal activities',
+		location: 'Rash stages section (early rash)',
+		why: "silentDays=0: the page says 'Smallpox may be contagious during this phase but is most contagious during the next 2 stages', i.e. prodromal transmission is minor, so the preset treats pre-rash infectiousness as zero. illDays=16 is my own pick worked out from the page's timeline — the rash lasts roughly four days before scabbing, 'By the end of the second week after the rash appears, most of the sores have scabbed over', and the person is only 'no longer contagious' once all scabs have fallen off (about three to four weeks); 16 days is a middle value for the practically infectious window. hospitalisedShare=0.9 is my own pick based on the quoted sentence about patients being too sick to carry on normal activities. The same quote is the core evidence that smallpox patients stop mixing, so spread concentrates in households and hospitals.",
+		context:
+			'CDC clinical description of the eradicated disease, written for health professionals and the public; page last reviewed October 22, 2024.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title 'Signs and Symptoms of Smallpox | Smallpox | CDC', last reviewed October 22, 2024; the quoted sentence and the phrases 'may be contagious during this phase but is most contagious', 'no longer contagious' and '7 to 19 days' all confirmed verbatim."
+		}
+	},
+	{
+		id: 'cdc-smallpox-vaccine',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Smallpox Vaccine',
+		journal: 'CDC (cdc.gov)',
+		year: 2024,
+		url: 'https://www.cdc.gov/smallpox/vaccines/index.html',
+		usedFor: ['smallpox.fullEfficacy', 'smallpox.partialEfficacy', 'smallpox.coverageToday'],
+		quote:
+			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
+		location: 'Effectiveness section',
+		why: "fullEfficacy=0.95 straight from this sentence. partialEfficacy=0.5 is my own pick: the page says 'Smallpox vaccination can protect you from smallpox for about 3 to 5 years', so someone vaccinated decades ago counts as only partly protected. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated.",
+		context: 'Official CDC page on the smallpox vaccine; last reviewed October 23, 2024.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: phrases '95% of those vaccinated', '3 to 5 years' and 'stopped in 1972' all confirmed verbatim; page last reviewed October 23, 2024."
+		}
+	},
+	{
+		id: 'who-smallpox-qa',
+		authors: 'World Health Organization',
+		title: 'Smallpox (Questions and answers)',
+		journal: 'WHO (who.int)',
+		year: 2016,
+		url: 'https://www.who.int/news-room/questions-and-answers/item/smallpox',
+		usedFor: ['smallpox.mortality', 'smallpox.illDays', 'smallpox.coverageToday'],
+		quote: 'Smallpox was fatal in up to 30% of cases.',
+		location: 'Questions and answers — severity',
+		why: "mortality=0.30 taken directly as the historical, untreated variola major case-fatality share. The page's 'The most infectious period is during the first week of illness, although a person with smallpox is still infectious until the last scabs fall off' supports the illDays choice. Its 'Anyone who has been vaccinated against smallpox (in most countries, this means anyone aged 40 or over) will have some level of protection' is the second source for today's low vaccination level — note that the page dates from 2016, so the same cohort is now roughly 50 and over.",
+		context: 'WHO Q&A on the eradicated disease; dated 28 June 2016.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: quotes 'fatal in up to 30% of cases', 'most infectious period is during the first week of illness' and 'anyone aged 40 or over' all confirmed verbatim; page dated 28 June 2016, so the age cut-off should be read as 'aged 40 or over in 2016'."
+		}
+	},
+	{
+		id: 'cdc-pinkbook-mumps',
+		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
+		title: 'Chapter 15: Mumps — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2024,
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-15-mumps.html',
+		usedFor: [
+			'mumps.silentDays',
+			'mumps.illDays',
+			'mumps.asymptomaticFraction',
+			'mumps.mortality',
+			'mumps.fullEfficacy',
+			'mumps.partialEfficacy',
+			'mumps.hospitalisedShare',
+			'mumps.waningDays'
+		],
+		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
+		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
+		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. fullEfficacy=0.88 and partialEfficacy=0.78 from 'vaccine effectiveness of one dose of mumps or MMR vaccine was 78% and two dose mumps vaccine effectiveness is 88%'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. waningDays≈41 years is my own pick, informed by 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows protection is not permanent but does not give a decay rate.",
+		context:
+			'Official US reference text; the 78%/88% figures are pooled post-licensure effectiveness estimates.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice with different questions; the communicability sentence, the '15% to 24%' asymptomatic sentence, the 78%/88% effectiveness sentence, the '1% or less' complication sentence and the 'Since 2006' sentence were all returned verbatim; page last reviewed May 1, 2024; no retraction."
+		}
+	},
+	{
+		id: 'gupta-2005-mumps-r0',
+		authors: 'Gupta RK, Best J, MacMahon E',
+		title: 'Mumps and the UK epidemic 2005',
+		journal: 'BMJ',
+		year: 2005,
+		doi: '10.1136/bmj.330.7500.1132',
+		url: 'https://www.bmj.com/content/330/7500/1132',
+		usedFor: ['mumps.r0'],
+		quote:
+			'The number of secondary cases of infection expected to result from an index case of mumps in a fully susceptible population (R or basic reproduction number) is 10-12.',
+		location: 'Introductory section on epidemiology',
+		why: 'r0=11 is the midpoint of the quoted 10–12 range.',
+		context:
+			'Peer-reviewed BMJ clinical review of mumps epidemiology written during the 2005 UK epidemic; the figure is the standard pre-vaccination estimate, quoted alongside measles at 15–17.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: BMJ 2005;330:1132–1135, Gupta, Best & MacMahon, DOI 10.1136/bmj.330.7500.1132; quoted sentence confirmed verbatim (the article writes 'R' here and 'R0' later for the same quantity); no retraction or correction notice."
+		}
+	},
+	{
+		id: 'cdc-pinkbook-pertussis',
+		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
+		title: 'Chapter 16: Pertussis — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2022,
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-16-pertussis.html',
+		usedFor: [
+			'pertussis.silentDays',
+			'pertussis.illDays',
+			'pertussis.mortality',
+			'pertussis.waningDays',
+			'pertussis.fullEfficacy',
+			'pertussis.partialEfficacy',
+			'pertussis.hospitalisedShare'
+		],
+		quote:
+			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms',
+		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy',
+		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). waningDays=12 years is my own pick anchored on 'Immunity following B. pertussis infection is not permanent.' fullEfficacy=0.85 from 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%'; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify.",
+		context: 'Official US reference text; page last reviewed October 19, 2022.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice with different questions; the communicability sentence, 'Immunity following B. pertussis infection is not permanent.', the 80–85% DTaP efficacy sentence and the infant case/death/hospitalisation counts were all returned verbatim; no retraction."
+		}
+	},
+	{
+		id: 'kretzschmar-2010-pertussis-r0',
+		authors: 'Kretzschmar M, Teunis PFM, Pebody RG',
+		title:
+			'Incidence and Reproduction Numbers of Pertussis: Estimates from Serological and Social Contact Data in Five European Countries',
+		journal: 'PLoS Medicine',
+		year: 2010,
+		doi: '10.1371/journal.pmed.1000291',
+		url: 'https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1000291',
+		usedFor: ['pertussis.r0', 'pertussis.asymptomaticFraction'],
+		quote: 'The basic reproduction numbers are similar across countries at around 5.5.',
+		location: 'Abstract — Methods and findings',
+		why: "r0=5.5 taken directly. The paper's framing ('continued circulation of the pathogen by mostly asymptomatic and mild infections in adolescents and adults') is also the reason the preset carries a large asymptomatic share.",
+		context:
+			'Serological data from five European countries combined with social-contact matrices; a next-generation-matrix estimate rather than a single-outbreak figure.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: PLoS Medicine 2010, article e1000291, DOI 10.1371/journal.pmed.1000291, Kretzschmar, Teunis & Pebody; quoted sentence confirmed verbatim; no retraction.'
+		}
+	},
+	{
+		id: 'craig-2020-pertussis-asymptomatic',
+		authors:
+			'Craig R, Kunkel E, Crowcroft NS, Fitzpatrick MC, de Melker H, Althouse BM, Merkel T, Scarpino SV, Koelle K, Friedman L, Arnold C, Bolotin S',
+		title: 'Asymptomatic Infection and Transmission of Pertussis in Households: A Systematic Review',
+		journal: 'Clinical Infectious Diseases',
+		year: 2020,
+		doi: '10.1093/cid/ciz531',
+		url: 'https://academic.oup.com/cid/article-lookup/doi/10.1093/cid/ciz531',
+		usedFor: ['pertussis.asymptomaticFraction'],
+		quote: 'comprising up to 55.6% of those tested',
+		location: 'Abstract — results (asymptomatic household contacts with laboratory-confirmed pertussis)',
+		why: "asymptomaticFraction=0.35 is my own pick. The review gives an upper bound, not a pooled estimate: asymptomatic laboratory-confirmed infection reached 55.6% of household contacts tested in the highest study, and mild/atypical illness 'up to 46.2% of all contacts tested'. I chose a value below the maximum because those are ceilings from heterogeneous household studies.",
+		context:
+			'Systematic review of 26 studies that tested household contacts regardless of symptoms — the best available evidence on silent pertussis infection.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: Clin Infect Dis 2020;70(1):152–161, DOI 10.1093/cid/ciz531, first author Rodger Craig; both the '55.6%' and '46.2%' sentences confirmed verbatim; no retraction. Note the article is dated 2020 in the journal issue although it appeared online in 2019."
+		}
+	},
+	{
+		id: 'alimohamadi-2020-covid-r0',
+		authors: 'Alimohamadi Y, Taghdir M, Sepandi M',
+		title: 'Estimate of the Basic Reproduction Number for COVID-19: A Systematic Review and Meta-analysis',
+		journal: 'Journal of Preventive Medicine and Public Health',
+		year: 2020,
+		doi: '10.3961/jpmph.20.076',
+		url: 'https://www.jpmph.org/journal/view.php?doi=10.3961/jpmph.20.076',
+		usedFor: ['covid19.r0'],
+		quote: 'the pooled R0 for COVID-19 was estimated as 3.32 (95% CI, 2.81 to 3.82)',
+		location: 'Abstract — Results',
+		why: 'r0=3.32 taken directly as the pooled early-pandemic (ancestral virus) estimate.',
+		context:
+			'Systematic review and meta-analysis of early 2020 R0 estimates — preferred over any single-country estimate.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: J Prev Med Public Health 2020;53(3):151–157, DOI 10.3961/jpmph.20.076, Alimohamadi, Taghdir & Sepandi; quoted sentence confirmed (printed with '95% CI'); no retraction."
+		}
+	},
+	{
+		id: 'byrne-2020-infectious-period',
+		authors:
+			"Byrne AW, McEvoy D, Collins AB, Hunt K, Casey M, Barber A, Butler F, Griffin J, Lane EA, McAloon C, O'Brien K, Wall P, Walsh KA, More SJ",
+		title:
+			'Inferred duration of infectious period of SARS-CoV-2: rapid scoping review and analysis of available evidence for asymptomatic and symptomatic COVID-19 cases',
+		journal: 'BMJ Open',
+		year: 2020,
+		doi: '10.1136/bmjopen-2020-039856',
+		url: 'https://bmjopen.bmj.com/content/10/8/e039856',
+		usedFor: ['covid19.silentDays', 'covid19.illDays'],
+		quote: 'One study provided approximate median infectious period for asymptomatic cases of 6.5-9.5 days.',
+		location: 'Abstract — Results',
+		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'. illDays=8 is my own pick: it sits inside the quoted 6.5–9.5 day asymptomatic window and is shorter than the review's mean of 13.4 days from symptom onset to two negative PCR tests, because PCR positivity outlasts infectiousness — the review itself warns about 'limitations of inferring infectiousness from repeated diagnosis, viral loads and viral replication data alone'.",
+		context:
+			'Rapid scoping review pooling virological, contact-tracing and modelling estimates of how long COVID-19 cases are infectious.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: BMJ Open 2020;10:e039856, first author Andrew W. Byrne; both the presymptomatic '<1-4 days' statement and the '6.5-9.5 days' sentence confirmed; no retraction. One caveat: the two reads of the page returned slightly different renderings of the title (the running-head form 'A rapid scoping review of the literature on the infectious period of COVID-19' versus the full article title recorded here), so the title field follows the indexed article title."
+		}
+	},
+	{
+		id: 'ward-2024-covid-ihr-ifr',
+		authors: 'Ward T, Fyles M, Glaser A, Paton RS, Ferguson W, Overton CE',
+		title:
+			'The real-time infection hospitalisation and fatality risk across the COVID-19 pandemic in England',
+		journal: 'Nature Communications',
+		year: 2024,
+		doi: '10.1038/s41467-024-47199-3',
+		url: 'https://www.nature.com/articles/s41467-024-47199-3',
+		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare'],
+		quote:
+			'The IHR and the IFR in England peaked in January 2021 at 3.39% (95% Credible Intervals (CrI): 2.79, 3.97) and 0.97% (95% CrI: 0.62, 1.36), respectively.',
+		location: 'Abstract',
+		why: "Both values are worked out from this quote, which is per infection, while the preset is per symptomatic case. With asymptomaticFraction 0.20: mortality = 0.97% / 0.8 = 1.2%, and hospitalisedShare = 3.39% / 0.8 = 4.2%. The January 2021 peak reflects a largely unvaccinated population, closest to the original virus; the paper's later estimates (IFR 0.06%, IHR 0.32%) show how much this fell.",
+		context:
+			'Bayesian analysis tied to the ONS Coronavirus Infection Survey and REACT, so the denominator is measured infections rather than reported cases.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Nat Commun 15:4633 (2024), DOI 10.1038/s41467-024-47199-3; quoted sentence confirmed verbatim; no retraction.'
+		}
+	},
+	{
+		id: 'chemaitelly-2022-natural-immunity-waning',
+		authors:
+			'Chemaitelly H, Ayoub HH, Tang P, Coyle P, Yassine HM, Al Thani AA, Al-Kanaani Z, Al-Kuwari E, Jeremijenko A, Kaleeckal AH, Latif AN, Shaik RM, Abdul-Rahim HF, Nasrallah GK, Al-Kuwari MG, Butt AA, Al-Romaihi HE, Al-Thani MH, Al-Khal A, Bertollini R, Abu-Raddad LJ',
+		title: 'Duration of immune protection of SARS-CoV-2 natural infection against reinfection',
+		journal: 'Journal of Travel Medicine',
+		year: 2022,
+		doi: '10.1093/jtm/taac109',
+		url: 'https://academic.oup.com/jtm/article-lookup/doi/10.1093/jtm/taac109',
+		usedFor: ['covid19.waningDays'],
+		quote:
+			'Fitting the waning of protection to a Gompertz curve suggested that effectiveness reaches 50% in the 22nd month and < 10% by the 32nd month.',
+		location: 'Abstract — Results',
+		why: 'waningDays=660 (about 22 months) comes straight from this sentence: the preset models immunity as all-or-nothing, so the half-life point is the natural single number to use. Protection against severe reinfection was far more durable (97.3%, with no evidence of waning), which this one-number preset cannot express.',
+		context:
+			'Three matched national retrospective cohort studies in Qatar covering February 2020 to June 2022, among unvaccinated people with a documented primary infection.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: J Travel Med 2022;29:taac109, DOI 10.1093/jtm/taac109, first author Hiam Chemaitelly; the '85.5%' and '50% in the 22nd month' sentences confirmed verbatim. A correction dated 28 October 2022 is noted on the record; there is no retraction."
+		}
+	},
+	{
+		id: 'mmwr-2025-covid-vaccine-effectiveness',
+		authors: 'Link-Gelles R and CDC COVID-19 Vaccine Effectiveness Collaborators',
+		title:
+			'Interim Estimates of 2024-2025 COVID-19 Vaccine Effectiveness Among Adults Aged >=18 Years - VISION and IVY Networks, September 2024-January 2025',
+		journal: 'MMWR Morbidity and Mortality Weekly Report',
+		year: 2025,
+		url: 'https://www.cdc.gov/mmwr/volumes/74/wr/mm7406a1.htm',
+		usedFor: ['covid19.fullEfficacy', 'covid19.partialEfficacy'],
+		quote: 'VE against COVID-19-associated ED/UC visits was 33% (95% CI = 28%-38%)',
+		location: 'Results / Summary',
+		why: "fullEfficacy=0.35 is the quoted 33% against emergency-department and urgent-care visits, rounded; the report's hospitalisation estimates in adults 65 and over were 45% (95% CI 36-53) and 46% (95% CI 26-60), so 0.35 is a reasonable all-ages figure for 'not getting ill'. partialEfficacy=0.20 is my own pick for someone whose last dose is out of date, since these estimates all cover the first 7-119 days after vaccination.",
+		context:
+			'CDC interim vaccine-effectiveness estimates from two US surveillance networks for the current (2024-2025 formula) COVID-19 vaccine; MMWR 2025;74(6):73-82.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: MMWR 2025;74(6):73-82, first author Ruth Link-Gelles; the 33% ED/UC estimate and the 45%/46% hospitalisation estimates confirmed verbatim; no retraction.'
+		}
+	},
+	{
+		id: 'who-ebola-factsheet',
+		authors: 'World Health Organization',
+		title: 'Ebola disease (fact sheet)',
+		journal: 'WHO (who.int)',
+		year: 2025,
+		url: 'https://www.who.int/news-room/fact-sheets/detail/ebola-virus-disease',
+		usedFor: ['ebola.mortality', 'ebola.silentDays', 'ebola.illDays', 'ebola.about'],
+		quote: 'The average Ebola disease case fatality rate is around 50%.',
+		location: 'Key facts / Transmission',
+		why: "mortality=0.50 taken directly (the fact sheet adds 'Case fatality rates have varied from 25-90% in past outbreaks'). silentDays=0 from 'People cannot transmit the disease before they have symptoms.' illDays=10 is my own pick: the fact sheet only says 'they remain infectious as long as their blood contains the virus', with no day count, and 10 days sits between symptom onset and death or recovery. The same page carries the two real exceptions the lesson needs: 'Burial ceremonies that involve direct contact with the body of a person who has died can also contribute to the transmission of Ebola disease' and 'Health and care workers have frequently been infected while treating patients with Ebola disease. This occurs through close contact with patients when infection control precautions are not strictly practiced.' It also notes 'Early intensive supportive care with rehydration and the treatment of symptoms improves survival', which is why outbreaks are deadliest where care is poor.",
+		context: "WHO's official fact sheet, last updated 24 April 2025.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title 'Ebola disease', last updated 24 April 2025; all quoted sentences confirmed. One wording caveat: the infectiousness sentence was rendered as 'People remain infectious as long as their blood contains the virus.' on the first read and 'they remain infectious as long as their blood contains the virus.' on the second (the clause follows the preceding sentence), so the clause form is the one quoted here."
+		}
+	},
+	{
+		id: 'vankerkhove-2015-ebola-parameters',
+		authors: 'Van Kerkhove MD, Bento AI, Mills HL, Ferguson NM, Donnelly CA',
+		title:
+			'A review of epidemiological parameters from Ebola outbreaks to inform early public health decision-making',
+		journal: 'Scientific Data',
+		year: 2015,
+		doi: '10.1038/sdata.2015.19',
+		url: 'https://www.nature.com/articles/sdata201519',
+		usedFor: ['ebola.r0', 'ebola.mortality'],
+		quote: 'estimates of R0 for Ebola Zaire ranged from 1.4-4.7',
+		location: 'Results / parameter summary for Zaire ebolavirus',
+		why: "r0=1.8 sits in the lower part of the quoted 1.4-4.7 range, matching the West African epidemic's country-level estimates (about 1.7-2.0) rather than the highest historical figures. The same review's 'Ebola Zaire virus is the most lethal with an overall estimated CFR ranging from 69 to 88%' is the basis for the note that untreated historical mortality was far above the WHO 50% average.",
+		context:
+			'Comprehensive compilation of Ebola epidemiological parameters from 40 years of outbreaks, assembled to parameterise transmission models.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Scientific Data 2015, article 150019, DOI 10.1038/sdata.2015.19; both the R0 range and the CFR range confirmed; no retraction.'
+		}
+	},
+	{
+		id: 'dean-2016-ebola-household-sar',
+		authors: 'Dean NE, Halloran ME, Yang Y, Longini IM',
+		title:
+			'Transmissibility and Pathogenicity of Ebola Virus: A Systematic Review and Meta-analysis of Household Secondary Attack Rate and Asymptomatic Infection',
+		journal: 'Clinical Infectious Diseases',
+		year: 2016,
+		doi: '10.1093/cid/ciw114',
+		url: 'https://academic.oup.com/cid/article-lookup/doi/10.1093/cid/ciw114',
+		usedFor: ['ebola.about'],
+		quote: 'The greatest risk factor was the provision of nursing care (SAR, 47.9% [95% CI, 23.3%-72.6%]).',
+		location: 'Abstract — results',
+		why: "The strongest single piece of evidence that Ebola spreads almost only to people physically caring for someone too ill to move, set against 'little transmission occurring in its absence (SAR, 0.8% [95% CI, 0%-2.3%])'. Its 27% asymptomatic estimate is not used: Glynn 2017 found silent infection uncommon, and no study shows silent cases spreading it.",
+		context:
+			'Meta-analysis of household secondary attack rates from 1976 to 2014, disaggregated by exposure type.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Clin Infect Dis 2016;62(10):1277-1286, DOI 10.1093/cid/ciw114, first author Natalie E. Dean; the 12.5%, 0.8%, 47.9% and 27.1% figures all confirmed verbatim; no retraction.'
+		}
+	},
+	{
+		id: 'faye-2015-conakry-transmission-chains',
+		authors:
+			'Faye O, Boelle P-Y, Heleze E, Faye O, Loucoubar C, Magassouba N, Soropogui B, Keita S, Gakou T, Bah EI, Koivogui L, Sall AA, Cauchemez S',
+		title:
+			'Chains of transmission and control of Ebola virus disease in Conakry, Guinea, in 2014: an observational study',
+		journal: 'The Lancet Infectious Diseases',
+		year: 2015,
+		doi: '10.1016/S1473-3099(14)71075-8',
+		url: 'https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(14)71075-8/fulltext',
+		usedFor: ['ebola.about'],
+		quote: '82% (119 of 145) of transmission occurred in the community and 72% (105) between family members',
+		location: 'Abstract — findings',
+		why: "Quantifies where Ebola actually spreads. The same abstract reports each non-health-worker case infecting 'a mean of 2.3 people (95% CI 1.6-3.2): 1.4 (0.9-2.2) in the community, 0.4 (0.1-0.9) in hospitals, and 0.5 (0.2-1.0) at funerals', and that after infection control was introduced 'the reproduction number in hospitals and at funerals reduced to lower than 0.1'. That split supports modelling Ebola as spreading in households, hospitals and funerals rather than through ordinary mixing, and shows those exceptional routes shut down when care and burial practices improve.",
+		context:
+			'Observational reconstruction of transmission chains for 193 confirmed and probable cases in Conakry and two other Guinean regions in 2014.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: The Lancet Infectious Diseases, published 22 January 2015; the '2.3 people', 'lower than 0.1' and '82% (119 of 145)' quotes all confirmed verbatim; no retraction. The publisher page served to me did not display the full author list, volume or pages, so those citation details come from the indexed record rather than from the page itself."
+		}
+	},
+	{
+		id: 'cdc-ervebo-vaccine',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Ebola Vaccine Product Information (ERVEBO)',
+		journal: 'CDC (cdc.gov)',
+		year: 2025,
+		url: 'https://www.cdc.gov/vhf/ebola/clinicians/vaccine',
+		usedFor: ['ebola.fullEfficacy', 'ebola.partialEfficacy'],
+		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
+		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
+		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. partialEfficacy=0.0 follows from the page's statement that ERVEBO is approved 'as a single dose administration' — there is no incomplete course to model. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
+		context: 'CDC clinician page on the licensed Zaire ebolavirus vaccine; last reviewed 30 January 2025.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title 'Ebola Vaccine Product Information | Ebola | CDC', last reviewed January 30, 2025; the 'single dose administration', 'does not provide protection against other species' and trial-result sentences all confirmed verbatim."
+		}
+	},
+	{
+		id: 'who-marburg-factsheet',
+		authors: 'World Health Organization',
+		title: 'Marburg virus disease (fact sheet)',
+		journal: 'WHO (who.int)',
+		year: 2025,
+		url: 'https://www.who.int/news-room/fact-sheets/detail/marburg-virus-disease',
+		usedFor: [
+			'marburg.mortality',
+			'marburg.silentDays',
+			'marburg.illDays',
+			'marburg.fullEfficacy',
+			'marburg.partialEfficacy',
+			'marburg.about'
+		],
+		quote: 'The average MVD case fatality rate is around 50%.',
+		location: 'Key facts / Transmission / Treatment',
+		why: "mortality=0.50 taken directly, with the page's 'Case fatality rates have varied from 24% to 88% in past outbreaks.' as the range. silentDays=0 from 'People cannot transmit the disease before they have symptoms.' fullEfficacy and partialEfficacy are 0 because of 'Currently there are no vaccines or antiviral treatments approved for MVD.' The exceptional routes are the same as for Ebola and come from this page: 'Burial ceremonies that involve direct contact with the body of the deceased can also contribute to the transmission of Marburg virus.' and 'Healthcare workers have frequently been infected while treating patients with MVD.' The page's note that 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival' is why outbreaks remain deadliest where care is poor.",
+		context: "WHO's official fact sheet, dated 20 January 2025.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title 'Marburg virus disease', dated 20 January 2025; all seven quoted sentences confirmed verbatim."
+		}
+	},
+	{
+		id: 'ajelli-2012-marburg-transmission',
+		authors: 'Ajelli M, Merler S',
+		title: 'Transmission Potential and Design of Adequate Control Measures for Marburg Hemorrhagic Fever',
+		journal: 'PLoS ONE',
+		year: 2012,
+		doi: '10.1371/journal.pone.0050948',
+		url: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0050948',
+		usedFor: ['marburg.r0', 'marburg.illDays', 'marburg.about'],
+		quote:
+			'Such factors, along with the extremely high severity and fatality, support the rare occurrence of large epidemics in human populations.',
+		location: 'Abstract',
+		why: "r0=1.59 from the abstract's 'the basic reproduction number to be R0 = 1.59 (95%CI: 1.53-1.66)'. illDays=8 is my own pick, derived from the quoted generation-time distribution ('mean 9 days (95%CI: 8.2-10 days)'): if the average gap between one case and the next is 9 days, the infectious window is of that order, and I shortened it slightly because transmission is concentrated in late illness. The quoted sentence is the clearest published statement of the burn-out lesson, and the paper's finding that isolating cases 'no later than 2-3 days after symptoms onset is sufficient to contain an outbreak' shows how little slack such a pathogen has.",
+		context:
+			'Analysis of the largest documented Marburg epidemic (Angola 2005, 329 deaths) combined with viral-load data from non-human primates.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: PLoS ONE 2012;7(12):e50948, DOI 10.1371/journal.pone.0050948, Ajelli & Merler; the R0, generation-time and 'rare occurrence of large epidemics' quotes all confirmed; no retraction."
+		}
+	},
+	{
+		id: 'cdc-pinkbook-rubella',
+		authors: 'Centers for Disease Control and Prevention (Hall E, Wodi AP, et al., eds.)',
+		title: 'Chapter 20: Rubella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2021,
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-20-rubella.html',
+		usedFor: [
+			'rubella.silentDays',
+			'rubella.illDays',
+			'rubella.asymptomaticFraction',
+			'rubella.mortality',
+			'rubella.waningDays',
+			'rubella.fullEfficacy',
+			'rubella.partialEfficacy',
+			'rubella.hospitalisedShare',
+			'rubella.about'
+		],
+		quote:
+			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
+		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Characteristics',
+		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
+		context:
+			'Official US reference text; page last reviewed August 18, 2021. The serious burden of rubella is congenital rubella syndrome in pregnancy, which this per-case preset does not represent.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: chapter title 'Chapter 20: Rubella', last reviewed August 18, 2021; all four quoted phrases ('7 days before to 7 days after rash onset', 'up to 50% of infections may be subclinical or inapparent', the single-dose seroconversion sentence and 'long-term, probably lifelong, protection') confirmed verbatim; no retraction or withdrawal notice."
+		}
+	},
+	{
+		id: 'papadopoulos-2022-rubella-r0',
+		authors: 'Papadopoulos T, Vynnycky E',
+		title:
+			'Estimates of the basic reproduction number for rubella using seroprevalence data and indicator-based approaches',
+		journal: 'PLoS Computational Biology',
+		year: 2022,
+		doi: '10.1371/journal.pcbi.1008858',
+		url: 'https://researchonline.lshtm.ac.uk/id/eprint/4666072/',
+		usedFor: ['rubella.r0'],
+		quote: 'R0 was <5, 5-10 and >10 for 81, 14 and 3 settings respectively',
+		location: 'Abstract — results',
+		why: "r0=5 is worked out from this quote rather than copied: the study reports a distribution over 98 settings, with the large majority below 5, so 5 is a defensible upper-middle single value for a general-audience preset. The preprint version of the same work puts it as 'The basic reproduction number was less than 5 for over half of the settings'.",
+		context:
+			"Analysis of rubella seroprevalence data from 98 settings using several estimation approaches; published in a peer-reviewed journal (the record read here is the authors' institutional repository entry for it).",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title, both authors (Timos Papadopoulos; Emilia Vynnycky), PLoS Computational Biology 18 (2022), article e1008858, DOI 10.1371/journal.pcbi.1008858 all confirmed, and the quoted sentence confirmed; no retraction. Caveat: the publisher's own page (journals.plos.org) could not be opened during this session because the fetch proxy rate-limited that domain, so both reads were of the LSHTM repository record, cross-checked once against the bioRxiv preprint of the same study."
+		}
+	},
+	{
+		id: 'who-varicella-position-paper-2014',
+		authors: 'World Health Organization (Strategic Advisory Group of Experts on Immunization)',
+		title: 'Varicella and herpes zoster vaccines: WHO position paper, June 2014',
+		journal: 'Weekly Epidemiological Record 89(25):265-288',
+		year: 2014,
+		url: 'https://www.nitag-resource.org/sites/default/files/665ff52e4dc61309dde19eef6eac47db1f8abd95_1.pdf',
+		usedFor: ['chickenpox.asymptomaticFraction'],
+		quote:
+			'VZV is a highly contagious herpes virus which causes both varicella (chickenpox), usually during childhood, and herpes zoster (shingles)',
+		location: 'Introduction / Epidemiology',
+		why: "This is a worked-out value, not a figure any source states: no official source I could read quantifies subclinical primary varicella. It is worked out from two quoted facts. First, this position paper's statement that infection with VZV is what 'causes ... varicella (chickenpox)' in childhood, together with 'In temperate high-income countries in the pre-vaccination era, >90% infections occurred before adolescence' — i.e. essentially the whole susceptible population passes through a recognised illness. Second, the CDC Pink Book's clinically measured household figure, 'Secondary attack rates among susceptible household contacts of persons with varicella are between 61% and 100%': those attack rates are counted from visible disease, and a rate reaching 100% leaves no room for a large silent fraction. 0.05 is therefore a small non-zero allowance for unrecognised or very mild cases rather than a measured share. The paper's separate remark that 'subclinical reinfection is common' is about reinfection of already-immune people, not primary infection, and is deliberately not used here.",
+		context:
+			"WHO's formal position paper on varicella vaccines, published in the Weekly Epidemiological Record; the global official reference for varicella policy.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice; title confirmed as 'Varicella and herpes zoster vaccines: WHO position paper, June 2014', Weekly Epidemiological Record vol. 89 no. 25, 20 June 2014; the quoted sentence and the '>90% infections occurred before adolescence' and 'usually confers immunity for life' sentences all confirmed verbatim. Read from the NITAG Resource Centre's hosted copy of the WER issue because who.int's own item page serves a download rather than readable text; no retraction."
+		}
+	},
+	{
+		id: 'who-smallpox-eradication-subclinical',
+		authors: 'Fenner F, Henderson DA, Arita I, Jezek Z, Ladnyi ID (World Health Organization)',
+		title: 'Smallpox and Its Eradication — Chapter 1: Clinical Features',
+		journal: 'World Health Organization, Geneva',
+		year: 1988,
+		url: 'https://biotech.law.lsu.edu/blaw/bt/smallpox/who/red-book/Chp%2001%20-%2027-36.pdf',
+		usedFor: ['smallpox.asymptomaticFraction'],
+		quote:
+			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major.',
+		location: 'Chapter 1, Clinical Features — section on subclinical infection',
+		why: "smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them.",
+		context:
+			"The official WHO history of smallpox and its eradication, the standard reference for a disease that can no longer be studied; chapter hosted by the LSU Law Center's public mirror of the WHO 'red book'.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice (the second read requested the full sentences with no ellipses); all three sentences confirmed word for word, and the file identified as Chapter 1 (Clinical Features) of 'Smallpox and Its Eradication'. Caveat: this mirror serves the chapter PDF without its title page, so the editors, publisher and 1988 date come from the standard citation for the work rather than from the page itself; no retraction (and none is possible for a 1988 WHO monograph)."
+		}
+	},
+	{
+		id: 'cdc-smallpox-clinical-signs',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Clinical Signs and Symptoms of Smallpox',
+		journal: 'CDC (cdc.gov)',
+		year: 2024,
+		url: 'https://www.cdc.gov/smallpox/hcp/clinical-signs/index.html',
+		usedFor: ['smallpox.waningDays', 'smallpox.silentDays', 'smallpox.mortality'],
+		quote: 'Recovery from smallpox gives the patient prolonged immunity to re-infection with variola virus.',
+		location: 'Clinical course / immunity',
+		why: "waningDays=null follows from this sentence: CDC describes immunity after recovery as 'prolonged', with no stated end, so for a simulator that models immunity as either present or gone, treating survivor immunity as not waning is the faithful reading. ('Prolonged' is weaker than 'lifelong', so this is the one place in the smallpox preset where null is a simplification of the source.) The page also independently supports two values already in the preset: silentDays=0, from 'During this time, the infected person does not have symptoms, is not contagious, and may feel fine', and mortality=0.30, from 'the case-fatality rate differed for the different clinical forms, but it was approximately 30% overall in unvaccinated individuals.'",
+		context: "CDC's clinician-facing clinical description of smallpox; last reviewed October 23, 2024.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened: title 'Clinical Signs and Symptoms of Smallpox | Smallpox | CDC', last reviewed October 23, 2024; all three quoted sentences confirmed verbatim. Both reads also confirmed that the page makes no claim that asymptomatic variola infection did not occur, which is why that value rests on the WHO eradication history instead."
+		}
+	},
+	{
+		id: 'buitrago-garcia-2020-asymptomatic-sars-cov-2',
+		authors: 'Buitrago-Garcia D, Egli-Gany D, Counotte MJ, Hossmann S, Imeri H, Ipekci MA, Salanti G, Low N',
+		title: 'Asymptomatic SARS-CoV-2 infections: a living systematic review and meta-analysis',
+		journal: 'medRxiv (preprint, version 3; the peer-reviewed version appeared in PLoS Medicine)',
+		year: 2020,
+		doi: '10.1101/2020.04.25.20079103',
+		url: 'https://www.medrxiv.org/content/10.1101/2020.04.25.20079103v3',
+		usedFor: ['covid19.asymptomaticFraction'],
+		quote:
+			'The overall estimate of the proportion of people who become infected with SARS-CoV-2 and remain asymptomatic throughout infection was 20% (95% CI 17-25)',
+		location: 'Abstract — results',
+		why: "covid19.asymptomaticFraction=0.20 taken directly from this pooled estimate. The same abstract is also relevant to how the model treats silent cases: 'The secondary attack rate was slightly lower in contacts of people with asymptomatic infection than those with symptomatic infection (relative risk 0.35, 95% CI 0.10-1.27)' — asymptomatic COVID-19 cases do transmit, unlike the filovirus picture below, but less efficiently.",
+		context:
+			'Living systematic review and meta-analysis (94 studies) by the Institute of Social and Preventive Medicine, Bern; the version I could read twice is medRxiv v3, and the same review was published in PLoS Medicine (2020;17(9):e1003346) with the same 20% (95% CI 17-25) estimate.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Opened twice: authors, 28 July 2020 posting date and both quoted sentences confirmed verbatim; no withdrawal notice on the preprint. Caveat flagged honestly: this is the preprint host, because the PLoS Medicine page could not be opened from this session (the fetch proxy rate-limited journals.plos.org). The 20% (95% CI 17-25) figure matches the indexed abstract of the published PLoS Medicine article, so the number is not preprint-only, but a reader who needs the peer-reviewed version of record should cite the PLoS Medicine paper.'
+		}
+	},
+	{
+		id: 'glynn-2017-asymptomatic-ebola',
+		authors:
+			'Glynn JR, Bower H, Johnson S, Houlihan CF, Montesano C, Scott JT, Semple MG, Bangura MS, Kamara AJ, Kamara O, Mansaray SH, Sesay D, Turay C, Dicks S, Guetiya Wadoum RE, Colizzi V, Checchi F, Samuel D, Tedder RS',
+		title:
+			'Asymptomatic infection and unrecognised Ebola virus disease in Ebola-affected households in Sierra Leone: a cross-sectional study using a new non-invasive assay for antibodies to Ebola virus',
+		journal: 'The Lancet Infectious Diseases',
+		year: 2017,
+		doi: '10.1016/S1473-3099(17)30111-1',
+		url: 'https://discovery-pp.ucl.ac.uk/id/eprint/1544866/1/Houlihan-C_asymptomatic%20infection_Ebola%20virus.pdf',
+		usedFor: ['ebola.asymptomaticFraction', 'marburg.asymptomaticFraction', 'ebola.about'],
+		quote:
+			'This new highly specific and sensitive assay showed asymptomatic infection with Ebola virus was uncommon despite high exposure.',
+		location: 'Abstract — interpretation',
+		why: "This is the study behind the recommendation to set ebola.asymptomaticFraction to 0 in this model. Measured share: 'Among asymptomatic contacts, 2.6% (1.2-4.7; 10 of 388) with no symptoms tested positive.' Epidemiological weight: 'The low prevalence suggests asymptomatic infection contributes little to herd immunity in Ebola, and even if infectious, would account for few transmissions.' Since this simulator keeps asymptomatic cases infectious and mobile, carrying a 27% silent fraction (the Dean 2016 meta-analysis figure used earlier in this document) would make the model assert silent Ebola spreaders, which no study has demonstrated; 0 is the honest setting, and 0.026 is the alternative if a non-infectious silent compartment is wanted. The same reasoning is applied to Marburg by analogy, supported by its even lower seroprevalence.",
+		context:
+			'Cross-sectional study of 481 household contacts of survivors from the Kerry Town Ebola Treatment Centre, using an oral-fluid anti-glycoprotein IgG assay validated at 100% specificity and 95.9% sensitivity — the most direct test of whether silent Ebola infection happens.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice: The Lancet Infectious Diseases, published online 27 February 2017, DOI 10.1016/S1473-3099(17)30111-1, first author Judith R Glynn; all three quoted sentences confirmed verbatim; no retraction. Read from UCL Discovery's open-access copy of the accepted article because thelancet.com returned 403 to this session."
+		}
+	},
+	{
+		id: 'rimoin-2018-ebola-antibodies-40-years',
+		authors:
+			'Rimoin AW, Lu K, Bramble MS, Steffen I, Doshi RH, Hoff NA, Mukadi P, Nicholson BP, Alfonso VH, Olinger G, Sinai C, Bomponda PL, Kabamba J, Lokonga JP, Muyembe-Tamfum JJ, Simmons G, Wright LL, Schieffelin JS',
+		title:
+			'Ebola Virus Neutralizing Antibodies Detectable in Survivors of the Yambuku, Zaire Outbreak 40 Years after Infection',
+		journal: 'The Journal of Infectious Diseases',
+		year: 2018,
+		doi: '10.1093/infdis/jix584',
+		url: 'https://academic.oup.com/jid/article-lookup/doi/10.1093/infdis/jix584',
+		usedFor: ['ebola.waningDays'],
+		quote:
+			"Interestingly, a subset of these survivors' serum antibodies could still neutralize live virus 40 years postinitial infection.",
+		location: 'Abstract — results',
+		why: "waningDays=null is worked out from this quote. The study followed survivors of the first recorded Ebola outbreak (Yambuku, 1976) and 'extend[ed] the known duration of response from 11 years postinfection to at least 40 years after symptomatic infection', with 86% (12/14) still reactive to glycoprotein. Forty years of detectable neutralising antibody is longer than any epidemic a simulator will run, so modelling survivor immunity as not waning is faithful. Two caveats a careful reader should keep: antibody persistence is a correlate of protection, not a demonstration of it, and only a subset (4 of 14) still neutralised live virus.",
+		context:
+			'Serological follow-up of 14 survivors of the 1976 Yambuku outbreak in the Democratic Republic of the Congo, four decades later.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice: J Infect Dis 2018;217(2):223-231, DOI 10.1093/infdis/jix584, first author Anne W. Rimoin; the '40 years postinitial infection' sentence and the 'from 11 years postinfection to at least 40 years' statement confirmed verbatim; no retraction."
+		}
+	},
+	{
+		id: 'who-ebola-treatment-centre',
+		authors: 'World Health Organization',
+		title: 'Ebola disease (fact sheet)',
+		journal: 'WHO (who.int)',
+		year: 2025,
+		url: 'https://www.who.int/news-room/fact-sheets/detail/ebola-virus-disease',
+		usedFor: ['ebola.hospitalisedShare'],
+		quote:
+			'Patients should be isolated in a designated treatment centre for early care and to avoid transmission at home.',
+		location: 'Prevention and control',
+		why: "hospitalisedShare=1 follows from this sentence read together with 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival.' WHO's advice is that every patient — suspected as well as confirmed — belongs in a treatment centre bed, both for their own survival and to stop household transmission. There is no mild, treat-at-home tier of symptomatic Ebola in this guidance, so every symptomatic case in the model should occupy a bed. The second half of the quoted sentence is also the mechanism behind the burn-out lesson: a bed is simultaneously treatment and removal from the mixing population.",
+		context:
+			"WHO's official Ebola fact sheet, last updated 24 April 2025; same page as the Ebola transmission and fatality quotes earlier in this document, cited separately here for the bed-occupancy value.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened specifically for this quote: 'Patients should be isolated in a designated treatment centre for early care and to avoid transmission at home.' confirmed verbatim, as was the supportive-care sentence; page title 'Ebola disease', last updated 24 April 2025."
+		}
+	},
+	{
+		id: 'semancik-2024-filovirus-seroprevalence',
+		authors:
+			'Semancik CS, Whitworth HS, Price MA, Yun H, Postler TS, Zaric M, Kilianski A, Cooper CL, Kuteesa M, Talasila S, Malkevich N, Gupta SB, Francis SC',
+		title:
+			'Seroprevalence of Antibodies to Filoviruses with Outbreak Potential in Sub-Saharan Africa: A Systematic Review to Inform Vaccine Development and Deployment',
+		journal: 'Vaccines',
+		year: 2024,
+		doi: '10.3390/vaccines12121394',
+		url: 'https://www.mdpi.com/2076-393X/12/12/1394',
+		usedFor: ['marburg.asymptomaticFraction'],
+		quote: 'with MARV seroprevalence mostly ranging from 0 to 3%',
+		location: 'Abstract — results (third finding)',
+		why: "marburg.asymptomaticFraction=0 is worked out from this quote. The review found Marburg antibody seroprevalence 'substantially lower than EBOV or SUDV antibody seroprevalence, even in outbreak-affected areas and in populations at a moderate or high risk of infection', mostly 0-3%. Since the directly measured Ebola evidence (Glynn 2017) shows silent filovirus infection is uncommon and would account for few transmissions even if infectious, and Marburg's seroprevalence is lower still, 0 is the honest setting for a model in which silent cases keep spreading. 0.03 is the alternative if a non-infectious silent compartment is wanted. The review is candid about the gap: 'little is known about the burden of asymptomatic infection or undiagnosed disease'.",
+		context:
+			'PROSPERO-registered systematic review (CRD42023415358) of 87 articles reporting filovirus antibody seroprevalence across sub-Saharan Africa, written to inform vaccine trial design.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice: Vaccines 2024;12(12):1394, DOI 10.3390/vaccines12121394; both the '0 to 3%' and 'little is known about the burden of asymptomatic infection' quotes confirmed verbatim; no retraction. Minor caveat: the two reads rendered the author list differently (the second named the last author, Suzanna C. Francis, as 'first author'); the order recorded here follows the article's own byline, with Semancik first and Francis senior."
+		}
+	},
+	{
+		id: 'natesan-2016-filovirus-antibody-persistence',
+		authors:
+			'Natesan M, Jensen SM, Keasey SL, Kamata T, Kuehne AI, Stonier SW, Lutwama JJ, Lobel L, Dye JM, Ulrich RG',
+		title:
+			'Human Survivors of Disease Outbreaks Caused by Ebola or Marburg Virus Exhibit Cross-Reactive and Long-Lived Antibody Responses',
+		journal: 'Clinical and Vaccine Immunology',
+		year: 2016,
+		doi: '10.1128/CVI.00107-16',
+		url: 'https://journals.asm.org/doi/10.1128/CVI.00107-16',
+		usedFor: ['marburg.waningDays'],
+		quote:
+			'persistent levels of antibodies to GP, NP, and VP40 were maintained for up to 14 years after infection',
+		location: 'Abstract / results summary',
+		why: 'marburg.waningDays=null is worked out from this quote. The study profiled survivors of Marburg, Sudan and Bundibugyo outbreaks in Uganda and found antibody responses lasting up to 14 years, far longer than any run of this simulator, so treating survivor immunity as not waning is faithful to the evidence. Two honest limits: the longest intervals in the study are for Sudan virus survivors (12-14 years) and Bundibugyo (7 years), while the Marburg samples were collected about a year after infection, so the 14-year figure is a filovirus finding rather than a Marburg-specific one; and antibody persistence is a correlate of protection, not proof of it. A separate study of Marburg survivors found neutralising-antibody responses to be limited, so this value is the least firmly grounded in the whole set.',
+		context:
+			'Proteome-wide antibody profiling of filovirus survivors from Ugandan outbreaks, carried out by USAMRIID with Makerere University and Ben-Gurion University collaborators.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Opened twice: Clin Vaccine Immunol 2016;23(8), DOI 10.1128/CVI.00107-16, first author Mohan Natesan; the 'up to 14 years after infection' quote confirmed verbatim both times; no retraction (the article carries a 'Spotlight Selection' designation). The caveat about which cohort supplies the 14-year interval is recorded in the why field rather than hidden."
+		}
+	},
+	{
+		id: 'who-marburg-treatment-centre',
+		authors: 'World Health Organization',
+		title: 'Marburg virus disease (fact sheet)',
+		journal: 'WHO (who.int)',
+		year: 2025,
+		url: 'https://www.who.int/news-room/fact-sheets/detail/marburg-virus-disease',
+		usedFor: ['marburg.hospitalisedShare'],
+		quote:
+			'Patients suspected or confirmed for MVD should be isolated in a designated treatment centre for early care and to avoid transmission at home.',
+		location: 'Treatment and vaccines',
+		why: "hospitalisedShare=1 follows from this sentence together with 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival.' As with Ebola, WHO's guidance admits every symptomatic patient to a treatment centre rather than leaving a mild tier at home, so every symptomatic case in the model should occupy a bed — and because there is no approved vaccine or antiviral for Marburg, that bed is the entire intervention.",
+		context:
+			"WHO's official Marburg fact sheet, dated 20 January 2025; same page as the Marburg transmission and fatality quotes earlier in this document, cited separately here for the bed-occupancy value.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Re-opened specifically for this quote: the isolation sentence and the supportive-care sentence both confirmed verbatim in the 'Treatment and vaccines' section; page title 'Marburg virus disease', dated 20 January 2025."
+		}
 	}
 ];

@@ -21,12 +21,33 @@ export interface Sourced<T = number> {
 	sources: string[];
 }
 
-export type DiseaseId = 'measles' | 'polio' | 'flu';
+export type DiseaseId =
+	| 'measles'
+	| 'flu'
+	| 'covid19'
+	| 'chickenpox'
+	| 'mumps'
+	| 'rubella'
+	| 'pertussis'
+	| 'polio'
+	| 'smallpox'
+	| 'ebola'
+	| 'marburg';
+
+/** How the disease picker groups diseases, in plain words. */
+export type DiseaseGroup = 'common' | 'eradicated' | 'deadly';
+
+export const DISEASE_GROUP_LABELS: Record<DiseaseGroup, string> = {
+	common: 'Common',
+	eradicated: 'Wiped out by vaccines',
+	deadly: 'Deadly but burns out fast'
+};
 
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
 	id: DiseaseId;
 	name: string;
+	group: DiseaseGroup;
 	/** One plain-language line for the disease picker. */
 	blurb: string;
 	r0: Sourced;
@@ -46,6 +67,11 @@ export interface DiseaseConfig {
 	partialEfficacy: Sourced;
 	/** Share of symptomatic (red) cases who need a hospital bed. */
 	hospitalisedShare: Sourced;
+	/**
+	 * Share vaccinated today, for diseases where that is far from normal coverage
+	 * (smallpox: routine vaccination ended decades ago). New populations start here.
+	 */
+	coverageToday?: Sourced;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */

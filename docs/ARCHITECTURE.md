@@ -4,6 +4,7 @@ Owner: the project coordinator. Every build thread follows this file. Where it c
 
 ## 0. Product shape (from Alex)
 - Guiding principle, in Alex's words: "Simple interface gives it understanding, real data in the back gives it weight." Every screen stays simple; every number behind it is sourced.
+- Second principle (Alex, 7 Oct): each subsystem is simple and explained on its own; complexity and feedback loops emerge only from combining them ("this is more complicated than you thought"). Rule: lessons must emerge from the subsystems. No scenario-specific code, and lesson tests may set inputs only, never engine internals.
 - Audience: ordinary people. Every word on screen is plain language. An "About" page explains what the simulator is and how it works in plain words, and cites every paper and dataset behind the numbers (title, authors, year, journal, DOI or link) so anyone curious can look them up. Each preset links to its entries there ("Where do these numbers come from?").
 - Reference look: the map mockup (dark stylised map, populations as discs of dots, dashed air arcs, a control card per population, legend, small live charts). The impact-summary mockup is a secondary panel.
 - Each population is controlled separately: lock down one, change vaccination in another.
@@ -67,6 +68,19 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Mapping to the sim: vaccination percentages map directly (full = completed course, partial = started but not completed). Real density (people per km²) maps to sim density on a log scale clamped to the sim's range, so a dense city looks crowded and farmland looks sparse. The card shows the real figure, not the sim value.
 - The country presets in the spec (e.g. Bahrain, United States, Montenegro) come from this same data, never hard-coded numbers.
 
+### 4.2 Health policy (per population)
+- Each population has a "Health policy" card. Every behaviour and healthcare number is a slider on it, and every slider starts from a real-world preset; people can what-if from there at any time.
+- Fields, each stored as `{ value, sources }` like other config: `hospitalBedsPerThousand`, `spareBedShare`, lockdown compliance (the share who stay home; today a fixed 90% via `ESSENTIAL_SHARE`), lockdown fatigue days, testing reach and cooldown, travel frequency, and vaccination full and partial per disease.
+- Country presets are bundled by `fetch-data.ts`: World Bank beds per 1,000, Eurostat or OECD occupancy, WHO/UNICEF coverage. Compliance and fatigue come from COVID-era sources (e.g. mobility or stringency data), marked `context: 'COVID-19 era'`.
+- General default: 5.07 beds per 1,000 (EU average, Eurostat 2024) and 10% spare (NHS England occupancy), with the existing citations. The UK preset uses UK bed figures once sourced, since 5.07 is the EU average, not the UK's (Alex was told this on 7 Oct).
+- "Similar to": after any slider change the card shows the closest bundled country profile (nearest neighbour on normalised fields), or "Custom" if none is within a set distance.
+- Where presets live (the engine only ever receives a resolved `HealthPolicy` per region and never knows about countries):
+  - `config/countryProfiles.generated.json`, written by `scripts/fetch-data.ts`: per-country beds per 1,000, bed occupancy (giving `spareBedShare`), vaccination coverage per disease and density, each with source, indicator code and year.
+  - `config/behaviourPresets.ts`, hand-sourced: fields no bulk dataset gives per country (lockdown compliance, fatigue days, testing reach) in `{ value, sources }` form with `citations.ts` entries. Countries without their own figure fall back to a sourced general default, and the card says "general estimate".
+  - `config/healthPolicy.ts`: the `HealthPolicy` type, `presetFor(country)` (merges the two files), `similarTo(policy)` and the general default. Steps 2 and 3 use the general default.
+- Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run. Population, density and vaccination changes restart from day 0 (rule 1.8 stands).
+- Every slider and card has a one-line plain-English "what this means" explainer, taken from the same citation entry. The About page has one short section per subsystem.
+
 ## 5. Tick order (engine.ts; never reorder)
 1. Apply queued commands.
 2. Departures.
@@ -98,7 +112,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - When a dot's protection drops a level, a working vaccine stays working with chance `efficacyNew / efficacyOld`; a vaccine that didn't take never starts working. Waning can only lower protection.
 
 ### 6.4 Lockdown (per region)
-- `essential` is fixed at spawn for 10% of dots. On lockdown, all other dots stop.
+- `essential` is fixed at spawn for a share of dots set by the region's policy (lockdown compliance, 4.2; default 10% essential). On lockdown, all other dots stop.
 - The region keeps `lockdownTicks`, which rises while locked and falls at the same rate after lifting. A frozen dot breaks quarantine and wanders again once `lockdownTicks > fatigueTicks` (drawn at spawn, e.g. mean 30 days, sd 10; research may refine). Dots within about 3 days of their limit jitter as a visual warning.
 - Lockdown also cancels that region's gatherings and stops non-essential departures from it.
 
@@ -125,7 +139,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - `scripts/calibrate.ts` (Node, headless): for each disease, seed index cases into a fully susceptible city, measure secondary infections via `infectedBy`, and binary-search `beta` to the target R0. Write the results to `config/diseases.generated.ts`.
 - Target R0 is the research value. If dot density cannot reach it (measles about 15), raise `transmissionRadius`; never weaken the lesson. The herd-immunity line shown to users is `(1 - 1/R0) / fullEfficacy`. If that is above 100% (e.g. flu, where the vaccine is about 40% effective), the UI says in plain words that vaccination alone can't stop it, rather than showing an impossible target.
 - Calibration keeps adding seeds until the standard error of the measured R0 is under 2% of the target (low-R0 diseases like flu need many more seeds). The generated file's header records seeds used, index cases, and the measured R0 with its standard error.
-- A test re-measures R0 at the committed `beta` and fails if it is outside the target by more than 3 standard errors, so the committed numbers can't silently drift from the script.
+- A test re-measures R0 at the committed `beta` on fresh seeds and fails if it is outside the target by more than 3 standard errors (the fresh measurement's and the calibration's combined, since both are noisy), so the committed numbers can't silently drift from the script.
 - `herdCoverage(disease)` is a pure function in config returning `{ coverage: (1 - 1/R0) / fullEfficacy, reachable: coverage <= 1 }`. The UI only displays it.
 
 ### 6.10 Citations
@@ -145,6 +159,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Mortality can be high (tens of percent). The model keeps one simple rule set: deceased dots never infect. Real exceptions (e.g. Ebola spreading at funerals) are named in plain words on the About page, not modelled.
 - Wording must stay true. The lesson is "spreads less far", never "harmless": the About page notes that such diseases still cause deadly outbreaks where care is poor.
 - Eradicated diseases start with today's reality (almost no one vaccinated against smallpox), which is itself a what-if worth showing.
+- COVID-19 is required, not just an example. It is also the validation case: lesson tests 12 and 13 use the UK preset with real COVID-19 numbers.
 
 ## 7. Engine API (all that Svelte sees)
 ```ts
@@ -176,6 +191,7 @@ Telemetry: `{ day, regions: [{ id, counts per colour, overloaded, capacity, lock
 ```
 src/lib/sim/     constants.ts rng.ts types.ts agents.ts grid.ts disease.ts movement.ts transit.ts routes.ts geography.ts interventions.ts telemetry.ts render.ts engine.ts camera.ts
 src/lib/config/  diseases.ts diseases.generated.ts scenarios.ts realData.generated.json citations.ts
+                 behaviour.ts herd.ts healthPolicy.ts behaviourPresets.ts countryProfiles.generated.json
 src/lib/ui/      SimCanvas.svelte RegionCard.svelte TopBar.svelte SetupPanel.svelte Legend.svelte Charts.svelte ImpactPanel.svelte
 src/routes/      +page.svelte (ssr off), about/+page.svelte
 scripts/         calibrate.ts fetch-data.ts
@@ -199,15 +215,17 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
   9. Every curated start seed yields the microcosm: island plus mainland, one ferry-width strait, 3 cities in the start view.
   10. Deadly but fast (e.g. Ebola) versus measles, same starting city, flights on: the deadly disease reaches fewer other regions in at least 80% of seeds.
   11. Every disease in the catalogue passes the R0 re-measure test from 6.9.
+  12. COVID-19 with the UK preset and no interventions overloads hospitals.
+  13. COVID-19 with the UK preset: an early lockdown lowers the hospital overload peak.
 - Test time budget: the full suite must stay under 5 minutes in CI. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
 - If a lesson test fails, fix the model or the calibration. Never loosen a threshold without updating this file and telling Alex.
 
 ## 11. Build order (one PR per step)
 1. Headless engine: constants, rng, agents, grid, disease, in-region movement, calibration script, citations file, determinism, speed and herd-immunity tests; a bare canvas page to watch it.
 1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2.
-2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards, legend, charts.
-3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; lesson tests 2 to 6.
-4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import); lesson test 7.
+2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card's live healthcare and behaviour sliders, 4.2), legend, charts.
+3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; engine hooks for per-region compliance and live capacity changes; lesson tests 2 to 6, 12 and 13.
+4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets and "Similar to"); lesson test 7.
 5. Impact panel, About page with full citations, polish, deploy.
 
 ## 12. Decisions that change the original spec
@@ -221,3 +239,4 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Vaccines are all-or-nothing using each disease's published efficacy (the spec had green dots never catching it and partial cutting the chance by 60%). Partly vaccinated dots that catch it are ill half as long and never die. Alex chose real vaccine figures over simplified ones (7 Oct).
 - Regions use their own spatial grids instead of one whole-world grid, and disc size comes from dot count and sim density (7 Oct, after the step 1 review).
 - Hospital capacity comes from real beds per 1,000 people and normal occupancy, and overload counts only cases that need a bed (7 Oct).
+- Every behaviour and healthcare number is a per-population slider starting from a real-world preset, with a "Similar to" country label (Alex, 7 Oct).

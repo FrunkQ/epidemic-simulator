@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { CITATIONS } from '../../src/lib/config/citations';
 import { DISEASES } from '../../src/lib/config/diseases';
-import { derivedKeys } from '../../src/lib/config/herd';
+import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
 import type { DiseaseId, Sourced } from '../../src/lib/sim/types';
 
 /** Every research-backed config object, keyed by the prefix citations use in usedFor. */
 const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR };
 /** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'blurb']);
+const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
 
 function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;
@@ -54,7 +54,8 @@ describe('citations', () => {
 	it('only names config keys that exist in usedFor', () => {
 		const keys = new Set([
 			...sourced.map((n) => n.key),
-			...derivedKeys(Object.keys(DISEASES) as DiseaseId[])
+			...derivedKeys(Object.keys(DISEASES) as DiseaseId[]),
+			...aboutKeys(Object.keys(DISEASES) as DiseaseId[])
 		]);
 		const unknown = CITATIONS.flatMap((c) =>
 			c.usedFor.filter((u) => !keys.has(u)).map((u) => `${c.id} -> ${u}`)
@@ -88,17 +89,17 @@ describe('citations', () => {
 		}
 	});
 
-	it('labels COVID-era sources the same way', () => {
-		const covid = CITATIONS.filter(
-			(c) => /covid/i.test(c.context) || c.usedFor.some((u) => u.startsWith('behaviour.lockdown'))
-		);
-		expect(covid.length).toBeGreaterThan(0);
-		for (const c of covid) expect(c.context, c.id).toBe('COVID-19 era');
+	it('labels the behaviour research from COVID-19 the same way', () => {
+		const behaviour = CITATIONS.filter((c) => c.usedFor.some((u) => u.startsWith('behaviour.lockdown')));
+		expect(behaviour.length).toBeGreaterThan(0);
+		for (const c of behaviour) expect(c.context, c.id).toBe('COVID-19 era');
 	});
 
-	it('uses COVID-era research for behaviour only, never for disease numbers', () => {
+	it('uses COVID-era research for behaviour and COVID-19 itself, never for other diseases', () => {
 		const misused = CITATIONS.filter(
-			(c) => c.context === 'COVID-19 era' && c.usedFor.some((u) => !u.startsWith('behaviour.'))
+			(c) =>
+				c.context === 'COVID-19 era' &&
+				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
 		).map((c) => c.id);
 		expect(misused).toEqual([]);
 	});
