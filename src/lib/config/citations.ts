@@ -146,17 +146,27 @@ export const CITATIONS: Citation[] = [
 			'measles.illDays',
 			'measles.partialEfficacy',
 			'measles.fullEfficacy',
-			'measles.waningDays'
+			'measles.waningDays',
+			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.partial.infection',
+			'measles.vaccines.MMR.seriousPer100kDoses',
+			'measles.vaccines.MMR.deathsPer100kDoses',
+			'mumps.vaccines.MMR.seriousPer100kDoses',
+			'mumps.vaccines.MMR.deathsPer100kDoses',
+			'rubella.vaccines.MMR.seriousPer100kDoses',
+			'rubella.vaccines.MMR.deathsPer100kDoses'
 		],
 		quote:
-			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong',
-		location: 'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024)',
-		why: 'CDC reference text, read directly.',
+			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong … MMR vaccine is associated with a very small risk of febrile seizures; approximately one case for every 3,000 to 4,000 doses of MMR vaccine administered.',
+		location:
+			'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024); Vaccine Safety (febrile seizures)',
+		why: 'CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in 3,000 to 4,000 doses = 25 to 33 per 100,000 doses, stored as 30. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. The page gives no rate of deaths caused by the vaccine, so the death rate is null.',
 		context: 'US; seroconversion data.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Vaccine Safety sentence re-opened in a separate pass and confirmed verbatim (last reviewed 24 April 2024).'
 		}
 	},
 	{
@@ -247,7 +257,12 @@ export const CITATIONS: Citation[] = [
 		year: 2011,
 		evidence: 'review',
 		doi: '10.1093/infdis/jir102',
-		usedFor: ['measles.partialEfficacy', 'measles.fullEfficacy'],
+		usedFor: [
+			'measles.partialEfficacy',
+			'measles.fullEfficacy',
+			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.partial.infection'
+		],
 		quote: '≥12 months, the median VE was … 92.0% … For 2 doses … the median VE was 94.1%',
 		location: 'abstract',
 		why: 'Review of 70 papers.',
@@ -266,7 +281,12 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1002/14651858.cd004407.pub4',
-		usedFor: ['measles.partialEfficacy', 'measles.fullEfficacy'],
+		usedFor: [
+			'measles.partialEfficacy',
+			'measles.fullEfficacy',
+			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.partial.infection'
+		],
 		quote: '95% after one dose ... and 96% after two doses',
 		location: 'abstract',
 		why: 'Cochrane review; added support.',
@@ -285,7 +305,7 @@ export const CITATIONS: Citation[] = [
 		year: 2025,
 		evidence: 'study',
 		doi: '10.2807/1560-7917.es.2025.30.46.2500130',
-		usedFor: ['measles.fullEfficacy'],
+		usedFor: ['measles.fullEfficacy', 'measles.vaccines.MMR.infection'],
 		quote: 'VE was 96.4%',
 		location: 'abstract',
 		why: 'Single outbreak; support only.',
@@ -305,7 +325,7 @@ export const CITATIONS: Citation[] = [
 		year: 2026,
 		evidence: 'study',
 		doi: '10.1093/ije/dyag083',
-		usedFor: ['measles.fullEfficacy', 'measles.waningDays'],
+		usedFor: ['measles.fullEfficacy', 'measles.waningDays', 'measles.vaccines.MMR.infection'],
 		quote: 'remained high after 15 years 99.7%',
 		location: 'abstract',
 		why: 'Large cohort.',
@@ -389,20 +409,27 @@ export const CITATIONS: Citation[] = [
 			'polio.illDays',
 			'polio.asymptomaticFraction',
 			'polio.mortality',
-			'polio.fullEfficacy',
 			'polio.waningDays',
-			'polio.hospitalisedShare'
+			'polio.hospitalisedShare',
+			'polio.vaccines.IPV.severe',
+			'polio.vaccines.IPV.seriousPer100kDoses',
+			'polio.vaccines.IPV.deathsPer100kDoses',
+			'polio.vaccines.OPV.severe',
+			'polio.vaccines.OPV.partial.severe',
+			'polio.vaccines.OPV.seriousPer100kDoses',
+			'polio.vaccines.OPV.deathsPer100kDoses'
 		],
 		quote:
-			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series',
+			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
 		location:
-			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024)',
-		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases.',
+			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024); OPV vaccine efficacy; Vaccine-associated paralytic polio; IPV safety',
+		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per 2 to 3 million doses = 0.033 to 0.05 per 100,000 doses, stored as 0.04; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). No death rate is given for either, so both death rates are null.',
 		context: 'US; children.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Vaccine sentences re-opened in separate passes: the IPV 99% sentence, the single-dose tOPV sentence, the VAPP sentence and the all-IPV safety sentence returned verbatim; the OPV three-dose phrase is given as a short fragment because only one read returned it.'
 		}
 	},
 	{
@@ -595,11 +622,12 @@ export const CITATIONS: Citation[] = [
 		year: 2014,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jit601',
-		usedFor: ['polio.partialEfficacy', 'polio.fullEfficacy'],
-		quote: 'One full dose of intramuscular IPV seroconverted 33%, 41%, and 47%',
-		location: 'abstract',
-		why: 'Systematic review.',
-		context: 'Infants.',
+		usedFor: ['polio.vaccines.IPV.partial.severe'],
+		quote:
+			'One full dose of intramuscular IPV seroconverted 33%, 41%, and 47% of infants against serotypes 1, 2, and 3 on average, whereas 2 full doses seroconverted 79%, 80%, and 90%, respectively. … Limited data from case-control studies indicate clinical efficacy equivalent to the proportion seroconverting.',
+		location: 'Abstract, Results',
+		why: 'One IPV dose, a started course: the mean of 33%, 41% and 47% = 0.40 protection against paralysis, since clinical efficacy about equals the share seroconverting.',
+		context: '20 study arms from 12 articles; infants. Seroconversion rises with age at the dose.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -615,10 +643,10 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'study',
 		doi: '10.1016/s1473-3099(23)00688-6',
-		usedFor: ['polio.partialEfficacy'],
+		usedFor: ['polio.vaccines.IPV.partial.severe'],
 		quote: 'effectiveness of one IPV dose was 43%',
 		location: 'abstract',
-		why: 'Large case-control study.',
+		why: "Context for one IPV dose against paralysis: 43% here agrees with Grassly 2014's pooled 0.40, which sets the value.",
 		context: 'Nigeria; 89% with community controls.',
 		verified: {
 			by: 'independent verification pass',
@@ -628,22 +656,30 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'hird2012-ipv-mucosal-review',
-		authors: 'Hird TR, et al.',
+		authors: 'Hird TR, Grassly NC',
 		title:
 			'Systematic Review of Mucosal Immunity Induced by Oral and Inactivated Poliovirus Vaccines against Virus Shedding following Oral Poliovirus Challenge',
 		journal: 'PLoS Pathogens',
 		year: 2012,
 		evidence: 'systematic-review',
 		doi: '10.1371/journal.ppat.1002599',
-		usedFor: ['polio.fullEfficacy'],
-		quote: 'IPV provided no protection against shedding',
+		usedFor: [
+			'polio.fullEfficacy',
+			'polio.partialEfficacy',
+			'polio.vaccines.IPV.infection',
+			'polio.vaccines.IPV.partial.infection',
+			'polio.vaccines.OPV.infection'
+		],
+		quote:
+			'Individuals vaccinated with OPV were protected against infection and shedding of poliovirus in stool samples collected after challenge compared with unvaccinated individuals (summary odds ratio [OR] for shedding 0.13 (95% confidence interval [CI] 0.08–0.24)). In contrast, IPV provided no protection against shedding compared with unvaccinated individuals (summary OR 0.81 [95% CI 0.59–1.11])',
 		location: 'abstract',
-		why: 'Systematic review.',
-		context: 'Caveat: efficacy is against paralysis, not shedding.',
+		why: 'OPV: 1 - OR 0.13 = 0.87 protection against infection (an odds ratio overstates the risk reduction a little when shedding is common). IPV: 1 - OR 0.81 = 0.19, but its 95% CI (0.59-1.11) includes no effect, so it is not statistically significant and is stored as 0, for a full or a started course. IPV cuts shedding from the throat more than from the gut; this model has no route of spread (throat or gut), so it uses this gut-shedding result, and an IPV-vaccinated person can still catch and pass on polio while being protected from paralysis.',
+		context: '31 stool-shedding challenge studies through May 2011, mostly trivalent OPV schedules.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'PLoS article page confirms title, authors Hird TR and Grassly NC, year 2012, and both quoted sentences verbatim; no correction or retraction notice.'
 		}
 	},
 	{
@@ -933,7 +969,12 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s1473-3099(16)00129-8',
-		usedFor: ['flu.partialEfficacy', 'flu.fullEfficacy'],
+		usedFor: [
+			'flu.partialEfficacy',
+			'flu.fullEfficacy',
+			'flu.vaccines.inactivated.infection',
+			'flu.vaccines.inactivated.partial.infection'
+		],
 		quote: 'Pooled VE was 33% (95% CI 26-39; I(2)=44·4) for H3N2',
 		location: 'abstract',
 		why: 'Meta-analysis.',
@@ -953,11 +994,12 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.vaccine.2024.02.059',
-		usedFor: ['flu.fullEfficacy'],
-		quote: 'pooled IVE was 41.4 %',
+		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.infection'],
+		quote: 'The pooled IVE was 41.4 % (95 % CI: 39.2-43.5 %) against any influenza',
 		location: 'abstract',
-		why: 'Largest recent meta-analysis.',
-		context: '191 studies, 2017-2022.',
+		why: 'Largest recent meta-analysis: 0.414 is real-world protection against any flu, all ages, in a typical season.',
+		context:
+			'191 test-negative studies, 2017-2022. Same abstract: 48.6% in children, 36.7% at 18-64, 30.6% at 65+.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -973,7 +1015,7 @@ export const CITATIONS: Citation[] = [
 		year: 2018,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jix632',
-		usedFor: ['flu.partialEfficacy', 'flu.waningDays'],
+		usedFor: ['flu.partialEfficacy', 'flu.waningDays', 'flu.vaccines.inactivated.partial.infection'],
 		quote: 'A/H3 (change in VE, -33',
 		location: 'abstract',
 		why: 'Meta-analysis.',
@@ -993,7 +1035,7 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'study',
 		doi: '10.3390/vaccines10060888',
-		usedFor: ['flu.partialEfficacy', 'flu.waningDays'],
+		usedFor: ['flu.partialEfficacy', 'flu.waningDays', 'flu.vaccines.inactivated.partial.infection'],
 		quote: 'wanes within 180 days after 14 days of influenza vaccination',
 		location: 'abstract',
 		why: 'Large multi-season study; support. Provisional: a sourced half-life is being searched before step 3.',
@@ -1150,7 +1192,9 @@ export const CITATIONS: Citation[] = [
 			'chickenpox.fullEfficacy',
 			'chickenpox.partialEfficacy',
 			'chickenpox.hospitalisedShare',
-			'chickenpox.about'
+			'chickenpox.about',
+			'chickenpox.vaccines.varicella.infection',
+			'chickenpox.vaccines.varicella.partial.infection'
 		],
 		quote:
 			'The period of communicability extends from 1 to 2 days before the onset of rash until all lesions have formed crusts.',
@@ -1243,7 +1287,13 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/smallpox/vaccines/index.html',
-		usedFor: ['smallpox.fullEfficacy', 'smallpox.partialEfficacy', 'smallpox.coverageToday'],
+		usedFor: [
+			'smallpox.fullEfficacy',
+			'smallpox.partialEfficacy',
+			'smallpox.coverageToday',
+			'smallpox.vaccines.vaccinia.infection',
+			'smallpox.vaccines.vaccinia.partial.infection'
+		],
 		quote:
 			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
 		location: 'Effectiveness section',
@@ -1294,7 +1344,9 @@ export const CITATIONS: Citation[] = [
 			'mumps.fullEfficacy',
 			'mumps.partialEfficacy',
 			'mumps.hospitalisedShare',
-			'mumps.waningDays'
+			'mumps.waningDays',
+			'mumps.vaccines.MMR.infection',
+			'mumps.vaccines.MMR.partial.infection'
 		],
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
@@ -1348,12 +1400,17 @@ export const CITATIONS: Citation[] = [
 			'pertussis.waningDays',
 			'pertussis.fullEfficacy',
 			'pertussis.partialEfficacy',
-			'pertussis.hospitalisedShare'
+			'pertussis.hospitalisedShare',
+			'pertussis.vaccines.DTaP.infection',
+			'pertussis.vaccines.DTaP.partial.infection',
+			'pertussis.vaccines.DTaP.seriousPer100kDoses',
+			'pertussis.vaccines.DTaP.deathsPer100kDoses'
 		],
 		quote:
-			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms',
-		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy',
-		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). waningDays=12 years is a provisional pick (a sourced half-life is being searched before step 3) anchored on 'Immunity following B. pertussis infection is not permanent.' fullEfficacy=0.85 from 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%'; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify.",
+			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms … Rates of these moderate or severe systemic reactions vary by symptom and vaccine but generally occur in fewer than 1 in 10,000 doses.',
+		location:
+			'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy; Vaccine Safety (DTaP adverse reactions)',
+		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). waningDays=12 years is a provisional pick (a sourced half-life is being searched before step 3) anchored on 'Immunity following B. pertussis infection is not permanent.' fullEfficacy=0.85 from 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%'; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in 10,000 doses = under 10 per 100,000 doses, stored as the upper bound 10 (not all need hospital care). No death is stated, so the death rate is null.",
 		context: 'Official US reference text; page last reviewed October 19, 2022.',
 		verified: {
 			by: 'independent verification pass',
@@ -1506,29 +1563,6 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
-		id: 'mmwr-2025-covid-vaccine-effectiveness',
-		authors: 'Link-Gelles R and CDC COVID-19 Vaccine Effectiveness Collaborators',
-		title:
-			'Interim Estimates of 2024-2025 COVID-19 Vaccine Effectiveness Among Adults Aged >=18 Years - VISION and IVY Networks, September 2024-January 2025',
-		journal: 'MMWR Morbidity and Mortality Weekly Report',
-		year: 2025,
-		evidence: 'official',
-		publisher: 'CDC',
-		url: 'https://www.cdc.gov/mmwr/volumes/74/wr/mm7406a1.htm',
-		usedFor: ['covid19.fullEfficacy', 'covid19.partialEfficacy'],
-		quote: 'VE against COVID-19-associated ED/UC visits was 33% (95% CI = 28%-38%)',
-		location: 'Results / Summary',
-		why: "fullEfficacy=0.35 is the quoted 33% against emergency-department and urgent-care visits, rounded; the report's hospitalisation estimates in adults 65 and over were 45% (95% CI 36-53) and 46% (95% CI 26-60), so 0.35 is a reasonable all-ages figure for 'not getting ill'. partialEfficacy=0.20 is my own pick for someone whose last dose is out of date, since these estimates all cover the first 7-119 days after vaccination.",
-		context:
-			'CDC interim vaccine-effectiveness estimates from two US surveillance networks for the current (2024-2025 formula) COVID-19 vaccine; MMWR 2025;74(6):73-82.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true,
-			note: 'Re-opened: MMWR 2025;74(6):73-82, first author Ruth Link-Gelles; the 33% ED/UC estimate and the 45%/46% hospitalisation estimates confirmed verbatim; no retraction.'
-		}
-	},
-	{
 		id: 'who-ebola-factsheet',
 		authors: 'World Health Organization',
 		title: 'Ebola disease (fact sheet)',
@@ -1605,7 +1639,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/vhf/ebola/clinicians/vaccine',
-		usedFor: ['ebola.fullEfficacy', 'ebola.partialEfficacy'],
+		usedFor: [
+			'ebola.fullEfficacy',
+			'ebola.partialEfficacy',
+			'ebola.vaccines.rVSV-ZEBOV.infection',
+			'ebola.vaccines.rVSV-ZEBOV.partial.infection'
+		],
 		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
 		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
 		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. partialEfficacy=0.0 follows from the page's statement that ERVEBO is approved 'as a single dose administration' — there is no incomplete course to model. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
@@ -1686,7 +1725,9 @@ export const CITATIONS: Citation[] = [
 			'rubella.fullEfficacy',
 			'rubella.partialEfficacy',
 			'rubella.hospitalisedShare',
-			'rubella.about'
+			'rubella.about',
+			'rubella.vaccines.MMR.infection',
+			'rubella.vaccines.MMR.partial.infection'
 		],
 		quote:
 			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
@@ -2779,6 +2820,455 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Crossref confirms title, authors, journal, volume 22 article 311, 29 March 2022, with no correction or retraction; PMC metadata (PMC8962942) is_retracted false. Full text and supplement Table S1 read from the PMC open-data bucket.'
+		}
+	},
+	{
+		id: 'cheng-2021-phase3-ma',
+		authors: 'Cheng H, Peng Z, Luo W, Si S, Mo M, Zhou H, Xin X, Liu H, Yu Y',
+		title: 'Efficacy and Safety of COVID-19 Vaccines in Phase III Trials: A Meta-Analysis',
+		journal: 'Vaccines',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.3390/vaccines9060582',
+		url: 'https://www.mdpi.com/2076-393X/9/6/582',
+		usedFor: ['covid19.fullEfficacy', 'covid19.vaccines.mRNA-original.infection'],
+		quote: 'the mRNA vaccine (RR = 0.05, 95% CI: 0.03–0.09) was the most effective against COVID-19',
+		location: 'Abstract; repeated in Results 3.2',
+		why: '1 - RR 0.05 = 0.95 for two mRNA doses against COVID-19 in phase III trials, which ran against the original 2020 virus that this disease entry models. Kow 2021 finds the same 95% in real-world use.',
+		context:
+			'Eight phase III placebo-controlled trials, 2020; outcome is symptomatic laboratory-confirmed COVID-19.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, nine authors and year 2021 match, no update/retraction fields. Quote confirmed verbatim on the MDPI article page; no correction notice seen.'
+		}
+	},
+	{
+		id: 'kow-2021-bnt-ma',
+		authors: 'Kow CS, Hasan SS',
+		title:
+			'Real-world effectiveness of BNT162b2 mRNA vaccine: a meta-analysis of large observational studies',
+		journal: 'Inflammopharmacology',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1007/s10787-021-00839-2',
+		usedFor: [
+			'covid19.fullEfficacy',
+			'covid19.partialEfficacy',
+			'covid19.vaccines.mRNA-original.infection',
+			'covid19.vaccines.mRNA-original.partial.infection'
+		],
+		quote:
+			'The meta-analysis revealed significant protective effect against RT-PCR confirmed COVID-19 ≥ 14 days after the first dose, with vaccine effectiveness of 53% (95% confidence interval 32-68%), and ≥ 7 days after the second dose, with vaccine effectiveness of 95% (95% confidence interval: 96-97%).',
+		location: 'Abstract',
+		why: 'One dose (14 days or more after it) prevents 0.53 of infections; two doses 0.95 in real-world use, matching the phase III trials (Cheng 2021).',
+		context:
+			"Large observational studies from early 2021 (original strain and Alpha). The abstract's interval for 95% (96-97%) is printed as published.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, authors Kow and Hasan, Inflammopharmacology, 2021 match; no update, retraction or erratum fields. Full-text excerpt contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'zheng-2022-covid-ve-ma',
+		authors: 'Zheng C, Shao W, Chen X, Zhang B, Wang G, Zhang W',
+		title: 'Real-world effectiveness of COVID-19 vaccines: a literature review and meta-analysis',
+		journal: 'International Journal of Infectious Diseases',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.ijid.2021.11.009',
+		usedFor: ['covid19.vaccines.mRNA-original.severe'],
+		quote:
+			'For the Pfizer-BioNTech vaccine, a total of 23 articles reported the VE for full vaccination. The summary VE was 91.2% (95% CI 87.9–94.5%) against SARS-CoV-2 infection ..., 97.6% (95% CI 96.5–98.7%) against COVID-19-related hospitalization, and 98.1% ...',
+		location: 'Results, vaccine-brand subgroup paragraph',
+		why: "A full mRNA course prevents 0.976 of COVID-19 hospital admissions, counted in everyone vaccinated (not only breakthrough cases), so it fits the severe slot directly. Rahmani 2022's two-dose figure (0.88) is not used because it is below the 0.95 infection figure, which would make breakthrough cases more severe than in the unvaccinated.",
+		context:
+			'51 real-world studies published Aug 2020 - Oct 2021: a mix of the original strain, Alpha and Delta. Published online 17 Nov 2021, in print Jan 2022 (vol 114, pp 252-260).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref not reachable (rate limit). The DOI, title and journal are confirmed by the PMC full text (PMC8595975, PMID 34800687), which also gives the six authors and contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'rahmani-k-2022-covid-ve-ma',
+		authors:
+			'Rahmani K, Shavaleh R, Forouhi M, Disfani HF, Kamandi M, Oskooi RK, Foogerdi M, Soltani M, Rahchamani M, Mohaddespour M, Dianatinasab M',
+		title:
+			'The effectiveness of COVID-19 vaccines in reducing the incidence, hospitalization, and mortality from COVID-19: A systematic review and meta-analysis',
+		journal: 'Frontiers in Public Health',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.3389/fpubh.2022.873596',
+		url: 'https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2022.873596/full',
+		usedFor: [
+			'covid19.vaccines.mRNA-original.partial.severe',
+			'covid19.vaccines.adenovirus.severe',
+			'covid19.vaccines.adenovirus.partial.infection',
+			'covid19.vaccines.adenovirus.partial.severe'
+		],
+		quote:
+			'and that of ChAdOx1 vaccine was 51% (pooled OR = 0.49 95% CI: 0.41–0.59) … the effectiveness of BNT162b2 mRNA vaccine was 53% (OR = 0.47, 95% CI: 0.36–0.62), that of mRNA-1273 was 73% (OR = 0.27, 95% CI: 0.21–0.33), and the effectiveness of ChAdOx1 vaccine was about 62% (OR = 0.38, 95% CI: 0.23–0.62) … BNT162b2 mRNA, MRNA-1273, and ChAdOx1 vaccines had the effectiveness of 88% (OR = 0.12, 95% CI: 0.10–0.15), 91% (OR = 0.09, 95% CI: 0.07–0.10), and 91% (OR = 0.09, 95% CI: 0.02–0.35), respectively',
+		location:
+			'Results: infection after the first dose (Figure 2); hospitalisation after the first dose (Figure 5); hospitalisation after the second dose (Figure 11)',
+		why: 'Per-product figures from one meta-analysis. One dose of ChAdOx1 prevents 0.51 of infections and 0.62 of hospital admissions; two doses 0.91 of admissions. One dose of BNT162b2 prevents 0.53 of admissions. Hospital figures count everyone vaccinated, so they fit the severe slot.',
+		context:
+			'54 studies published up to 15 Oct 2021. The review gives no variant split; its pooled studies are mostly from the UK in early 2021, when Alpha dominated, which is inferred from the study dates rather than stated.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, all 11 authors, Frontiers in Public Health, 2022 match; only a preprint relation, no erratum or retraction. Full-text excerpt contains the first-dose and second-dose per-vaccine hospitalisation sentences verbatim.'
+		}
+	},
+	{
+		id: 'voysey-2021-chadox1-pooled',
+		authors: 'Voysey M, Costa Clemens SA, Madhi SA, Weckx LY, Folegatti PM, et al.',
+		title:
+			'Single-dose administration and the influence of the timing of the booster dose on immunogenicity and efficacy of ChAdOx1 nCoV-19 (AZD1222) vaccine: a pooled analysis of four randomised trials',
+		journal: 'The Lancet',
+		year: 2021,
+		evidence: 'study',
+		noReviewReason:
+			'A pooled analysis of all four ChAdOx1 randomised trials, not a systematic review. The meta-analyses with ChAdOx1-specific numbers (Rahmani 2022, Zheng 2022) pool 2021 real-world studies dominated by Alpha and Delta, so none is restricted to the original strain.',
+		doi: '10.1016/S0140-6736(21)00432-3',
+		usedFor: ['covid19.vaccines.adenovirus.infection'],
+		quote:
+			'Overall vaccine efficacy more than 14 days after the second dose was 66·7% (95% CI 57·4-74·0), with 84 (1·0%) cases in the 8597 participants in the ChAdOx1 nCoV-19 group and 248 (2·9%) in the 8581 participants in the control group.',
+		location: 'Summary, Findings',
+		why: 'Two doses of ChAdOx1 prevent 0.667 of symptomatic COVID-19 against the original strain. Efficacy depends on the gap between doses: 55.1% under 6 weeks, 81.3% at 12 weeks or more.',
+		context: 'Four randomised trials (UK, Brazil, South Africa), Apr-Dec 2020.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, first five authors, The Lancet, 2021 match; no update or retraction fields. Full text read from PMC (PMC7894131, same DOI) contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'yegorov-2025-flu-severe-ma',
+		authors:
+			'Yegorov S, Patel OD, Sharma H, Khan T, Gupta R, Yao M, Sritharan A, Silverman N, Pullenayegum E, Miller MS, Loeb M',
+		title:
+			'Effectiveness of influenza vaccination to prevent severe disease: a systematic review and meta-analysis of test-negative design studies',
+		journal: 'Clinical Microbiology and Infection',
+		year: 2025,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.cmi.2025.09.023',
+		usedFor: ['flu.vaccines.inactivated.severe'],
+		quote:
+			'Pooled IVE was 42% (95% CI: 39-44) against influenza-associated hospitalisation (very low certainty)',
+		location: 'Abstract, Results',
+		why: 'Flu vaccine prevents 0.42 of flu hospital admissions, all ages, counted in everyone vaccinated; a real-world figure on the same scale as the 0.414 infection figure (Guo 2024).',
+		context:
+			'165 test-negative studies to Sept 2024; adults and children. Higher in seasons with a good vaccine match, but the by-match figure was not in the accessible text. Online 2025, in print Feb 2026.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, 11 authors and journal match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'rondy-2017-flu-hosp-ma',
+		authors: 'Rondy M, El Omeiri N, Thompson MG, Levêque A, Moren A, Sullivan SG',
+		title:
+			'Effectiveness of influenza vaccines in preventing severe influenza illness among adults: A systematic review and meta-analysis of test-negative design case-control studies',
+		journal: 'Journal of Infection',
+		year: 2017,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.jinf.2017.09.010',
+		usedFor: ['flu.vaccines.inactivated.severe'],
+		quote:
+			'Between 2010-11 and 2014-15, the pooled seasonal IVE was 41% (95%CI:34;48) for any influenza (51% (95%CI:44;58) among people aged 18-64y and 37% (95%CI:30;44) among ≥65 years).',
+		location: 'Abstract, Results',
+		why: "An independent pooled estimate against flu hospital admission in adults (0.41) that agrees with Yegorov's 0.42.",
+		context: '30 hospital test-negative studies, adults, 2010-11 to 2014-15.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, six authors, Journal of Infection, 2017 match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'marin-2016-varicella-ma',
+		authors: 'Marin M, Marti M, Kambhampati A, Jeram SM, Seward JF',
+		title: 'Global Varicella Vaccine Effectiveness: A Meta-analysis',
+		journal: 'Pediatrics',
+		year: 2016,
+		evidence: 'meta-analysis',
+		doi: '10.1542/peds.2015-3741',
+		usedFor: ['chickenpox.vaccines.varicella.partial.severe'],
+		quote:
+			'The pooled 1-dose VE was 81% (95% confidence interval [CI]: 78%-84%) against all varicella and 98% (95% CI: 97%-99%) against moderate/severe varicella with no significant association between VE and vaccine type or study design (P > .1).',
+		location: 'Abstract, Results',
+		why: 'One dose, a partial course of the two-dose schedule, prevents 0.98 of moderate or severe chickenpox, counted in everyone vaccinated. Moderate cases are included, so this is if anything a low estimate of protection against the severe illness the model uses. No pooled two-dose severe figure exists, so the full course has none.',
+		context: 'Post-licensure studies 1995-2014, healthy children.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, five authors, Pediatrics, 2016 match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'oster-2022-mrna-myocarditis',
+		authors: 'Oster ME, Shay DK, Su JR, et al.',
+		title:
+			'Myocarditis Cases Reported After mRNA-Based COVID-19 Vaccination in the US From December 2020 to August 2021',
+		journal: 'JAMA',
+		year: 2022,
+		evidence: 'study',
+		doi: '10.1001/jama.2021.24110',
+		usedFor: ['covid19.vaccines.mRNA-original.seriousPer100kDoses'],
+		quote:
+			'The rates of myocarditis were highest after the second vaccination dose in adolescent males aged 12 to 15 years (70.7 per million doses of the BNT162b2 vaccine), in adolescent males aged 16 to 17 years (105.9 per million doses of the BNT162b2 vaccine), and in young men aged 18 to 24 years (52.4 and 56.3 per million doses of the BNT162b2 vaccine and the mRNA-1273 vaccine, respectively).',
+		location:
+			"Abstract, Results; also 'Among 192 405 448 persons receiving a total of 354 100 845 mRNA-based COVID-19 vaccines ... 1626 of these reports met the case definition of myocarditis' and 'Approximately 96% of persons (784/813) were hospitalized'",
+		why: 'Worked out: 1,626 myocarditis cases in 354,100,845 doses = 4.59 per million = 0.459 per 100,000 doses. Adding anaphylaxis (about 5 per million = 0.5 per 100,000, CDC) gives 0.96 serious events per 100,000 doses. The rate is far higher in young men after dose 2 (105.9 per million = 10.6 per 100,000 at 16-17).',
+		context:
+			'US passive reports (VAERS), Dec 2020 - Aug 2021, within 7 days of a dose; likely under-counted.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors, JAMA 2022, no retraction relation; abstract quote re-read verbatim in a second search. Full text blocked by CAPTCHA.'
+		}
+	},
+	{
+		id: 'cdc-covid-vaccine-safety-2025',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Coronavirus Disease 2019 (COVID-19) Vaccine Safety',
+		journal: 'CDC Vaccine Safety',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/vaccine-safety/vaccines/covid-19.html',
+		usedFor: [
+			'covid19.vaccines.mRNA-original.seriousPer100kDoses',
+			'covid19.vaccines.mRNA-original.deathsPer100kDoses'
+		],
+		quote:
+			'Anaphylaxis occurs at a rate of approximately 5 cases per one million vaccine doses administered. … COVID-19 vaccines do not increase the risk of death from non-COVID causes when compared to those who have not been vaccinated.',
+		location: 'Sections on anaphylaxis and deaths (last updated 31 January 2025)',
+		why: 'Anaphylaxis 5 per million = 0.5 per 100,000 doses, added to myocarditis (Oster 2022). No death is established as caused by the mRNA vaccines, so the death rate is null.',
+		context:
+			"US official page; also: 'most patients (80%) were considered by their cardiologist or other healthcare provider to have either fully or probably fully recovered' from myocarditis at 3 months or more.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; all quoted strings confirmed verbatim.'
+		}
+	},
+	{
+		id: 'xu-2021-covid-vaccine-mortality',
+		authors:
+			'Xu S, Huang R, Sy LS, Glenn SC, Ryan DS, Morrissette K, Shay DK, Vazquez-Benitez G, Glanz JM, Klein NP, McClure D, Liles EG, Weintraub ES, Tseng HF, Qian L',
+		title:
+			'COVID-19 Vaccination and Non-COVID-19 Mortality Risk — Seven Integrated Health Care Organizations, United States, December 14, 2020-July 31, 2021',
+		journal: 'MMWR Morbidity and Mortality Weekly Report',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/mmwr/volumes/70/wr/mm7043e2.htm',
+		usedFor: ['covid19.vaccines.mRNA-original.deathsPer100kDoses'],
+		quote: 'There is no increased risk for mortality among COVID-19 vaccine recipients.',
+		location:
+			"Summary box; also 'COVID-19 vaccine recipients had lower rates of non–COVID-19 mortality than did unvaccinated persons after adjusting for age, sex, race and ethnicity, and study site.'",
+		why: 'Deaths among vaccinated people were not above those in the unvaccinated, so no death rate caused by the vaccine is established: null.',
+		context:
+			'US Vaccine Safety Datalink; MMWR 70(43):1520-1524. Covers Pfizer, Moderna and Janssen. A healthy-vaccinee effect may partly explain the lower rate.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; both sentences confirmed verbatim; authors and citation confirmed.'
+		}
+	},
+	{
+		id: 'lane-shakir-2022-chadox1-tts',
+		authors: 'Lane S, Shakir S',
+		title:
+			'Assessing Case Fatality on Cases of Thrombosis with Concurrent Thrombocytopenia Following COVID-19 Vaccine AstraZeneca (Vaxzevria) in the United Kingdom: A Review of Spontaneously Reported Data',
+		journal: 'Drug Safety',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis gives per-dose rates of TTS or TTS deaths after ChAdOx1; the UK national reporting data (MHRA Yellow Card) analysed here are the standard source.',
+		doi: '10.1007/s40264-022-01217-9',
+		url: 'https://link.springer.com/article/10.1007/s40264-022-01217-9',
+		usedFor: [
+			'covid19.vaccines.adenovirus.seriousPer100kDoses',
+			'covid19.vaccines.adenovirus.deathsPer100kDoses'
+		],
+		quote:
+			'To 25 May 2022, 443 cases (81 fatal, 18.28%) had been reported in the UK. … The reporting rate of TTS is therefore estimated at 15.74 cases reported per million first doses of Vaxzevria and 2.12 cases of TTS reported per million second doses',
+		location: 'Abstract and Results',
+		why: 'TTS (clots with low platelets) 15.74 per million first doses = 1.574 per 100,000 doses; the first-dose rate is used, the higher of the two (second doses 0.212 per 100,000). Deaths worked out: 15.74 × 18.28% = 2.88 per million first doses = 0.288 per 100,000. These deaths are caused by the vaccine.',
+		context:
+			'UK spontaneous reports to 25 May 2022; Drug Safety 45:1003-1008. Cases were mostly in adults under 60.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; both quotes confirmed. A published correction (doi 10.1007/s40264-022-01233-9, Sept 2022) changes only the Table 2 count for ages 60-69, not the quoted totals. Not retracted.'
+		}
+	},
+	{
+		id: 'cdc-flu-gbs-2024',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Guillain-Barré Syndrome and Flu Vaccine',
+		journal: 'CDC Influenza (Flu)',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/flu/vaccine-safety/guillainbarre.html',
+		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses', 'flu.vaccines.inactivated.deathsPer100kDoses'],
+		quote:
+			'If there is an increased risk of GBS following flu vaccination, it is small, on the order of one to two additional GBS cases per million doses of flu vaccine administered.',
+		location:
+			"Main text; also 'Most people recover fully from GBS, but some people have long-term nerve damage.' and 'In some cases, people have died of GBS, usually from difficulty breathing.'",
+		why: 'GBS 1 to 2 per million doses plus anaphylaxis 1.35 per million (McNeil 2016) = 2.35 to 3.35 per million, about 0.3 per 100,000 doses. The page gives no rate of deaths caused by the vaccine, so the death rate is null.',
+		context:
+			"The risk is stated conditionally ('if there is an increased risk'), so this is an upper estimate. Last updated 17 September 2024.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; quotes confirmed verbatim.'
+		}
+	},
+	{
+		id: 'mcneil-2016-anaphylaxis',
+		authors:
+			'McNeil MM, Weintraub ES, Duffy J, Sukumaran L, Jacobsen SJ, Klein NP, Hambidge SJ, Lee GM, Jackson LA, Irving SA, King JP, Kharbanda EO, Bednarczyk RA, DeStefano F',
+		title: 'Risk of anaphylaxis after vaccination in children and adults',
+		journal: 'Journal of Allergy and Clinical Immunology',
+		year: 2016,
+		evidence: 'study',
+		doi: '10.1016/j.jaci.2015.07.048',
+		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses', 'polio.vaccines.IPV.seriousPer100kDoses'],
+		quote:
+			'The rate of anaphylaxis was 1.31 (95% CI, 0.90-1.84) per million vaccine doses. The incidence did not vary significantly by age, and there was a nonsignificant female predominance. Vaccine-specific rates included 1.35 (95% CI, 0.65-2.47) per million doses for inactivated trivalent influenza vaccine',
+		location: 'Abstract, Results',
+		why: 'Flu: 1.35 per million added to GBS (CDC) gives about 0.3 per 100,000 doses. IPV has no vaccine-specific serious risk (CDC), so the all-vaccine anaphylaxis rate 1.31 per million = 0.131 per 100,000 doses is used.',
+		context:
+			'US Vaccine Safety Datalink 2009-2011, 25.2 million doses, chart-confirmed cases; same across age bands.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors and journal, print year 2016; no update or retraction relation; abstract quote re-read in a second search.'
+		}
+	},
+	{
+		id: 'moro-2022-varicella-vaers',
+		authors: 'Moro PL, et al.',
+		title:
+			'Safety Surveillance of Varicella Vaccines in the Vaccine Adverse Event Reporting System, United States, 2006-2020',
+		journal: 'Journal of Infectious Diseases',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis of serious events after chickenpox vaccine was found; this is the largest US surveillance analysis (132.8 million doses).',
+		doi: '10.1093/infdis/jiac306',
+		usedFor: [
+			'chickenpox.vaccines.varicella.seriousPer100kDoses',
+			'chickenpox.vaccines.varicella.deathsPer100kDoses'
+		],
+		quote:
+			'During 2006-2020, approximately 132.8 million VAR doses were distributed; 40 684 reports were received in VAERS (30.6/100 000 doses distributed), with 4.1% classified as serious (1.3/100 000 doses distributed).',
+		location:
+			"Abstract, Results; also 'AEs associated with evidence of vaccine strain varicella-zoster virus (vVZV) infection included meningitis, encephalitis, herpes zoster, and 6 deaths (all in immunocompromised persons with contraindications for vaccination).'",
+		why: '1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. The 6 vaccine-strain deaths in 132.8 million doses (0.0045 per 100,000) were all in people who should not have had this vaccine, so for recommended use no death is established: null.',
+		context: 'US passive surveillance, 2006-2020.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search confirmed title, first author, journal, year, DOI and quotes. Only the first author is given; no retraction seen.'
+		}
+	},
+	{
+		id: 'miller-2015-deaths-after-vaccination',
+		authors: 'Miller E, et al.',
+		title: 'Deaths following vaccination: What does the evidence show?',
+		journal: 'Vaccine',
+		year: 2015,
+		evidence: 'review',
+		doi: '10.1016/j.vaccine.2015.05.023',
+		usedFor: ['flu.vaccines.inactivated.deathsPer100kDoses', 'polio.vaccines.OPV.deathsPer100kDoses'],
+		quote:
+			'Rare cases where a known or plausible theoretical risk of death following vaccination exists include anaphylaxis, … Guillain-Barré syndrome after inactivated influenza vaccine, … and vaccine-associated paralytic poliomyelitis from oral poliovirus vaccine.',
+		location: 'Abstract',
+		why: 'Names GBS after flu vaccine and paralysis after oral polio vaccine as rare possible causes of death, but gives no per-dose rate, so the death rate stays null with this said plainly rather than shown as 0.',
+		context:
+			'Review by CDC authors; it also warns against reading reports of deaths after vaccination as caused by it.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search confirmed title, first author, journal, year, DOI and quote. Only the first author is given.'
+		}
+	},
+	{
+		id: 'lane-1969-smallpox-complications',
+		authors: 'Lane JM, et al.',
+		title: 'Complications of smallpox vaccination, 1968',
+		journal: 'New England Journal of Medicine',
+		year: 1969,
+		evidence: 'study',
+		noReviewReason:
+			'Routine smallpox vaccination ended before pooled analyses of its complications were made; this 1968 US national survey is still the standard reference.',
+		doi: '10.1056/NEJM196911272812201',
+		usedFor: [
+			'smallpox.vaccines.vaccinia.seriousPer100kDoses',
+			'smallpox.vaccines.vaccinia.deathsPer100kDoses'
+		],
+		quote:
+			'There were 74 complications and one death per 1,000,000 primary vaccinations. Morbidity and mortality rates were highest for infants, with 112 complications and five deaths per 1,000,000 primary vaccinations.',
+		location: 'Abstract',
+		why: '74 complications per million primary vaccinations = 7.4 per 100,000 (not all serious, so an upper bound); 1 death per million = 0.1 per 100,000 (infants 0.5). These deaths were caused by the vaccine.',
+		context:
+			"US 1968, NYCBH vaccinia strain; deaths from postvaccinial encephalitis, vaccinia necrosum and eczema vaccinatum. Today's populations may fare worse because more people have weakened immunity or eczema.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened in a second search; title, first author, journal, year, DOI and quote confirmed. Only the first author is given.'
+		}
+	},
+	{
+		id: 'choi-2021-acip-ebola',
+		authors:
+			'Choi MJ, Cossaboom CM, Whitesell AN, Dyal JW, Joyce A, Morgan RL, Campos-Outcalt D, Person M, Ervin E, Yu YC, Rollin PE, Harcourt BH, Atmar RL, Bell BP, Helfand R, Damon IK, Frey SE',
+		title:
+			'Use of Ebola Vaccine: Recommendations of the Advisory Committee on Immunization Practices, United States, 2020',
+		journal: 'MMWR Recommendations and Reports',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/mmwr/volumes/70/rr/rr7001a1.htm',
+		usedFor: [
+			'ebola.vaccines.rVSV-ZEBOV.seriousPer100kDoses',
+			'ebola.vaccines.rVSV-ZEBOV.deathsPer100kDoses'
+		],
+		quote:
+			'Overall, reported vaccine-related serious adverse events were rare. Across 12 clinical trials, out of 15,399 persons who received the vaccine, three serious adverse events were judged to be related or possibly related to the vaccine: one febrile reaction, one anaphylactic reaction, and one influenza-like illness.',
+		location: 'Safety section',
+		why: 'Worked out: 3 / 15,399 people = 19.5 per 100,000; the vaccine is one dose, so this is also per 100,000 doses. No vaccine-related death is described, so the death rate is null.',
+		context: 'Clinical-trial data (rVSV-ZEBOV); MMWR 70(1):1-12.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; quotes confirmed verbatim; authors and issue confirmed.'
 		}
 	}
 ];

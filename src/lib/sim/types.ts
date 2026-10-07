@@ -46,6 +46,31 @@ export interface Banded extends Sourced<Bands> {
 export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
 export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
 
+/**
+ * One vaccine a population can be given against a disease, keyed by product and version.
+ * Protections are shares from 0 to 1. `severe` is the published protection against severe
+ * disease in everyone vaccinated (not only in breakthrough cases); `null` means no pooled figure
+ * exists. Risk rates are per 100,000 doses; `deathsPer100kDoses.value` is `null` when no death
+ * has been established as caused by the vaccine (never treat that as 0).
+ */
+export interface Vaccine {
+	product: string;
+	version?: string;
+	/** Plain name for the picker. */
+	label: string;
+	/** Exactly one entry per disease is the default. */
+	default?: true;
+	/** A full course: share of infections prevented. */
+	infection: Sourced;
+	severe: Sourced | null;
+	/** A started but unfinished course; `null` where no figure exists. */
+	partial?: { infection: Sourced | null; severe: Sourced | null };
+	/** Serious adverse events (usually needing hospital or emergency care) per 100,000 doses. */
+	seriousPer100kDoses: Sourced<number | null>;
+	/** Deaths caused by the vaccine per 100,000 doses; null when none has been established. */
+	deathsPer100kDoses: Sourced<number | null>;
+}
+
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
 	id: string;
@@ -88,6 +113,8 @@ export interface DiseaseConfig {
 	mortalityByAge?: Banded;
 	/** Hospital admissions by age band. */
 	hospitalisedByAge?: Banded;
+	/** Vaccines on offer; `fullEfficacy` and `partialEfficacy` equal the default's infection values. */
+	vaccines?: Vaccine[];
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
