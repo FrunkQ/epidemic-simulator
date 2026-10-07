@@ -62,7 +62,11 @@ export interface DiseaseConfig {
 	asymptomaticFraction: Sourced;
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
-	/** Days for immunity to fade one step; null when research says it does not fade. */
+	/**
+	 * Half-life of protection: days until half of protected people have lost a level of
+	 * protection, as sources report it (7 Oct). The engine draws each dot's time from an
+	 * exponential with mean waningDays / ln 2. null when research says it does not fade.
+	 */
 	waningDays: Sourced<number | null>;
 	/** How much a full course of vaccine cuts the chance of catching it (0 to 1). */
 	fullEfficacy: Sourced;
@@ -109,7 +113,8 @@ export interface DiseaseRuntime {
 	illTicks: number;
 	asymptomaticFraction: number;
 	mortality: number;
-	waningTicks: number;
+	/** Mean ticks until protection drops a level (waningDays / ln 2); 0 when it never fades. */
+	waningMeanTicks: number;
 	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
 	fullEfficacy: number;
 	partialEfficacy: number;

@@ -2748,7 +2748,7 @@ export const CITATIONS: Citation[] = [
 			"Abstract (Findings); single-year values from Table 1 'COVID-19 IFR estimates by age' (ages 1-100), stored in covidAgeIfr.ts",
 		why: 'Pooled global pre-vaccine death rate for every single year of age, preferred over Levin 2020, whose deaths include care homes. Bands are worked out in code with UK 2019 ages: 0-14 0.0034%, 15-64 0.33%, 65+ 6.66% per infection (6.10% to 7.48% depending on how 85+ splits by age), 1.43% overall for UK ages. The all-ages 0.68% (Meyerowitz-Katz) stays the headline; this is higher because it uses UK ages, which are older than the populations behind the all-ages figure.',
 		context:
-			"Infections from 15 April 2020 to 1 January 2021, before vaccines and widespread variants. No row for age 0, so age 0 takes age 1's value. One correction notice (Lancet 399:1468, DOI 10.1016/S0140-6736(22)00666-3, online 14 April 2022) only moves Tanzania and Uganda in Table 2 and leaves Table 1 unchanged.",
+			"Infections from 15 April 2020 to 1 January 2021, before vaccines and widespread variants. No row for age 0, so age 0 takes age 1's value. One correction notice (Lancet 399:1468, DOI 10.1016/S0140-6736(22)00666-3, online 14 April 2022) only moves Tanzania and Uganda in Table 2 and leaves Table 1 unchanged. Check against England: Ward 2024 gives an England pre-vaccine peak IFR of 0.97% per infection (January 2021), so these bands' 1.43% for UK ages is 1.48 times that, within the 1.5x the project allows without review.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
