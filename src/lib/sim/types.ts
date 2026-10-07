@@ -92,9 +92,32 @@ export interface Region {
 	hub?: { x: number; y: number };
 }
 
+export type RouteKind = 'road' | 'ferry' | 'air';
+
+export interface Route {
+	id: number;
+	kind: RouteKind;
+	from: number;
+	to: number;
+	/** Polyline in world units, from the edge of `from` to the edge of `to`: [x0, y0, x1, y1, ...]. */
+	points: number[];
+	/** Cumulative length at each point. */
+	cumulative: number[];
+	length: number;
+	travelDays: number;
+	/** Trips per day in each direction at the default travel setting. */
+	tripsPerDay: number;
+	open: boolean;
+	/** Distance along the route where a closed border's barrier stands (ground routes). */
+	barrierS?: number;
+}
+
 export interface Scenario {
+	/** Seed of the procedural map; routes are generated from it and the regions. */
 	mapSeed: number;
 	regions: Region[];
+	/** Multiplies how often people travel (the Travel slider); 1 is normal. */
+	travelScale?: number;
 }
 
 export type Speed = 0 | 0.5 | 1 | 2 | 4;
@@ -139,6 +162,8 @@ export interface Telemetry {
 	day: number;
 	speed: Speed;
 	peoplePerDot: number;
+	/** Dots on a road, ferry or plane right now. */
+	travelling: number;
 	regions: RegionTelemetry[];
 	totals: Counts;
 	/** Per region, one sample per sim day, oldest first. Channels follow HISTORY_CHANNELS. */

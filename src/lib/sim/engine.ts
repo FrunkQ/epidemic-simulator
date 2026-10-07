@@ -17,7 +17,10 @@ import {
 import { advanceIllness, infect, transmit, type DiseaseHooks } from './disease';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
+import type { World } from './geography';
 import { Renderer } from './render';
+import { generateRoutes } from './routes';
+import { Transit } from './transit';
 import { Rng } from './rng';
 import { sumCounts, TelemetryCounters } from './telemetry';
 import {
@@ -26,6 +29,7 @@ import {
 	type Command,
 	type DiseaseRuntime,
 	type Region,
+	type Route,
 	type Scenario,
 	type SimEvent,
 	type Speed,
@@ -36,6 +40,8 @@ import {
 export interface SimulationOptions {
 	seed: number;
 	disease: DiseaseRuntime;
+	/** The map. Without one there are no routes, so no travel. */
+	world?: World;
 	/** Dot pool size; tests may use a smaller one. */
 	capacity?: number;
 	/**
@@ -82,6 +88,9 @@ export class Simulation {
 	private readonly secondaryOnly: boolean;
 	private seed: number;
 	private readonly hooks: DiseaseHooks;
+	private world: World | null = null;
+	private routeList: Route[] = [];
+	private transit!: Transit;
 
 	constructor(scenario: Scenario, options: SimulationOptions) {
 		const capacity = options.capacity ?? MAX_AGENTS;
@@ -101,6 +110,7 @@ export class Simulation {
 			},
 			onDeath: () => {}
 		};
+		this.world = options.world ?? null;
 		this.setup(scenario, options.disease, options.seed);
 	}
 
@@ -112,12 +122,30 @@ export class Simulation {
 		return this.scenario.regions;
 	}
 
+	get routes(): readonly Route[] {
+		return this.routeList;
+	}
+
+	get map(): World | null {
+		return this.world;
+	}
+
+	get planes(): Transit {
+		return this.transit;
+	}
+
 	radiusOf(region: number): number {
 		return this.radii[region];
 	}
 
-	/** Setup change: rebuild everything and restart at day 0. */
-	setup(scenario: Scenario, disease: DiseaseRuntime = this.disease, seed: number = this.seed): void {
+	/** Setup change: rebuild everything and restart at day 0. Pass a world to change the map. */
+	setup(
+		scenario: Scenario,
+		disease: DiseaseRuntime = this.disease,
+		seed: number = this.seed,
+		world: World | null = this.world
+	): void {
+		this.world = world;
 		this.scenario = scenario;
 		this.disease = disease;
 		this.seed = seed;
@@ -136,6 +164,9 @@ export class Simulation {
 		this.regionDots = dots;
 		this.peoplePerDot = peoplePerDot;
 		this.spawn();
+		this.routeList = this.world ? generateRoutes(this.world, regions, this.radii) : [];
+		this.transit = new Transit(this.agents.capacity, regions.length);
+		this.transit.travelScale = scenario.travelScale ?? 1;
 		this.counters.recount(this.agents);
 		this.counters.sample(0);
 	}
@@ -205,9 +236,11 @@ export class Simulation {
 		this.tick++;
 		// 1. Commands.
 		if (this.queue.length > 0) this.applyCommands();
-		// 2. Departures: arrive with travel in step 2 of the build.
-		// 3. Movement.
+		// 2. Departures.
+		this.transit.depart(a, this.routeList, this.scenario.regions, this.tick, this.rng);
+		// 3. Movement, in a region and in transit.
 		moveInRegions(a, this.scenario.regions, this.radii, this.tick, this.rng);
+		this.transit.move(a, this.routeList, this.scenario.regions, this.radii, this.rng);
 		// 4. Spatial grid.
 		this.grid.rebuild(a);
 		// 5. Transmission.
@@ -261,7 +294,15 @@ export class Simulation {
 	}
 
 	render(ctx: CanvasRenderingContext2D, viewport: Viewport): void {
-		this.renderer.draw(ctx, viewport, this.view, this.agents, this.scenario.regions, this.radii, this.tick);
+		this.renderer.draw(ctx, viewport, this.view, {
+			agents: this.agents,
+			regions: this.scenario.regions,
+			radii: this.radii,
+			routes: this.routeList,
+			transit: this.transit,
+			world: this.world,
+			tick: this.tick
+		});
 	}
 
 	snapshot(): Telemetry {
@@ -282,6 +323,7 @@ export class Simulation {
 			day: this.day,
 			speed: this.speed,
 			peoplePerDot: this.peoplePerDot,
+			travelling: this.transit.travellers(this.agents),
 			regions,
 			totals: sumCounts(regions.map((r) => r.counts)),
 			history: this.scenario.regions.map((_, r) => ({ region: r, ...c.regionHistory(r) })),

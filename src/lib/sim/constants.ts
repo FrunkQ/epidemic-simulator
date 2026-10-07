@@ -40,3 +40,10 @@ export const ESSENTIAL_SHARE = 0.1;
 /** Lockdown tolerance drawn per dot at spawn, in days. */
 export const FATIGUE_MEAN_DAYS = 60;
 export const FATIGUE_SD_DAYS = 20;
+
+/** Map grid resolution: world units per heightmap cell. */
+export const MAP_CELL = 12;
+/** Share of the world that is land. */
+export const LAND_SHARE = 0.38;
+/** Widest stretch of water a ferry route may cross, in world units. */
+export const MAX_FERRY_GAP = 450;
