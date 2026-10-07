@@ -36,6 +36,7 @@ A fixed pool of `MAX_AGENTS = 6000` dots in typed arrays, allocated once (struct
 - `vaccineWorks`: Uint8Array. Vaccines are all-or-nothing: at spawn (and whenever protection changes) each vaccinated dot rolls once against its disease's efficacy for its protection level; 1 means fully protected, 0 means the vaccine didn't take and the dot can catch it like anyone else.
 - `speed`: Float32Array (each dot's own wandering speed). `waneTicks`: Int32Array (ticks until this dot's protection next drops a level; drawn from an exponential distribution with mean `waningDays` when protection is set; -1 when waning is off).
 - `asymptomatic`, `isolated`, `essential`: Uint8Array flags
+- `ageBand`: Uint8Array. 0 = aged 0-14, 1 = 15-64, 2 = 65+ (the World Bank bands), drawn at spawn from the region's age mix.
 - `region`: Int16Array (-1 while travelling)
 - `stateTicks`: Int32Array (ticks left in the current state)
 - `fatigueTicks`: Int32Array (how long this dot tolerates lockdown; drawn at spawn)
@@ -70,7 +71,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ### 4.2 Health policy (per population)
 - Each population has a "Health policy" card. Every behaviour and healthcare number is a slider on it, and every slider starts from a real-world preset; people can what-if from there at any time.
-- Fields, each stored as `{ value, sources }` like other config: `hospitalBedsPerThousand`, `spareBedShare`, lockdown compliance (the share who stay home; today a fixed 90% via `ESSENTIAL_SHARE`), lockdown fatigue days, testing reach and cooldown, travel frequency, and vaccination full and partial per disease.
+- Fields, each stored as `{ value, sources }` like other config: age mix (share aged 0-14 and share 65+, from World Bank SP.POP.0014.TO.ZS and SP.POP.65UP.TO.ZS; 15-64 is the remainder), `hospitalBedsPerThousand`, `spareBedShare`, lockdown compliance (the share who stay home; today a fixed 90% via `ESSENTIAL_SHARE`), lockdown fatigue days, testing reach and cooldown, travel frequency, and vaccination full and partial per disease.
 - Country presets are bundled by `fetch-data.ts`: World Bank beds per 1,000, Eurostat or OECD occupancy, WHO/UNICEF coverage. Compliance and fatigue come from COVID-era sources (e.g. mobility or stringency data), marked `context: 'COVID-19 era'`.
 - General default: 5.07 beds per 1,000 (EU average, Eurostat 2024) and 10% spare (NHS England occupancy), with the existing citations. The UK preset uses UK bed figures once sourced, since 5.07 is the EU average, not the UK's (Alex was told this on 7 Oct).
 - "Similar to": after any slider change the card shows the closest bundled country profile (nearest neighbour on normalised fields), or "Custom" if none is within a set distance.
@@ -78,7 +79,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
   - `config/countryProfiles.generated.json`, written by `scripts/fetch-data.ts`: per-country beds per 1,000, bed occupancy (giving `spareBedShare`), vaccination coverage per disease and density, each with source, indicator code and year.
   - `config/behaviourPresets.ts`, hand-sourced: fields no bulk dataset gives per country (lockdown compliance, fatigue days, testing reach) in `{ value, sources }` form with `citations.ts` entries. Countries without their own figure fall back to a sourced general default, and the card says "general estimate".
   - `config/healthPolicy.ts`: the `HealthPolicy` type, `presetFor(country)` (merges the two files), `similarTo(policy)` and the general default. Steps 2 and 3 use the general default.
-- Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run. Population, density and vaccination changes restart from day 0 (rule 1.8 stands).
+- Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run. Population, density, age mix and vaccination changes restart from day 0 (rule 1.8 stands).
 - Every slider and card has a one-line plain-English "what this means" explainer, taken from the same citation entry. The About page has one short section per subsystem.
 
 ## 5. Tick order (engine.ts; never reorder)
@@ -104,7 +105,9 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - A SILENT dot behaves exactly like a healthy dot: it moves, travels, and obeys lockdown like everyone else, because it does not know it is ill.
 - When SILENT ends: an asymptomatic dot stays SILENT for its remaining contagious period (`illDays` more), then becomes RECOVERED without ever turning red. Otherwise it becomes SYMPTOMATIC for `illDays` (halved if PARTIAL).
 - SYMPTOMATIC: speed 0, still contagious to dots that wander into it, never boards transport. If this happens mid-route, the dot stops on the route and its clock keeps running.
-- End of illness: dies with chance `mortality x (region overloaded ? 3 : 1)`. PARTIAL dots never die (mockup: "mild symptoms, won't die"). Otherwise RECOVERED, which is immune.
+- Age (Alex, 7 Oct): `mortality` and `hospitalisedShare` are per age band (0-14, 15-64, 65+), sourced per disease. Three bands, not a single cutoff, because several lessons turn on children or young adults (measles and polio deaths in young children, chickenpox worse in adults, 1918 flu killing healthy young adults). Each band-rate source records its reference population so test 16 can check the bands. Where a source gives only an overall rate, derive the bands from a sourced age ratio and mark them worked out; if even that doesn't exist, use the same value in all bands and the About page says so. Mixing is the same for all ages (no contact matrix), so R0 calibration is unaffected; the About page names "who meets whom by age" as not modelled. Vaccination coverage is the same in every band (WHO figures are childhood coverage), and the About page says so.
+- Vaccine protection has two parts. `infection` stays all-or-nothing via `vaccineWorks`, as before. `severe` applies to a vaccinated dot whose vaccine didn't stop infection: its death chance and hospitalisedShare are multiplied by (1 - severe). Against new strains, vaccines mostly keep people out of hospital rather than stopping infection, and updated vaccines do both better; this is the honest part of the lesson. This replaces the old "partly vaccinated never die" rule. Where a disease has no sourced severe protection, keep today's behaviour (partial: severe = 1, ill half as long), marked as the existing default in the evidence table.
+- End of illness: dies with chance `mortality[ageBand] x (1 - severe for vaccinated dots) x (region overloaded ? 3 : 1)`. Otherwise RECOVERED, which is immune.
 
 ### 6.3 Waning immunity
 - Each disease has `waningDays` from research (measles is close to lifelong, so effectively off; flu is short). Do not invent waning where research says there is none; the booster lesson shows with flu.
@@ -122,6 +125,10 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 ### 6.6 Hospital load
 - Each region has `hospitalBedsPerThousand` (sourced; default 5.07, Eurostat 2024; step 4 can take country values from World Bank data). Only spare beds count: `capacity = dots x hospitalBedsPerThousand / 1000 x spareBedShare`, where `spareBedShare` (1 minus normal bed occupancy) is sourced too. Capacity is in dots, the same unit as the counts; the UI may show it in people by multiplying by `peoplePerDot`.
 - Each disease has a sourced `hospitalisedShare` (the share of symptomatic cases needing a hospital bed). The engine counts SYMPTOMATIC dots per region each tick; `overloaded = symptomatic x hospitalisedShare > capacity`. Telemetry carries the flag and capacity; the UI flashes a warning and the chart draws the capacity line.
+- Capacity and pressure (Alex, 7 Oct: plain words a lay person understands). Each population shows two headline readings. **Capacity** is fixed: one plain rating built from the detail sliders underneath (beds per 1,000 and normal occupancy; collapsed by default). **Pressure** moves: a gauge from 0 to 100%+ with three plain bands, "Coping", "Under pressure", "Overwhelmed".
+- `pressure = (beds normally occupied + epidemic patients) / total beds`, where epidemic patients = SYMPTOMATIC dots x hospitalisedShare, summed over every circulating disease. A UK-like preset therefore starts the run already "Under pressure".
+- Deaths under strain: replace the hard 3x overload step with a sourced curve. The death multiplier is 1 up to a threshold and rises with pressure above it, capped at a sourced maximum (COVID-era research is fine here). If only a single figure exists, use it as the cap and say so. The 3x from the spec has no source.
+- Telemetry carries pressure and its band per region; the chart draws pressure with the band lines.
 - Step 3 must show the line is meaningful in the default scenario: with no interventions, at least one common disease (e.g. measles or COVID-19) crosses it, and flattening the curve with lockdown keeps it under for at least part of the run. If real numbers can't show that, report it to Alex rather than fudging the numbers.
 
 ### 6.7 Mass testing (per region)
@@ -155,11 +162,30 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 ### 6.11 Disease catalogue
 - Diseases are pure config: adding one never touches engine code. Each needs the full sourced profile (R0, silent days, ill days, asymptomatic share, mortality, vaccine efficacy full and partial or "no vaccine", waning), verified per 6.10, calibrated per 6.9, and a one-line plain description.
 - Catalogue (Alex, 7 Oct): the most common well-known diseases (e.g. measles, flu, COVID-19, chickenpox, mumps, rubella, whooping cough, polio), eradicated or historical ones (e.g. smallpox), and at least one very deadly, fast-acting disease (e.g. Ebola) to show that diseases which make people very ill very fast tend to burn out, because sick people stop moving and die before passing it far.
-- The dropdown groups them in plain words: "Common", "Wiped out by vaccines", "Deadly but burns out fast".
+- The dropdown groups them in plain words: "Common", "Wiped out by vaccines", "Deadly but burns out fast", "Historic pandemics".
+- 1918 flu ("Spanish flu", Alex 7 Oct) goes in "Historic pandemics" with three-band death rates; its unusual young-adult peak shows as a 15-64 rate out of line with 65+. The About page gives the reason only as the sources state it, since the cause is still debated.
 - Mortality can be high (tens of percent). The model keeps one simple rule set: deceased dots never infect. Real exceptions (e.g. Ebola spreading at funerals) are named in plain words on the About page, not modelled.
 - Wording must stay true. The lesson is "spreads less far", never "harmless": the About page notes that such diseases still cause deadly outbreaks where care is poor.
 - Eradicated diseases start with today's reality (almost no one vaccinated against smallpox), which is itself a what-if worth showing.
+- Variants are separate catalogue entries with their own sourced R0, timings and severity, e.g. "COVID-19 (2020 original)" and "COVID-19 (Omicron era)". The engine still sees one disease at a time, so variants need no engine change.
+- Vaccine versions (Alex, 7 Oct: show why an up-to-date vaccine helps): each disease can list `vaccineVersions: [{ id, label, full: { infection, severe }, partial: { infection, severe } }]`, picked per population and defaulting to the updated version, every number sourced against that disease or variant (e.g. original vaccine vs Omicron, updated vaccine vs Omicron). The Health policy card has a "Vaccine version" picker; changing it restarts the run, because `vaccineWorks` is re-rolled.
 - COVID-19 is required, not just an example. It is also the validation case: lesson tests 12 and 13 use the UK preset with real COVID-19 numbers.
+
+### 6.12 Two diseases at once (Alex, 7 Oct: "winter flu and COVID hitting at once")
+- `MAX_DISEASES = 2` circulating at once. Per-disease arrays become [slot x agent]: `state`, `stateTicks`, `asymptomatic`, `vaccineWorks`, `waneTicks`, `infectedTick`, `infectedBy`. Movement, age and region stay per agent.
+- The diseases are independent except for three couplings, which are the feedback loops and must emerge, not be scripted: (a) a dot SYMPTOMATIC or isolated with either disease stops moving and doesn't travel; (b) hospital pressure is shared; (c) a dot can carry both at once. Whether co-infection changes severity comes from a sourced study; if nothing solid exists, there is no extra effect and the About page says so.
+- Transmission: one grid build per tick (cell size = the larger radius), then one infection pass per disease with its own radius and beta. Calibration stays per disease, run alone; the coupled run is checked by a lesson test.
+- Seasonality (winter making flu spread more) is a separate subsystem and is not modelled yet; the scenario starts both together and the About page says so. It is offered to Alex as a later add-on.
+- Performance budget still applies: `step(1)` under 4 ms at 5,000 dots with 2 diseases.
+
+### 6.13 Vaccine risk, shown honestly (Alex, 7 Oct: "lets not dance away the truths")
+- Each vaccine version has sourced adverse-event rates per dose, per age band where sources give them (e.g. mRNA myocarditis in young adults, MMR febrile seizures, anaphylaxis): serious events needing hospital, and deaths, keeping the "per million doses" basis.
+- These are far too rare to show with 5,000 dots, so they are not rolled per dot. They are calculated from vaccinated people (dots x peoplePerDot x coverage, by band), and the panel says plainly they are calculated, not simulated.
+- The impact panel shows, per 100,000 people, side by side: harm caused by the vaccine; harm from the disease in this run; harm from the disease if nobody had been vaccinated. The last is a counterfactual run (same seed and settings, vaccination 0) run headless at full speed in a Web Worker; the engine is pure and deterministic, so it needs no special code. Vaccine deaths are never hidden; they sit on the same scale as the disease's so people can see the difference themselves.
+- Never on its own (Alex, 7 Oct): vaccine harm renders in exactly one component, `HarmComparison`, whose props are all required: vaccine-caused harm, disease harm in this run, disease harm with no vaccination (the counterfactual, which may be zero) and baseline deaths. All are per 100,000 people, over the same period and population, on one shared scale. A test fails if vaccine-harm figures are exported or rendered anywhere else.
+- Baseline deaths: everyday all-cause deaths in that population over the same sim period, from sourced death rates by age band per country (UN World Population Prospects or WHO life tables; World Bank crude death rate as the fallback), weighted by the region's age mix.
+- Two separate, labelled figures, never merged. "Expected everyday deaths in the weeks after vaccination" = vaccinated people x background rate x window. These happen anyway and are why "died after vaccine" reports exist (the observed-vs-expected method). "Deaths confirmed as caused by the vaccine" uses the sourced causal rates only. Do not say confirmed vaccine deaths were people about to die anyway: causal harms such as TTS and myocarditis mostly hit younger, healthy people.
+- Wording: no "harmless" or "safe" claims. Numbers sit side by side with a one-line plain explainer per bar, and people compare for themselves.
 
 ## 7. Engine API (all that Svelte sees)
 ```ts
@@ -179,12 +205,13 @@ type Command =
   | { type: 'speed'; value: 0 | 0.5 | 1 | 2 | 4 }
   | { type: 'seed'; region: number; count: number };
 ```
-Telemetry: `{ day, regions: [{ id, counts per colour, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], totals, latest (this day's history sample per region), historyVersion, events (last 100 only) }`. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
+Telemetry: `{ day, regions: [{ id, counts per colour, deaths per age band, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], totals, latest (this day's history sample per region), historyVersion, events (last 100 only) }`. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
 
 ## 8. Rendering
 - Dots: small squares or circles batched by colour (one fill per colour per frame).
 - Colour priority: DECEASED grey; SYMPTOMATIC or isolated red; SILENT orange; RECOVERED purple; otherwise by protection: FULL green, PARTIAL yellow, NONE blue. Make sure orange and yellow are clearly different (and colour-blind safe); give infectious dots a faint pulse ring.
-- Charts: small canvas line charts drawn from `history`; no SVG chart library, no animation. Hospital capacity is a dashed line.
+- With two diseases (6.12), shape shows which disease: circle = none or disease A, diamond = disease B, hexagon = both; colour = the most serious state across both. The legend shows both.
+- Charts: small canvas line charts drawn from `history`; no SVG chart library, no animation. Hospital pressure is drawn with its band lines.
 - Control cards float over each population via `worldToScreen`, as in the mockup; on small screens they collapse to a tap-to-open card.
 
 ## 9. Files
@@ -217,16 +244,22 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
   11. Every disease in the catalogue passes the R0 re-measure test from 6.9.
   12. COVID-19 with the UK preset and no interventions overloads hospitals.
   13. COVID-19 with the UK preset: an early lockdown lowers the hospital overload peak.
+  14. COVID-19, everything the same except age mix: an older population (about 29% aged 65+) has more deaths per infection than a younger one (about 3%) in at least 80% of seeds.
+  15. Omicron-era COVID-19, same coverage: the updated vaccine gives fewer infections and fewer deaths than the original vaccine in at least 80% of seeds.
+  16. Age-band check (config test): for each disease with band rates, the band rates weighted by the source's reference population reproduce the published overall rate within its uncertainty.
+  17. 1918 flu vs seasonal flu: the 15-64 band has a higher death rate per infection under 1918 flu in at least 80% of seeds.
+  18. Flu and COVID-19 together with a UK-like preset reach a higher peak hospital pressure than either alone, in at least 80% of seeds. For "close to reality", compare the shape qualitatively with a sourced UK winter (e.g. 2022/23 hospital occupancy); no curve fitting.
 - Test time budget: the full suite must stay under 5 minutes in CI. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
 - If a lesson test fails, fix the model or the calibration. Never loosen a threshold without updating this file and telling Alex.
 
 ## 11. Build order (one PR per step)
 1. Headless engine: constants, rng, agents, grid, disease, in-region movement, calibration script, citations file, determinism, speed and herd-immunity tests; a bare canvas page to watch it.
-1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2.
+1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2. A small config-only follow-up adds the COVID-19 variants, 1918 flu, the vaccine-version numbers, the vaccine adverse-event rates and general background death rates by age band (country values come in step 4).
 2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card's live healthcare and behaviour sliders, 4.2), legend, charts.
-3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital load, hubs, waning; engine hooks for per-region compliance and live capacity changes; lesson tests 2 to 6, 10 (moved from 1b, since it needs travel and illness timing), 12 and 13.
-4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets and "Similar to"); lesson test 7.
-5. Impact panel, About page with full citations, polish, deploy.
+3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital capacity and pressure (6.6), hubs, waning; build the illness arrays slot-aware (6.12) from the start to avoid a second refactor; engine hooks for per-region compliance and live capacity changes; per-band death and hospital rules with the `ageBand` array; the severe-protection rule and the Vaccine version picker; lesson tests 2 to 6, 10 (moved from 1b, since it needs travel and illness timing), 12, 13, 14, 15 and 17.
+4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets including age mix, and "Similar to"); lesson test 7.
+3b. Two diseases at once (6.12): per-slot arrays in use, shared pressure, shapes and legend; lesson test 18.
+5. Impact panel (including `HarmComparison` with vaccine harm, disease harm, the counterfactual worker and baseline deaths, 6.13), About page with full citations, polish, deploy.
 
 ## 12. Decisions that change the original spec
 - The infection chance per tick is calibrated to R0 (the spec treated R0 as a per-collision probability).
@@ -240,3 +273,8 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Regions use their own spatial grids instead of one whole-world grid, and disc size comes from dot count and sim density (7 Oct, after the step 1 review).
 - Hospital capacity comes from real beds per 1,000 people and normal occupancy, and overload counts only cases that need a bed (7 Oct).
 - Every behaviour and healthcare number is a per-population slider starting from a real-world preset, with a "Similar to" country label (Alex, 7 Oct).
+- Populations have an age mix (0-14, 15-64, 65+) that changes death and hospital risk per disease; mixing is the same at all ages (Alex chose to model age now, 7 Oct).
+- Vaccines protect in two parts, against infection (all-or-nothing) and against severe illness for breakthrough cases, and diseases can list vaccine versions such as original vs updated COVID-19 vaccines (7 Oct). This replaces "partly vaccinated never die".
+- Hospital strain is shown as fixed capacity plus a moving pressure gauge (Coping / Under pressure / Overwhelmed), with a sourced death curve instead of a flat 3x (7 Oct).
+- Up to two diseases can circulate at once, coupled only through movement, shared hospital pressure and sourced co-infection effects (7 Oct).
+- Vaccine side effects are calculated and shown next to disease harm, including a no-vaccination comparison run (7 Oct).
