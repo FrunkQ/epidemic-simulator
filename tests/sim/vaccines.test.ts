@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { DISEASES } from '../../src/lib/config/diseases';
+import { DISEASES, OMICRON_VACCINE_INPUTS } from '../../src/lib/config/diseases';
 import {
 	breakthroughSevereProtection,
 	defaultVaccine,
+	stackedProtection,
 	sumDeathsPer100k,
 	vaccineKey
 } from '../../src/lib/config/vaccines';
@@ -28,7 +29,8 @@ function vaccine(deaths: number | null): Vaccine {
 		infection: { value: 0.5, sources: ['x'] },
 		severe: null,
 		seriousPer100kDoses: { value: 1, sources: ['x'] },
-		deathsPer100kDoses: { value: deaths, sources: ['x'] }
+		deathsPer100kDoses: { value: deaths, sources: ['x'] },
+		waningDays: { value: null, sources: ['x'] }
 	};
 }
 
@@ -110,6 +112,33 @@ describe('vaccines', () => {
 				}
 			}
 		}
+	});
+
+	it('gives every vaccine its own sourced waningDays: a positive half-life or null', () => {
+		for (const d of WITH_VACCINES) {
+			for (const v of d.vaccines!) {
+				const key = `${d.id}.${vaccineKey(v)}.waningDays`;
+				expect(v.waningDays, key).toBeDefined();
+				expect(v.waningDays.sources.length, key).toBeGreaterThan(0);
+				const w = v.waningDays.value;
+				expect(w === null || (Number.isFinite(w) && w > 0), key).toBe(true);
+			}
+		}
+	});
+
+	it("works out the updated COVID-19 vaccine's protection from the original's and the bivalent's relative effectiveness", () => {
+		const k = OMICRON_VACCINE_INPUTS;
+		const updated = DISEASES.covid19omicron.vaccines.find((v) => v.product === 'covid-updated')!;
+		const original = DISEASES.covid19omicron.vaccines.find((v) => v.product === 'covid-original')!;
+		expect(updated.infection.value).toBe(1 - (1 - k.bivalentRelativeInfection) * (1 - k.originalInfection));
+		expect(updated.severe!.value).toBe(1 - (1 - k.bivalentRelativeSevere) * (1 - k.originalSevere));
+		expect(updated.infection.value).toBeCloseTo(0.45, 3);
+		expect(updated.severe!.value).toBeCloseTo(0.826, 3);
+		// The same constants back the original vaccine's own entry.
+		expect(original.infection.value).toBe(k.originalInfection);
+		expect(original.severe!.value).toBe(k.originalSevere);
+		expect(stackedProtection(0, 0.3)).toBeCloseTo(0.3, 12);
+		expect(stackedProtection(0.5, 0.5)).toBeCloseTo(0.75, 12);
 	});
 
 	describe('sumDeathsPer100k', () => {

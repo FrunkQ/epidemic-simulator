@@ -11,7 +11,16 @@ export function breakthroughSevereProtection(infection: number, severe: number):
 	return 1 - (1 - severe) / (1 - infection);
 }
 
-/** The key citations use for a vaccine in usedFor, e.g. "mRNA-original" or "IPV". */
+/**
+ * Protection of a vaccine measured relative to another, against people with no vaccine:
+ * 1 - (1 - relative) x (1 - base). Used for the updated COVID-19 vaccine, whose sources compare it
+ * with the original vaccine rather than with the unvaccinated.
+ */
+export function stackedProtection(relative: number, base: number): number {
+	return 1 - (1 - relative) * (1 - base);
+}
+
+/** The key citations use for a vaccine in usedFor, e.g. "covid-updated" or "IPV". */
 export function vaccineKey(vaccine: Vaccine): string {
 	return vaccine.version ? `${vaccine.product}-${vaccine.version}` : vaccine.product;
 }

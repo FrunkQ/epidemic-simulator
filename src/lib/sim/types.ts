@@ -19,6 +19,11 @@ export const Protection = {
 export interface Sourced<T = number> {
 	value: T;
 	sources: string[];
+	/**
+	 * Set on a placeholder: why the value is not yet properly sourced. Placeholders are listed by
+	 * tests/sim/provisional.test.ts, and a release build (RELEASE=1) fails while any remain.
+	 */
+	provisional?: string;
 }
 
 /** One value per age band: 0-14, 15-64, 65+ (the World Bank bands). */
@@ -69,6 +74,12 @@ export interface Vaccine {
 	seriousPer100kDoses: Sourced<number | null>;
 	/** Deaths caused by the vaccine per 100,000 doses; null when none has been established. */
 	deathsPer100kDoses: Sourced<number | null>;
+	/**
+	 * Half-life of the vaccine's protection against infection: days until that protection has
+	 * fallen to half its starting value (vaccinated dots wane with this, 6.3). null when no
+	 * meaningful waning is established within the time the sim covers, and then a source must say so.
+	 */
+	waningDays: Sourced<number | null>;
 }
 
 /** Disease settings as written in config: durations in days. */
@@ -88,9 +99,10 @@ export interface DiseaseConfig {
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
 	/**
-	 * Half-life of protection: days until half of protected people have lost a level of
-	 * protection, as sources report it (7 Oct). The engine draws each dot's time from an
-	 * exponential with mean waningDays / ln 2. null when research says it does not fade.
+	 * Half-life of infection-acquired immunity (recovered dots): days until half of recovered
+	 * people have lost protection, as sources report it (7 Oct). Vaccine protection has its own
+	 * `Vaccine.waningDays`. The engine draws each dot's time from an exponential with mean
+	 * waningDays / ln 2. null when research says it does not fade.
 	 */
 	waningDays: Sourced<number | null>;
 	/** How much a full course of vaccine cuts the chance of catching it (0 to 1). */
