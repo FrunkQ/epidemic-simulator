@@ -2590,7 +2590,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'Eurostat',
 		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjangroup?format=JSON&geo=UK&sex=T&time=2019&lang=EN',
-		usedFor: ['population.ukBackgroundDeathRate'],
+		usedFor: ['population.ukBackgroundDeathRate', 'covid19.mortalityByAge', 'covid19.hospitalisedByAge'],
 		quote:
 			'2019: Total 66,647,112; Less than 5 years 3,885,007; From 5 to 9 years 4,146,546; From 10 to 14 years 3,908,395; From 15 to 19 years 3,661,722; From 20 to 24 years 4,170,514; From 25 to 29 years 4,527,006; From 30 to 34 years 4,485,180; From 35 to 39 years 4,387,779; From 40 to 44 years 4,008,205; From 45 to 49 years 4,457,239; From 50 to 54 years 4,668,822; From 55 to 59 years 4,351,807; From 60 to 64 years 3,716,512; From 65 to 69 years 3,384,532; From 70 to 74 years 3,286,389; From 75 to 79 years 2,281,501; From 80 to 84 years 1,695,137; 85 years or over 1,624,819',
 		location:
@@ -2765,6 +2765,56 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'OFID 2016;3(1):ofw040. Checked in the Norwegian Institute of Public Health repository record and the Consensus full-text record; authors, year, journal and DOI match and the quote is verbatim; no correction found.'
+		}
+	},
+	{
+		id: 'covid19-forecasting-team-2022-ifr',
+		authors: 'COVID-19 Forecasting Team (Sorensen R, et al.)',
+		title:
+			'Variation in the COVID-19 infection–fatality ratio by age, time, and geography during the pre-vaccine era: a systematic analysis',
+		journal: 'The Lancet',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/S0140-6736(21)02867-1',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8871594/',
+		usedFor: ['covid19.mortalityByAge'],
+		quote:
+			'Age-specific IFR estimates form a J shape, with the lowest IFR occurring at age 7 years (0·0023%, 95% uncertainty interval [UI] 0·0015–0·0039) and increasing exponentially through ages 30 years (0·0573%, 0·0418–0·0870), 60 years (1·0035%, 0·7002–1·5727), and 90 years (20·3292%, 14·6888–28·9754).',
+		location:
+			"Abstract (Findings); single-year values from Table 1 'COVID-19 IFR estimates by age' (ages 1-100), stored in covidAgeIfr.ts",
+		why: 'Pooled global pre-vaccine death rate for every single year of age, preferred over Levin 2020, whose deaths include care homes. Bands are worked out in code with UK 2019 ages: 0-14 0.0034%, 15-64 0.33%, 65+ 6.66% per infection (6.10% to 7.48% depending on how 85+ splits by age), 1.43% overall for UK ages. The all-ages 0.68% (Meyerowitz-Katz) stays the headline; this is higher because it uses UK ages, which are older than the populations behind the all-ages figure.',
+		context:
+			"Infections from 15 April 2020 to 1 January 2021, before vaccines and widespread variants. No row for age 0, so age 0 takes age 1's value. One correction notice (Lancet 399:1468, DOI 10.1016/S0140-6736(22)00666-3, online 14 April 2022) only moves Tanzania and Uganda in Table 2 and leaves Table 1 unchanged.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract quote confirmed in the Consensus full-text record and the author-hosted PDF; Table 1 read from that PDF with two spot-checks. Crossref lists exactly one correction (update-to), which does not touch Table 1; twelve Table 1 rows were compared between the original and corrected versions and are identical.'
+		}
+	},
+	{
+		id: 'herrera-esposito-2022-severe-by-age',
+		authors: 'Herrera-Esposito D, de los Campos G',
+		title:
+			'Age-specific rate of severe and critical SARS-CoV-2 infections estimated with multi-country seroprevalence studies',
+		journal: 'BMC Infectious Diseases',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12879-022-07262-0',
+		url: 'https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-022-07262-0',
+		usedFor: ['covid19.hospitalisedByAge'],
+		quote:
+			'Examples of this are the rate of severe infections (Infection-severe rate, ISR), which we define as infections resulting in hospitalization or out-of-hospital death',
+		location:
+			'Background, paragraph 1 (definition); Additional file 1, Table S1 (5-year ages to 85+), stored in covidAgeIfr.ts',
+		why: "The only multi-country meta-analysis of severe cases by age per infection before vaccines. Weighted by UK 2019 ages: 0-14 0.13%, 15-64 2.35%, 65+ 18.7% per infection. It counts deaths outside hospital as severe, so beds for 65+ are slightly high; in England and Wales 67.8% of 2020 COVID-19 deaths happened in hospital (ONS weekly deaths, week ending 1 January 2021). That definition matches the model's assumption that as many deaths as possible happen in hospital. For UK ages the bands give about 4.7% per infection, above Ward 2024's all-ages 3.39%; each figure matches its own source, and the About page gives both.",
+		context:
+			'Serosurveys from early to mid 2020 in 16 high-income locations, England included. The paper says rates for under-10s may be too low; its alternative 0-9 figure (0.42%) would make 0-14 0.34%.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors, journal, volume 22 article 311, 29 March 2022, with no correction or retraction; PMC metadata (PMC8962942) is_retracted false. Full text and supplement Table S1 read from the PMC open-data bucket.'
 		}
 	}
 ];

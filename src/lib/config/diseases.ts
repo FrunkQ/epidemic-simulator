@@ -1,4 +1,5 @@
 import type { Banded, Bands, DiseaseConfig, Sourced } from '../sim/types';
+import { covid19BandsPerInfection, covid19SevereBandsPerInfection } from './covidAgeIfr';
 
 /** How the disease picker groups diseases, in plain words. */
 export const DISEASE_GROUPS = {
@@ -22,6 +23,25 @@ const COVID19_ASYMPTOMATIC: Sourced = {
 	sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2']
 };
 const COVID19_IFR: Sourced = { value: 0.0068, sources: ['meyerowitzkatz2020-covid-ifr'] };
+const COVID19_AGE = covid19BandsPerInfection();
+const ukWeighted = (b: Bands) => b.reduce((a, v, i) => a + v * COVID19_AGE.shares[i], 0);
+/** Deaths per infection by band, derived in covidAgeIfr.ts; UK 2019 ages are the reference. */
+const COVID19_DEATHS_BY_AGE: Banded = {
+	value: COVID19_AGE.bands,
+	per: 'infection',
+	reference: COVID19_AGE.shares,
+	overall: ukWeighted(COVID19_AGE.bands),
+	sources: ['covid19-forecasting-team-2022-ifr', 'eurostat-uk-population-2018-2019-5yr']
+};
+const COVID19_SEVERE = covid19SevereBandsPerInfection();
+/** Hospitalised or died outside hospital, per infection by band (Herrera-Esposito 2022). */
+const COVID19_HOSPITAL_BY_AGE: Banded = {
+	value: COVID19_SEVERE,
+	per: 'infection',
+	reference: COVID19_AGE.shares,
+	overall: ukWeighted(COVID19_SEVERE),
+	sources: ['herrera-esposito-2022-severe-by-age', 'eurostat-uk-population-2018-2019-5yr']
+};
 
 /**
  * Omicron against the 2020 virus in people with no immunity: basic infection fatality 0.7% vs
@@ -212,6 +232,8 @@ export const DISEASES = {
 			value: perSymptomatic(COVID19_IFR, COVID19_ASYMPTOMATIC),
 			sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr']
 		},
+		mortalityByAge: COVID19_DEATHS_BY_AGE,
+		hospitalisedByAge: COVID19_HOSPITAL_BY_AGE,
 		waningDays: {
 			value: 660,
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']

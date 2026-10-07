@@ -1,7 +1,7 @@
 import type { Bands, Sourced } from '../sim/types';
 
 /**
- * COVID-19 (2020 virus) deaths per infection by age, worked out from sourced inputs so the
+ * COVID-19 (2020 virus) deaths and severe cases per infection by age, worked out from sourced inputs so the
  * bands can be re-derived and checked (lesson test 16). Inputs:
  * - the global pre-vaccine infection fatality ratio for each single year of age 1-100, in %
  *   (COVID-19 Forecasting Team 2022, Table 1; age 0 is not given, so it takes age 1's value);
@@ -47,7 +47,7 @@ export const UK_2019_AGE_GROUPS: Sourced<[number, number, number][]> = {
 		[80, 84, 1695137],
 		[85, 94, 1624819]
 	],
-	sources: ['eurostat-demo-pjangroup-uk-2019']
+	sources: ['eurostat-uk-population-2018-2019-5yr']
 };
 
 export type OldestGroup = 'central' | 'low' | 'high';
@@ -78,4 +78,27 @@ export function covid19BandsPerInfection(oldest: OldestGroup = 'central'): {
 		bands: deaths.map((d, i) => d / people[i]) as Bands,
 		shares: people.map((p) => p / total) as Bands
 	};
+}
+
+/**
+ * Share of infections that were severe, in %, for each UK group above (same order): admitted to
+ * hospital or died outside hospital (Herrera-Esposito & de los Campos 2022, Table S1).
+ */
+export const COVID19_SEVERE_PERCENT_BY_GROUP: Sourced<number[]> = {
+	value: [
+		0.086, 0.13, 0.18, 0.27, 0.39, 0.56, 0.82, 1.2, 1.7, 2.5, 3.7, 5.2, 7.5, 10.5, 14.6, 20.0, 26.6, 34.3
+	],
+	sources: ['herrera-esposito-2022-severe-by-age']
+};
+
+/** Severe cases (hospital or death outside it) per infection in each band, weighted by UK 2019 ages. */
+export function covid19SevereBandsPerInfection(): Bands {
+	const severe: Bands = [0, 0, 0];
+	const people: Bands = [0, 0, 0];
+	UK_2019_AGE_GROUPS.value.forEach(([first, , n], i) => {
+		const band = first < 15 ? 0 : first < 65 ? 1 : 2;
+		severe[band] += (n * COVID19_SEVERE_PERCENT_BY_GROUP.value[i]) / 100;
+		people[band] += n;
+	});
+	return severe.map((s, i) => s / people[i]) as Bands;
 }
