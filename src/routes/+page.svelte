@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { loadDisease } from '../lib/config/index';
 	import { DISEASES } from '../lib/config/diseases';
 	import { threeCities } from '../lib/config/scenarios';
 	import { createSimulation } from '../lib/sim/engine';
@@ -11,7 +10,7 @@
 	let diseaseId: DiseaseId = $state('measles');
 	let scenario: Scenario = $state(threeCities());
 	let seed = $state(1);
-	const sim = createSimulation(threeCities(), { seed: 1, disease: loadDisease('measles') });
+	const sim = createSimulation(threeCities(), { seed: 1, diseaseId: 'measles' });
 	let telemetry: Telemetry | null = $state.raw(null);
 	let speed: Speed = $state(1);
 	let size = { width: 0, height: 0 };
@@ -36,7 +35,7 @@
 	}
 
 	function restart() {
-		sim.setup($state.snapshot(scenario), loadDisease(diseaseId), seed);
+		sim.setup($state.snapshot(scenario), diseaseId, seed);
 		frame();
 	}
 

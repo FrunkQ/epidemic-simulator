@@ -343,14 +343,15 @@ export const CITATIONS: Citation[] = [
 			'polio.asymptomaticFraction',
 			'polio.mortality',
 			'polio.fullEfficacy',
-			'polio.waningDays'
+			'polio.waningDays',
+			'polio.hospitalisedShare'
 		],
 		quote:
-			'Approximately 70% of all polio infections in children are asymptomatic … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series',
+			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series',
 		location:
 			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024)',
-		why: 'CDC reference text, read directly.',
-		context: 'US. Gives no exact pre-symptom day count, so silentDays 7 is only bounded.',
+		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases.',
+		context: 'US; children.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -932,7 +933,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'wanes within 180 days after 14 days of influenza vaccination',
 		location: 'abstract',
 		why: 'Large multi-season study; support.',
-		context: 'US adults, pre-COVID seasons.',
+		context: 'US adults, seasons before 2020.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -946,11 +947,11 @@ export const CITATIONS: Citation[] = [
 		journal: 'Scientific Reports',
 		year: 2021,
 		doi: '10.1038/s41598-021-02133-1',
-		usedFor: ['behaviour.lockdownFatigue'],
+		usedFor: ['behaviour.lockdownFatigueMeanDays'],
 		quote: 'lockdowns lose all their impact on mobility in 112.1 days',
 		location: 'abstract',
-		why: 'Peer-reviewed, 93 countries.',
-		context: 'COVID-19, 2020.',
+		why: 'Peer-reviewed, 93 countries, 2020. Lockdown effect on mobility fades fully by about 112 days; a 60-day average point where people start drifting sits inside that.',
+		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -965,11 +966,11 @@ export const CITATIONS: Citation[] = [
 		journal: 'Nature Human Behaviour',
 		year: 2021,
 		doi: '10.1038/s41562-021-01181-x',
-		usedFor: ['behaviour.lockdownFatigue'],
+		usedFor: ['behaviour.lockdownFatigueSdDays'],
 		quote: 'less intense in countries with high interpersonal trust',
 		location: 'abstract',
-		why: 'Largest cross-national study.',
-		context: 'Justifies a non-zero sd; sd 20 itself is an assumption.',
+		why: 'Largest cross-national study. Fatigue varies between countries, which justifies a non-zero spread; sd 20 itself is an assumption.',
+		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -983,15 +984,75 @@ export const CITATIONS: Citation[] = [
 		journal: 'Research Square (preprint)',
 		year: 2021,
 		doi: '10.21203/rs.3.rs-621368/v1',
-		usedFor: ['behaviour.lockdownFatigue'],
+		usedFor: ['behaviour.lockdownFatigueMeanDays'],
 		quote: 'after four months of strict lockdown, NPIs have a significantly weaker contribution',
 		location: 'abstract',
-		why: '152-country panel; support only.',
-		context: 'Preprint.',
+		why: '152-country panel; preprint, support only. Measures get weaker after about four months.',
+		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true
 		}
+	},
+	{
+		id: 'eurostat-beds-2024',
+		authors: 'Eurostat',
+		title: 'Healthcare resource statistics - beds',
+		journal: 'Eurostat Statistics Explained',
+		year: 2026,
+		url: 'https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Healthcare_resource_statistics_-_beds',
+		usedFor: ['behaviour.hospitalBedsPerThousand'],
+		quote:
+			'there were, on average, 507 hospital beds per 100 000 inhabitants in 2024 across the whole of the EU',
+		location: "Section 'Hospital beds'",
+		why: 'Official statistic; 507 per 100,000 is 5.07 per 1,000. Countries range from 1.87 (Sweden) to 7.59 (Germany).',
+		context: 'EU-27, 2024. Counts all hospital beds, not only acute ones.',
+		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
+	},
+	{
+		id: 'cdc-measles-symptoms',
+		authors: 'CDC',
+		title: 'Measles Symptoms and Complications',
+		journal: 'CDC',
+		year: 2026,
+		url: 'https://www.cdc.gov/measles/signs-symptoms/index.html',
+		usedFor: ['measles.hospitalisedShare'],
+		quote: 'About 1 in 5 unvaccinated people in the U.S. who get measles is hospitalized.',
+		location: "Section 'Severe complications in children and adults' (last reviewed 29 April 2026)",
+		why: 'Official estimate of the hospitalised share of measles cases.',
+		context: 'US, unvaccinated cases.',
+		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
+	},
+	{
+		id: 'cdc-flu-burden-2022-23',
+		authors: 'CDC',
+		title: 'Estimated Flu Disease Burden 2022-2023 Flu Season',
+		journal: 'CDC Flu Burden',
+		year: 2023,
+		url: 'https://www.cdc.gov/flu-burden/php/data-vis/2022-2023.html',
+		usedFor: ['flu.hospitalisedShare'],
+		quote:
+			'an estimated 31 million flu-related illnesses, 14 million flu-related medical visits, 360,000 flu-related hospitalizations, and 21,000 flu-related deaths',
+		location:
+			'Summary paragraph; Table 1, all ages: 31,914,978 symptomatic illnesses, 369,372 hospitalizations',
+		why: 'Hospitalisations divided by symptomatic illnesses is 1.16%, rounded to 1.2%.',
+		context: 'US, all ages, 2022-23 season.',
+		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
+	},
+	{
+		id: 'cdc-flu-burden-about',
+		authors: 'CDC',
+		title: 'About Estimated Flu Burden',
+		journal: 'CDC Flu Burden',
+		year: 2025,
+		url: 'https://www.cdc.gov/flu-burden/php/about/index.html',
+		usedFor: ['flu.hospitalisedShare'],
+		quote:
+			'flu has resulted in 9.4 million – 51 million illnesses, 120,000 – 710,000 hospitalizations and 6,300 – 52,000 deaths annually between 2010 and 2025',
+		location: 'Main text',
+		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line.',
+		context: 'US, 2010-11 to 2024-25 seasons.',
+		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	}
 ];

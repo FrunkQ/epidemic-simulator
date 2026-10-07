@@ -17,6 +17,7 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		waningTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value),
 		fullEfficacy: config.fullEfficacy.value,
 		partialEfficacy: config.partialEfficacy.value,
+		hospitalisedShare: config.hospitalisedShare.value,
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};
@@ -70,27 +71,30 @@ export function transmit(
 	secondaryOnly: boolean
 ): void {
 	const { x, y, state, infectedTick, region, vaccineWorks } = agents;
-	const { cellStart, cellItems, cols, rows } = grid;
+	const { cellStart, cellItems } = grid;
 	const n = agents.activeCount;
 	const r2 = disease.transmissionRadius * disease.transmissionRadius;
 	const beta = disease.beta;
-	const cellSize = grid.cellSize;
 
 	for (let i = 0; i < n; i++) {
 		const s = state[i];
 		if (s !== State.SILENT && s !== State.SYMPTOMATIC) continue;
-		if (infectedTick[i] >= tick || region[i] < 0) continue;
+		const reg = region[i];
+		if (infectedTick[i] >= tick || reg < 0) continue;
 		const xi = x[i];
 		const yi = y[i];
-		const cx = Math.floor(xi / cellSize);
-		const cy = Math.floor(yi / cellSize);
+		const cols = grid.cols[reg];
+		const rows = grid.rows[reg];
+		const base = grid.offset[reg];
+		const cx = grid.col(reg, xi);
+		const cy = grid.row(reg, yi);
 		const x0 = cx > 0 ? cx - 1 : 0;
 		const x1 = cx < cols - 1 ? cx + 1 : cols - 1;
 		const y0 = cy > 0 ? cy - 1 : 0;
 		const y1 = cy < rows - 1 ? cy + 1 : rows - 1;
 		for (let gy = y0; gy <= y1; gy++) {
 			for (let gx = x0; gx <= x1; gx++) {
-				const c = gy * cols + gx;
+				const c = base + gy * cols + gx;
 				const end = cellStart[c + 1];
 				for (let k = cellStart[c]; k < end; k++) {
 					const j = cellItems[k];

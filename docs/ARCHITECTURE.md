@@ -32,9 +32,8 @@ A fixed pool of `MAX_AGENTS = 6000` dots in typed arrays, allocated once (struct
 - `x, y, vx, vy`: Float32Array
 - `state`: Uint8Array. 0 SUSCEPTIBLE, 1 SILENT, 2 SYMPTOMATIC, 3 RECOVERED, 4 DECEASED
 - `protection`: Uint8Array. 0 NONE, 1 PARTIAL, 2 FULL (vaccination level, kept separate from state)
-- `vaccineWorks`: Uint8Array (1 when this dot's vaccine took; drawn at spawn from the disease's efficacy)
-- `speed`: Float32Array (each dot's own cruising speed, so it can stop and start again)
-- `waneTicks`: Int32Array (for waning immunity, step 3)
+- `vaccineWorks`: Uint8Array. Vaccines are all-or-nothing: at spawn (and whenever protection changes) each vaccinated dot rolls once against its disease's efficacy for its protection level; 1 means fully protected, 0 means the vaccine didn't take and the dot can catch it like anyone else.
+- `speed`: Float32Array (each dot's own wandering speed). `waneTicks`: Int32Array (ticks until this dot's protection next drops a level; drawn from an exponential distribution with mean `waningDays` when protection is set; -1 when waning is off).
 - `asymptomatic`, `isolated`, `essential`: Uint8Array flags
 - `region`: Int16Array (-1 while travelling)
 - `stateTicks`: Int32Array (ticks left in the current state)
@@ -53,7 +52,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Camera: pan and zoom (wheel, pinch, and on-screen buttons), starting framed on the microcosm. All drawing goes through the camera transform. Dots outside the view are skipped when drawing but still simulated. Coastlines are cached `Path2D` shapes drawn each frame, not one giant offscreen bitmap. The engine exposes `worldToScreen` and `screenToWorld` including the camera; overlays and clicks use them, never raw pixels.
 - Scenario (`config/scenarios.ts`): map seed, `regions`, `routes`.
 - Region: `{ id, name, kind: 'city' | 'rural', cx, cy, population, density, radius (derived), hasAirport, vaccinatedFull, vaccinatedPartial, hospitalCapacity, hub? }`.
-  - Radius comes from population and density: `radius = sqrt(population / (density x PI))`, with density clamped to a sensible range. City default: dense, has an airport and a gathering hub. Rural default: small, sparse, no airport, no hub.
+  - Radius comes from the number of dots and a sim density: `radius = sqrt(dots / (simDensity x PI))`, with `simDensity` in dots per world unit², clamped to a sensible range. Using dots (not people) keeps the contact rate at the calibrated level whatever `peoplePerDot` is. Real density (people per km²) maps to `simDensity` as in 4.1. City default: dense, has an airport and a gathering hub. Rural default: small, sparse, no airport, no hub.
   - Density acts only through how often dots meet. Never add a density multiplier to the infection chance. Sparse rural areas spread slower because dots meet less.
 - Adding a population (Setup mode): the user picks city or rural, clicks a spot on land, and sets size and density. Validation: centre on land, disc mostly on land, no overlap with other discs, total population at most MAX_AGENTS (the UI shows the remaining budget). Users can also remove or resize populations.
 - Route generation (rerun whenever populations change):
@@ -80,15 +79,14 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ## 6. Mechanics
 ### 6.1 Transmission
-- One uniform grid over the whole world; cell size = the disease's transmission radius. Rebuild it every tick with a counting sort into preallocated `cellStart` / `cellItems` Int32Arrays. Only dots in a region go in; travellers do not.
-- For each infectious dot (SILENT or SYMPTOMATIC, with `infectedTick < tick`), scan the 3x3 neighbouring cells. For each SUSCEPTIBLE dot within the radius whose vaccine did not work (`vaccineWorks = 0`): chance = `beta`. On success, infect it.
-- Vaccines are all or nothing, per disease, from research: at spawn a FULL dot's vaccine works with chance `fullEfficacy` (measles 0.97, polio 0.99, flu 0.4) and a PARTIAL dot's with `partialEfficacy` (measles 0.93, polio 0.5, flu 0.2). A dot whose vaccine works cannot catch it; one whose vaccine failed catches it like anyone, but if PARTIAL is still ill half as long and never dies. (Changed from a flat 60% reduction for PARTIAL and full immunity for FULL, so each disease uses its real vaccine protection; leaky per-tick protection was rejected because repeated contact wears it down far below the published efficacy.)
-- `beta` is a per-tick chance calibrated so the sim's measured R0 matches the disease's research R0. Never hand-tune it.
-- `beta` and `transmissionRadius` live in `diseases.generated.ts`, written by the calibration.
+- One uniform grid per region, covering that region's disc bounding box (dots in different regions never meet, because discs don't overlap). Cell size = the disease's transmission radius. Rebuild every tick with a counting sort into preallocated `cellStart` / `cellItems` Int32Arrays, clearing only that region's cells. Only dots in a region go in; travellers don't. (A single whole-world grid was measured at about 0.9 ms per tick just clearing cells, and grows with the zoomed-out world.)
+- For each infectious dot (SILENT or SYMPTOMATIC, with `infectedTick < tick`), scan the 3x3 neighbouring cells. For each SUSCEPTIBLE dot within the radius that is not protected (`vaccineWorks = 0`): chance = `beta`. On success, infect it.
+- Vaccine model: all-or-nothing per disease, using published efficacy for full and partial courses, from the evidence table (e.g. measles 0.97 / 0.93, polio 0.99 / 0.5, flu 0.4 / 0.2). A leaky model (lower chance on every contact) was tried and rejected: repeated contacts wore protection far below the published efficacy. Partly vaccinated dots that still catch it are ill half as long and never die.
+- `beta` is a per-tick chance calibrated so the sim's measured R0 matches the disease's research R0 (see section 6.9). Never hand-tune it.
 - Green dots are not physical walls and there is no dot-to-dot collision. The "wall of immunity" appears because infectious dots waste their contacts on protected dots.
 
 ### 6.2 Course of illness
-- On infection: `state = SILENT`, `stateTicks = silentDays`, `asymptomatic = rng < disease.asymptomaticFraction` (polio about 0.95, measles and flu about 0).
+- On infection: `state = SILENT`, `stateTicks = silentDays`, `asymptomatic = rng < disease.asymptomaticFraction` (polio 0.96: WHO/CDC give 72% with no symptoms plus 24% with a mild illness, and both carry on as normal; measles and flu about 0).
 - A SILENT dot behaves exactly like a healthy dot: it moves, travels, and obeys lockdown like everyone else, because it does not know it is ill.
 - When SILENT ends: an asymptomatic dot stays SILENT for its remaining contagious period (`illDays` more), then becomes RECOVERED without ever turning red. Otherwise it becomes SYMPTOMATIC for `illDays` (halved if PARTIAL).
 - SYMPTOMATIC: speed 0, still contagious to dots that wander into it, never boards transport. If this happens mid-route, the dot stops on the route and its clock keeps running.
@@ -96,7 +94,8 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ### 6.3 Waning immunity
 - Each disease has `waningDays` from research (measles is close to lifelong, so effectively off; flu is short). Do not invent waning where research says there is none; the booster lesson shows with flu.
-- Steps: FULL to PARTIAL to NONE; RECOVERED to SUSCEPTIBLE with PARTIAL. When protection drops a level, a working vaccine stays working with probability `efficacyNew / efficacyOld`; a vaccine that didn't take never starts working. Process a rotating slice of dots each tick with an adjusted chance so the cost per tick is constant.
+- Steps: FULL to PARTIAL to NONE; RECOVERED to SUSCEPTIBLE with PARTIAL. Each protected dot counts down `waneTicks`; at zero it drops a level and draws a new countdown.
+- When a dot's protection drops a level, a working vaccine stays working with chance `efficacyNew / efficacyOld`; a vaccine that didn't take never starts working. Waning can only lower protection.
 
 ### 6.4 Lockdown (per region)
 - `essential` is fixed at spawn for 10% of dots. On lockdown, all other dots stop.
@@ -107,7 +106,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Cities have a hub point. For part of each sim day (e.g. day fraction 0.4 to 0.6) moving dots get a weak pull toward the hub, then disperse. Clamp speed. Off under lockdown.
 
 ### 6.6 Hospital load
-- The engine counts SYMPTOMATIC dots per region each tick. `overloaded = count > hospitalCapacity` (default a percentage of population). Telemetry carries the flag and capacity; the UI flashes a warning and the chart draws the capacity line.
+- The engine counts SYMPTOMATIC dots per region each tick. `overloaded = count > hospitalCapacity` (a share of the region's population, never an absolute number, so it scales when people add or resize populations; the default share is sourced, and step 4 can take hospital beds per 1,000 people from World Bank data). Telemetry carries the flag and capacity; the UI flashes a warning and the chart draws the capacity line.
 
 ### 6.7 Mass testing (per region)
 - Finds every SILENT dot infected more than 1 day ago (including asymptomatic ones) and sets `isolated = 1`: speed 0, no travel, drawn red. Their illness course and death chance do not change.
@@ -122,7 +121,10 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ### 6.9 Calibration
 - `scripts/calibrate.ts` (Node, headless): for each disease, seed index cases into a fully susceptible city, measure secondary infections via `infectedBy`, and binary-search `beta` to the target R0. Write the results to `config/diseases.generated.ts`.
-- Target R0 is the research value. If dot density cannot reach it (measles about 15), raise `transmissionRadius`; never weaken the lesson. The herd-immunity line shown to users is the vaccination coverage needed: (1 - 1/R0) / fullEfficacy. When that is above 100% (flu at 0.4 efficacy), the UI says in plain words that vaccination alone can't stop it, instead of showing an impossible target.
+- Target R0 is the research value. If dot density cannot reach it (measles about 15), raise `transmissionRadius`; never weaken the lesson. The herd-immunity line shown to users is `(1 - 1/R0) / fullEfficacy`. If that is above 100% (e.g. flu, where the vaccine is about 40% effective), the UI says in plain words that vaccination alone can't stop it, rather than showing an impossible target.
+- Calibration keeps adding seeds until the standard error of the measured R0 is under 2% of the target (low-R0 diseases like flu need many more seeds). The generated file's header records seeds used, index cases, and the measured R0 with its standard error.
+- A test re-measures R0 at the committed `beta` and fails if it is outside the target by more than 3 standard errors, so the committed numbers can't silently drift from the script.
+- `herdCoverage(disease)` is a pure function in config returning `{ coverage: (1 - 1/R0) / fullEfficacy, reachable: coverage <= 1 }`. The UI only displays it.
 
 ### 6.10 Citations
 - Every research-derived number in config carries the ids of its sources, e.g. `r0: { value: 15, sources: ['guerra2017'] }`. Full references live in `src/lib/config/citations.ts` (id, authors, title, journal, year, DOI or URL, what was taken from it).
@@ -132,6 +134,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - COVID-era research is used for the human-behaviour and intervention mechanics (lockdown adherence and fatigue, mass testing, hospital strain), not as a stand-in for other diseases' parameters. Mark such entries `context: 'COVID-19 era'`.
 - Double-check rule: every citation is verified by a separate pass that did not gather it. The checker opens the source itself and confirms the DOI or link resolves to that paper, that title, authors and year match, that the quoted value is really there at `location`, and that the paper has not been retracted. Anything that fails or can't be opened is removed or replaced, never kept unverified. A test fails if any entry has `verified.ok !== true`.
 - Before numbers are locked in step 1, the evidence is also written up as a plain table for Alex to review at /mnt/project-files/research/evidence.md: number, value used, source, quote, why.
+- "Every research-derived number" includes behaviour constants (lockdown fatigue, hospital share, gathering timing), not just disease parameters: they live in sourced config, never as bare constants. The citation test scans all config, fails on any research number that isn't in `{ value, sources }` form, and checks every required field (`usedFor` keys exist; `why`, `context`, `verified.by`, `verified.on` are non-empty). COVID-era entries use exactly `context: 'COVID-19 era'`. When a value is worked out rather than quoted, `quote` holds the facts it's worked from and `why` says how.
 
 ## 7. Engine API (all that Svelte sees)
 ```ts
@@ -140,7 +143,7 @@ sim.step(ticks)            // advance; used by the loop and by tests
 sim.render(ctx, viewport)  // dots, planes, barriers, sweeps
 sim.send(command)          // queued, applied at the next tick
 sim.snapshot(): Telemetry  // cheap copy, called about 10 Hz
-sim.setup(scenarioSetup)   // Setup change: restart at day 0
+sim.setup(scenarioSetup)   // Setup change: restart at day 0; takes diseaseId, the engine loads the disease itself
 sim.view                   // worldToScreen / screenToWorld
 
 type Command =
@@ -151,7 +154,7 @@ type Command =
   | { type: 'speed'; value: 0 | 0.5 | 1 | 2 | 4 }
   | { type: 'seed'; region: number; count: number };
 ```
-Telemetry: `{ day, regions: [{ id, counts per colour, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], totals, history (ring buffer, one sample per sim day per region), events: [{ kind: 'firstCase' | 'overloaded' | ..., region, day }] }`. The UI keeps it in `$state.raw` and replaces it whole on each publish.
+Telemetry: `{ day, regions: [{ id, counts per colour, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], totals, latest (this day's history sample per region), historyVersion, events (last 100 only) }`. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
 
 ## 8. Rendering
 - Dots: small squares or circles batched by colour (one fill per colour per frame).
@@ -175,7 +178,7 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Determinism: same seed and same commands give identical counts on day 100.
 - Speed: 5,000 dots mid-outbreak, `step(1)` averages under 4 ms in Node. In the browser, a dev-only FPS counter.
 - Lesson tests (headless, about 20 seeds each, assert on the share of seeds):
-  1. Measles, one imported case in a 5,000-dot city, counting people the vaccine does not protect (unvaccinated plus vaccine failures), not the imported case: at 98% fully vaccinated, under 5% infected in at least 80% of seeds. At 85%: over 30% infected in at least 80% of seeds. (Was 96%: with measles' real 97% two-dose protection, 96% coverage gives about 93% immune, right on the 1 − 1/R0 line, so outbreaks still happen there, as in real life. The coverage needed is (1 − 1/R0) / fullEfficacy, about 96%.)
+  1. Measles, one imported case into a 5,000-dot city: at 98% full coverage it fizzles (under 5% of unprotected dots infected) in at least 80% of seeds; at 85% it takes off (over 30% of unprotected dots infected) in at least 80% of seeds. Count only dots the vaccine does not protect. (96% coverage is about 93% immune, right on the threshold, so it is deliberately not tested.) The imported case itself is not counted, and the denominator is the actual number of dots with `vaccineWorks = 0`.
   2. A measles case leaving while silent by plane lands still infectious in at least 90% of trials; by ferry it arrives no longer infectious in at least 90%.
   3. Lockdown at day 5 lowers the peak number of red dots.
   4. Mass testing lowers total infections.
@@ -201,4 +204,5 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Hospital overload is computed in the engine, not in Svelte.
 - Travel moves at a set speed along the route path (the spec used a fixed progress step on a straight line, so every trip took the same time whatever the distance).
 - Setup changes restart the run; interventions are live.
-- Vaccines are all or nothing with each disease's published efficacy; partly vaccinated dots who still catch it are ill half as long and never die.
+- Vaccines are all-or-nothing using each disease's published efficacy (the spec had green dots never catching it and partial cutting the chance by 60%). Partly vaccinated dots that catch it are ill half as long and never die. Alex chose real vaccine figures over simplified ones (7 Oct).
+- Regions use their own spatial grids instead of one whole-world grid, and disc size comes from dot count and sim density (7 Oct, after the step 1 review).

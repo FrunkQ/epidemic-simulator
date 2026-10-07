@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { loadDisease } from '../../src/lib/config';
 import { singleCity } from '../../src/lib/config/scenarios';
 import { createSimulation } from '../../src/lib/sim/engine';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
@@ -8,7 +7,7 @@ describe('speed', () => {
 	it('steps 5,000 dots mid-outbreak in under 4 ms on average', () => {
 		const sim = createSimulation(singleCity({ population: 500_000 }), {
 			seed: 3,
-			disease: loadDisease('measles')
+			diseaseId: 'measles'
 		});
 		expect(sim.agents.activeCount).toBe(5000);
 		sim.send({ type: 'seed', region: 0, count: 20 });

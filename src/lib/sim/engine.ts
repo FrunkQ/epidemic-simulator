@@ -4,16 +4,14 @@ import {
 	BASE_SPEED,
 	DEFAULT_PEOPLE_PER_DOT,
 	ESSENTIAL_SHARE,
-	FATIGUE_MEAN_DAYS,
-	FATIGUE_SD_DAYS,
 	MAX_AGENTS,
 	MAX_DENSITY,
 	MIN_DENSITY,
 	MIN_DOTS_PER_REGION,
-	TICKS_PER_DAY,
-	WORLD_HEIGHT,
-	WORLD_WIDTH
+	TICKS_PER_DAY
 } from './constants';
+import { loadDisease } from '../config';
+import { BEHAVIOUR } from '../config/behaviour';
 import { advanceIllness, infect, transmit, type DiseaseHooks } from './disease';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
@@ -24,8 +22,10 @@ import {
 	Protection,
 	State,
 	type Command,
+	type DiseaseId,
 	type DiseaseRuntime,
 	type Region,
+	type RegionHistory,
 	type Scenario,
 	type SimEvent,
 	type Speed,
@@ -33,9 +33,14 @@ import {
 	type Viewport
 } from './types';
 
+/** Events kept for the UI. */
+const MAX_EVENTS = 100;
+
 export interface SimulationOptions {
 	seed: number;
-	disease: DiseaseRuntime;
+	diseaseId: DiseaseId;
+	/** Calibration and tests only: use these disease numbers instead of loading diseaseId. */
+	disease?: DiseaseRuntime;
 	/** Dot pool size; tests may use a smaller one. */
 	capacity?: number;
 	/**
@@ -68,6 +73,8 @@ export class Simulation {
 
 	private scenario!: Scenario;
 	private disease!: DiseaseRuntime;
+	private diseaseId!: DiseaseId;
+	private diseaseOverride: DiseaseRuntime | null = null;
 	private rng!: Rng;
 	private grid!: SpatialGrid;
 	private counters!: TelemetryCounters;
@@ -96,12 +103,18 @@ export class Simulation {
 				this.counters.ever[r]++;
 				if (this.firstCaseSeen[r] === 0) {
 					this.firstCaseSeen[r] = 1;
-					this.events.push({ kind: 'firstCase', region: r, day: this.day });
+					this.pushEvent({ kind: 'firstCase', region: r, day: this.day });
 				}
 			},
 			onDeath: () => {}
 		};
-		this.setup(scenario, options.disease, options.seed);
+		this.diseaseOverride = options.disease ?? null;
+		this.setup(scenario, options.diseaseId, options.seed);
+	}
+
+	private pushEvent(e: SimEvent): void {
+		this.events.push(e);
+		if (this.events.length > MAX_EVENTS) this.events.shift();
 	}
 
 	get day(): number {
@@ -117,8 +130,10 @@ export class Simulation {
 	}
 
 	/** Setup change: rebuild everything and restart at day 0. */
-	setup(scenario: Scenario, disease: DiseaseRuntime = this.disease, seed: number = this.seed): void {
+	setup(scenario: Scenario, diseaseId: DiseaseId = this.diseaseId, seed: number = this.seed): void {
 		this.scenario = scenario;
+		this.diseaseId = diseaseId;
+		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
 		this.seed = seed;
 		this.rng = new Rng(seed);
@@ -126,7 +141,6 @@ export class Simulation {
 		this.queue.length = 0;
 		this.events = [];
 		const regions = scenario.regions;
-		this.grid = new SpatialGrid(WORLD_WIDTH, WORLD_HEIGHT, disease.transmissionRadius, this.agents.capacity);
 		this.counters = new TelemetryCounters(regions.length);
 		this.mortalityMultiplier = new Float32Array(regions.length).fill(1);
 		this.firstCaseSeen = new Uint8Array(regions.length);
@@ -136,6 +150,11 @@ export class Simulation {
 		this.regionDots = dots;
 		this.peoplePerDot = peoplePerDot;
 		this.spawn();
+		this.grid = new SpatialGrid(
+			regions.map((reg, r) => [reg.cx, reg.cy, this.radii[r]]),
+			disease.transmissionRadius,
+			this.agents.capacity
+		);
 		this.counters.recount(this.agents);
 		this.counters.sample(0);
 	}
@@ -145,8 +164,8 @@ export class Simulation {
 		const rng = this.rng;
 		a.reset();
 		let slot = 0;
-		const fatigueMean = FATIGUE_MEAN_DAYS * TICKS_PER_DAY;
-		const fatigueSd = FATIGUE_SD_DAYS * TICKS_PER_DAY;
+		const fatigueMean = BEHAVIOUR.lockdownFatigueMeanDays.value * TICKS_PER_DAY;
+		const fatigueSd = BEHAVIOUR.lockdownFatigueSdDays.value * TICKS_PER_DAY;
 		this.scenario.regions.forEach((reg, r) => {
 			const density = Math.min(MAX_DENSITY, Math.max(MIN_DENSITY, reg.density));
 			const count = this.regionDots[r];
@@ -260,6 +279,11 @@ export class Simulation {
 		return this.seedCases(region, count);
 	}
 
+	/** One region's daily history (fresh typed arrays). Call only when historyVersion changes. */
+	history(region: number): RegionHistory {
+		return this.counters.regionHistory(region);
+	}
+
 	render(ctx: CanvasRenderingContext2D, viewport: Viewport): void {
 		this.renderer.draw(ctx, viewport, this.view, this.agents, this.scenario.regions, this.radii, this.tick);
 	}
@@ -272,7 +296,7 @@ export class Simulation {
 			dots: this.regionDots[r],
 			counts: c.regionCounts(r),
 			overloaded: false,
-			capacity: reg.hospitalCapacity,
+			capacity: Math.round((reg.population * reg.hospitalBedsPerThousand) / 1000),
 			lockedDown: false,
 			fatiguedShare: 0,
 			testCooldown: 0
@@ -284,7 +308,8 @@ export class Simulation {
 			peoplePerDot: this.peoplePerDot,
 			regions,
 			totals: sumCounts(regions.map((r) => r.counts)),
-			history: this.scenario.regions.map((_, r) => ({ region: r, ...c.regionHistory(r) })),
+			latest: this.scenario.regions.map((_, r) => c.latest(r)),
+			historyVersion: c.version,
 			events: this.events.slice()
 		};
 	}

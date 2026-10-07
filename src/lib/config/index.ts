@@ -7,3 +7,6 @@ import { CALIBRATION } from './diseases.generated';
 export function loadDisease(id: DiseaseId): DiseaseRuntime {
 	return toRuntime(DISEASES[id], CALIBRATION[id]);
 }
+
+export { BEHAVIOUR } from './behaviour';
+export { herdCoverage } from './herd';

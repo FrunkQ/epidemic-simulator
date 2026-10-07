@@ -15,7 +15,7 @@ describe('spatial grid', () => {
 		}
 		a.activeCount = 800;
 		const radius = 9;
-		const grid = new SpatialGrid(500, 500, radius, a.capacity);
+		const grid = new SpatialGrid([[250, 250, 220]], radius, a.capacity);
 		grid.rebuild(a);
 		for (let i = 0; i < 800; i += 37) {
 			const brute = new Set<number>();
@@ -23,11 +23,11 @@ describe('spatial grid', () => {
 				if (j !== i && (a.x[i] - a.x[j]) ** 2 + (a.y[i] - a.y[j]) ** 2 <= radius * radius) brute.add(j);
 			}
 			const found = new Set<number>();
-			const cx = Math.floor(a.x[i] / radius);
-			const cy = Math.floor(a.y[i] / radius);
+			const cx = grid.col(0, a.x[i]);
+			const cy = grid.row(0, a.y[i]);
 			for (let gy = cy - 1; gy <= cy + 1; gy++) {
 				for (let gx = cx - 1; gx <= cx + 1; gx++) {
-					const c = gy * grid.cols + gx;
+					const c = grid.offset[0] + gy * grid.cols[0] + gx;
 					for (let k = grid.cellStart[c]; k < grid.cellStart[c + 1]; k++) {
 						const j = grid.cellItems[k];
 						if (j !== i && (a.x[i] - a.x[j]) ** 2 + (a.y[i] - a.y[j]) ** 2 <= radius * radius) found.add(j);

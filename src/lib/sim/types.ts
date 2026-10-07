@@ -44,6 +44,8 @@ export interface DiseaseConfig {
 	fullEfficacy: Sourced;
 	/** The same for a started but unfinished course. */
 	partialEfficacy: Sourced;
+	/** Share of symptomatic (red) cases who need a hospital bed. */
+	hospitalisedShare: Sourced;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -54,6 +56,11 @@ export interface DiseaseCalibration {
 	transmissionRadius: number;
 	/** R0 the calibration measured at this beta, for the record. */
 	measuredR0: number;
+	/** Standard error of measuredR0. */
+	standardError: number;
+	/** Runs (seeds) and index cases behind the measurement. */
+	seeds: number;
+	indexCases: number;
 }
 
 /** Disease settings converted to ticks, used by the engine. */
@@ -68,6 +75,7 @@ export interface DiseaseRuntime {
 	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
 	fullEfficacy: number;
 	partialEfficacy: number;
+	hospitalisedShare: number;
 	beta: number;
 	transmissionRadius: number;
 }
@@ -87,8 +95,8 @@ export interface Region {
 	vaccinatedFull: number;
 	/** Share partly vaccinated, 0 to 1. */
 	vaccinatedPartial: number;
-	/** Symptomatic dots the hospitals can handle. */
-	hospitalCapacity: number;
+	/** Hospital beds per 1,000 people, so capacity scales with the population. */
+	hospitalBedsPerThousand: number;
 	hub?: { x: number; y: number };
 }
 
@@ -141,9 +149,18 @@ export interface Telemetry {
 	peoplePerDot: number;
 	regions: RegionTelemetry[];
 	totals: Counts;
-	/** Per region, one sample per sim day, oldest first. Channels follow HISTORY_CHANNELS. */
-	history: { region: number; days: number[]; series: Record<HistoryChannel, number[]> }[];
+	/** Today's history sample per region. The full history comes from sim.history(region). */
+	latest: Record<HistoryChannel, number>[];
+	/** Changes whenever a new daily sample is stored. */
+	historyVersion: number;
+	/** The most recent events (at most 100). */
 	events: SimEvent[];
+}
+
+/** One region's daily history, oldest first. Channels follow HISTORY_CHANNELS. */
+export interface RegionHistory {
+	days: Int32Array;
+	series: Record<HistoryChannel, Int32Array>;
 }
 
 export const HISTORY_CHANNELS = ['silent', 'symptomatic', 'recovered', 'deceased', 'susceptible'] as const;

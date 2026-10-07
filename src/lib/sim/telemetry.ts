@@ -1,6 +1,13 @@
 import { Agents } from './agents';
 import { HISTORY_DAYS } from './constants';
-import { HISTORY_CHANNELS, Protection, State, type Counts, type HistoryChannel } from './types';
+import {
+	HISTORY_CHANNELS,
+	Protection,
+	State,
+	type Counts,
+	type HistoryChannel,
+	type RegionHistory
+} from './types';
 
 /** Counter slots per region, in a flat Int32Array. */
 const C_UNPROTECTED = 0;
@@ -75,6 +82,7 @@ export class TelemetryCounters {
 		this.historyDay[slot] = day;
 		this.historyHead = (slot + 1) % HISTORY_DAYS;
 		if (this.historyLen < HISTORY_DAYS) this.historyLen++;
+		this.version++;
 	}
 
 	regionCounts(r: number): Counts {
@@ -92,19 +100,33 @@ export class TelemetryCounters {
 		};
 	}
 
-	/** Copy of the history for one region, oldest first. */
-	regionHistory(r: number): { days: number[]; series: Record<HistoryChannel, number[]> } {
-		const days: number[] = [];
-		const series = Object.fromEntries(HISTORY_CHANNELS.map((ch) => [ch, [] as number[]])) as Record<
+	/** Bumped every time a daily sample is stored. */
+	version = 0;
+
+	/** The most recent daily sample for one region. */
+	latest(r: number): Record<HistoryChannel, number> {
+		const slot = (this.historyHead - 1 + HISTORY_DAYS) % HISTORY_DAYS;
+		const h = (slot * this.regionCount + r) * CHANNELS;
+		return Object.fromEntries(HISTORY_CHANNELS.map((ch, k) => [ch, this.history[h + k]])) as Record<
 			HistoryChannel,
-			number[]
+			number
 		>;
-		const start = (this.historyHead - this.historyLen + HISTORY_DAYS) % HISTORY_DAYS;
-		for (let k = 0; k < this.historyLen; k++) {
+	}
+
+	/** One region's history as typed arrays, oldest first. */
+	regionHistory(r: number): RegionHistory {
+		const len = this.historyLen;
+		const days = new Int32Array(len);
+		const series = Object.fromEntries(HISTORY_CHANNELS.map((ch) => [ch, new Int32Array(len)])) as Record<
+			HistoryChannel,
+			Int32Array
+		>;
+		const start = (this.historyHead - len + HISTORY_DAYS) % HISTORY_DAYS;
+		for (let k = 0; k < len; k++) {
 			const slot = (start + k) % HISTORY_DAYS;
-			days.push(this.historyDay[slot]);
+			days[k] = this.historyDay[slot];
 			const h = (slot * this.regionCount + r) * CHANNELS;
-			for (let ch = 0; ch < CHANNELS; ch++) series[HISTORY_CHANNELS[ch]].push(this.history[h + ch]);
+			for (let ch = 0; ch < CHANNELS; ch++) series[HISTORY_CHANNELS[ch]][k] = this.history[h + ch];
 		}
 		return { days, series };
 	}

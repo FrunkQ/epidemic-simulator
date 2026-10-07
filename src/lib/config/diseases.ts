@@ -46,7 +46,8 @@ export const DISEASES: Record<DiseaseId, DiseaseConfig> = {
 		partialEfficacy: {
 			value: 0.93,
 			sources: ['cdc-pinkbook-measles', 'uzicanin2011-measles-ve-review', 'dipietrantonj2020-cochrane-mmrv']
-		}
+		},
+		hospitalisedShare: { value: 0.2, sources: ['cdc-measles-symptoms'] }
 	},
 	polio: {
 		id: 'polio',
@@ -85,7 +86,8 @@ export const DISEASES: Record<DiseaseId, DiseaseConfig> = {
 			value: 0.99,
 			sources: ['cdc-pinkbook-polio', 'grassly2014-ipv-doses-review', 'hird2012-ipv-mucosal-review']
 		},
-		partialEfficacy: { value: 0.5, sources: ['grassly2014-ipv-doses-review', 'cooper2024-ipv-nigeria'] }
+		partialEfficacy: { value: 0.5, sources: ['grassly2014-ipv-doses-review', 'cooper2024-ipv-nigeria'] },
+		hospitalisedShare: { value: 1, sources: ['cdc-pinkbook-polio'] }
 	},
 	flu: {
 		id: 'flu',
@@ -127,6 +129,7 @@ export const DISEASES: Record<DiseaseId, DiseaseConfig> = {
 		partialEfficacy: {
 			value: 0.2,
 			sources: ['belongia2016-flu-ve-review', 'young2018-flu-ve-waning-review', 'hu2022-flu-ve-waning']
-		}
+		},
+		hospitalisedShare: { value: 0.012, sources: ['cdc-flu-burden-2022-23', 'cdc-flu-burden-about'] }
 	}
 };

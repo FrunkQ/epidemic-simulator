@@ -1,5 +1,6 @@
 import { CITY_DENSITY, WORLD_HEIGHT, WORLD_WIDTH } from '../sim/constants';
 import type { Region, Scenario } from '../sim/types';
+import { BEHAVIOUR } from './behaviour';
 
 /** A default city, used by the calibration and by tests. */
 export function city(overrides: Partial<Region> = {}): Region {
@@ -14,7 +15,7 @@ export function city(overrides: Partial<Region> = {}): Region {
 		hasAirport: true,
 		vaccinatedFull: 0,
 		vaccinatedPartial: 0,
-		hospitalCapacity: 60,
+		hospitalBedsPerThousand: BEHAVIOUR.hospitalBedsPerThousand.value,
 		...overrides
 	};
 }
