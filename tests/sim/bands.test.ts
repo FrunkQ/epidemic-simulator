@@ -44,4 +44,15 @@ describe('age bands', () => {
 			perSymptomaticBands(POPULATION.backgroundDeathRate, DISEASES.flu.asymptomaticFraction)
 		).toThrow();
 	});
+	// Everyone who died of it needed a hospital bed first (the same per-case unit throughout).
+	it('never has more deaths than hospital admissions, overall or in any band', () => {
+		for (const d of diseases) {
+			expect(d.hospitalisedShare.value, d.id).toBeGreaterThanOrEqual(d.mortality.value);
+			if (d.mortalityByAge && d.hospitalisedByAge) {
+				const deaths = perSymptomaticBands(d.mortalityByAge, d.asymptomaticFraction);
+				const beds = perSymptomaticBands(d.hospitalisedByAge, d.asymptomaticFraction);
+				deaths.forEach((v, i) => expect(beds[i], `${d.id} band ${i}`).toBeGreaterThanOrEqual(v));
+			}
+		}
+	});
 });

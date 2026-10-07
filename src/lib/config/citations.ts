@@ -48,8 +48,7 @@ export const OFFICIAL_PUBLISHERS = [
 	'Eurostat',
 	'NHS England',
 	'World Bank',
-	'UN',
-	'US Public Health Service'
+	'UN'
 ] as const;
 
 export const CITATIONS: Citation[] = [
@@ -1089,12 +1088,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/flu-burden/php/data-vis/2022-2023.html',
-		usedFor: ['flu.hospitalisedShare', 'flu1918.hospitalisedShare'],
+		usedFor: ['flu.hospitalisedShare'],
 		quote:
 			'an estimated 31 million flu-related illnesses, 14 million flu-related medical visits, 360,000 flu-related hospitalizations, and 21,000 flu-related deaths',
 		location:
 			'Summary paragraph; Table 1, all ages: 31,914,978 symptomatic illnesses, 369,372 hospitalizations',
-		why: 'Hospitalisations divided by symptomatic illnesses is 1.16%, rounded to 1.2%. Also used for 1918 flu as an assumption: no 1918 hospital figure exists, and the About page says so.',
+		why: 'Hospitalisations divided by symptomatic illnesses is 1.16%, rounded to 1.2%.',
 		context: 'US, all ages, 2022-23 season.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
@@ -1107,11 +1106,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/flu-burden/php/about/index.html',
-		usedFor: ['flu.hospitalisedShare', 'flu1918.hospitalisedShare'],
+		usedFor: ['flu.hospitalisedShare'],
 		quote:
 			'flu has resulted in 9.4 million – 51 million illnesses, 120,000 – 710,000 hospitalizations and 6,300 – 52,000 deaths annually between 2010 and 2025',
 		location: 'Main text',
-		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line. Also used for 1918 flu as an assumption: no 1918 hospital figure exists, and the About page says so.',
+		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line.',
 		context: 'US, 2010-11 to 2024-25 seasons.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
@@ -2323,17 +2322,22 @@ export const CITATIONS: Citation[] = [
 			'The Incidence of Epidemic Influenza, 1918-19: A Further Analysis According to Age, Sex, and Color of the Records of Morbidity and Mortality Obtained in Surveys of 12 Localities',
 		journal: 'Public Health Reports 47(6):303-337',
 		year: 1932,
-		evidence: 'official',
+		evidence: 'study',
 		noReviewReason:
 			'No meta-analysis or systematic review gives numeric age-specific 1918 case fatality; this canvass is the primary dataset behind the published curves.',
-		publisher: 'US Public Health Service',
-		url: 'https://stacks.cdc.gov/view/cdc/68997/cdc_68997_DS1.pdf',
-		usedFor: ['flu1918.mortality', 'flu1918.mortalityByAge'],
+		doi: '10.2307/4580340',
+		mirrorUrl: 'https://stacks.cdc.gov/view/cdc/68997/cdc_68997_DS1.pdf',
+		usedFor: [
+			'flu1918.mortality',
+			'flu1918.mortalityByAge',
+			'flu1918.hospitalisedShare',
+			'flu1918.hospitalisedByAge'
+		],
 		quote:
 			'Fatality of influenza and of pneumonia by age, in all surveyed localities during epidemic of 1918-19 (percentage of cases which died)',
 		location:
 			"Table 28, p. 332 (fatality by age); Table 7, p. 311 (cases by age: 'Incidence of influenza among canvassed persons in each age group in all surveyed localities during the epidemic of 1918-19')",
-		why: 'Deaths per case by age from Table 28, banded with the case counts in Table 7: 0-14 0.0115, 15-64 0.0195, 65+ 0.0410 (worked out); overall 1.7% as published. The W shape (peaks under 1, at 25-29 and at 70+) shows only at single ages.',
+		why: 'Deaths per case by age from Table 28, banded with the case counts in Table 7: 0-14 0.0115, 15-64 0.0195, 65+ 0.0410 (worked out); overall 1.7% as published. The W shape (peaks under 1, at 25-29 and at 70+) shows only at single ages. Hospital share is set equal to deaths per case in each band, as a lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.',
 		context: 'US house-to-house canvass of 1918-19 (about 130,000 people in 18 localities)',
 		verified: {
 			by: 'independent verification pass',
@@ -2352,7 +2356,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'study',
 		doi: '10.2105/ajph.2020.306025',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7893349/',
-		usedFor: ['flu1918.mortality', 'flu1918.mortalityByAge'],
+		usedFor: [
+			'flu1918.mortality',
+			'flu1918.mortalityByAge',
+			'flu1918.hospitalisedShare',
+			'flu1918.hospitalisedByAge'
+		],
 		quote:
 			'The CFR rose to nearly 3% in the group aged 25 to 29 years and fell to less than 1.5% among those aged 45 to 49 years, but in people aged 70 years and older it rose again, reaching 5.1%.',
 		location: 'Results of the National House-to-House Surveys (citing Britten, Table 28, p332)',
@@ -2591,6 +2600,97 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Page opened twice; all table numbers matched. Official page; retraction not applicable.'
+		}
+	},
+	{
+		id: 'bobrovitz-2023-omicron-reinfection',
+		authors:
+			'Bobrovitz N, Ware H, Ma X, Li Z, Hosseini R, Cao C, Selemon A, Whelan M, Premji Z, Issa H, Cheng B, Abu Raddad LJ, Buckeridge DL, Van Kerkhove MD, Piechotta V, Higdon MM, Wilder-Smith A, Bergeri I, Feikin DR, Arora RK, Patel MK, Subissi L',
+		title:
+			'Protective effectiveness of previous SARS-CoV-2 infection and hybrid immunity against the omicron variant and severe disease: a systematic review and meta-regression',
+		journal: 'The Lancet Infectious Diseases',
+		year: 2023,
+		evidence: 'systematic-review',
+		doi: '10.1016/s1473-3099(22)00801-5',
+		usedFor: ['covid19omicron.waningDays'],
+		quote:
+			'The effectiveness of previous infection against reinfection was 65·2% (95% CI 52·9 to 75·9) at 3 months, dropping to 24·7% (16·4 to 35·5) at 12 months',
+		location: 'Results; Table 2 (any infection)',
+		why: 'Measures how well a past infection stops reinfection with Omicron, mostly earlier infections against later Omicron sublineages. That fits the Omicron-era disease, which stands for a virus that kept drifting. Worked out: linear between 65.2% at 3 months and 24.7% at 12 months, protection falls to half at 3 + (65.2 - 50) / (40.5 / 9) = 6.4 months, about 195 days, matching the half-way meaning of covid19.waningDays.',
+		context:
+			'Studies from many countries, 2021-2022: mostly earlier infections protecting against later Omicron sublineages',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked against Crossref metadata and the published PDF in the University of Victoria repository (the Lancet site returned 403). The quote is from the Results; the abstract words it differently. No correction or retraction.'
+		}
+	},
+	{
+		id: 'madewell-2023-omicron-serial',
+		authors: 'Madewell ZJ, Yang Y, Longini IM Jr, Halloran ME, Vespignani A, Dean NE',
+		title: 'Rapid review and meta-analysis of serial intervals for SARS-CoV-2 Delta and Omicron variants',
+		journal: 'BMC Infectious Diseases',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12879-023-08407-5',
+		usedFor: ['covid19omicron.silentDays'],
+		quote:
+			'The pooled mean serial interval for Delta was 3.9 days (95% CI: 3.4–4.3) (20 studies) and Omicron was 3.2 days (95% CI: 2.9–3.5) (20 studies).',
+		location: 'Abstract, Results',
+		why: "Worked out with the variant rule: the Omicron gap (incubation 3.42 - serial interval 3.2 = 0.22 days) over the 2020 gap (6.5 - 5.2 = 1.3 days) scales the 2020 virus's 2 silent days: 2 x 0.22 / 1.3 = 0.34, stored as 0.3. No review gives Omicron's presymptomatic period directly.",
+		context: 'Studies from many countries, 2021-2023',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked on PMC (PMC10291789); the publisher site was blocked.'
+		}
+	},
+	{
+		id: 'wu-2023-omicron-shedding',
+		authors: 'Wu Y, Guo Z, Yuan J, Cao G, Wang Y, Gao P, Liu J, Liu M',
+		title:
+			'Duration of viable virus shedding and polymerase chain reaction positivity of the SARS-CoV-2 Omicron variant in the upper respiratory tract: a systematic review and meta-analysis',
+		journal: 'International Journal of Infectious Diseases',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.ijid.2023.02.011',
+		usedFor: ['covid19omicron.illDays'],
+		quote:
+			'The pooled duration of viable virus shedding of the SARS-CoV-2 Omicron variant in the upper respiratory tract was 5.16 days (95% CI: 4.18-6.14)',
+		location: 'Abstract, Results',
+		why: 'Pooled days of live (infectious) virus for Omicron, rounded to 5.',
+		context: 'Studies from many countries, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked against Crossref metadata and Consensus full-text excerpts; PMC and ScienceDirect were blocked. No correction or retraction.'
+		}
+	},
+	{
+		id: 'yu-2008-1918-survivor-antibodies',
+		authors:
+			'Yu X, Tsibane T, McGraw PA, House FS, Keefer CJ, Hicar MD, Tumpey TM, Pappas C, Perrone LA, Martinez O, Stevens J, Wilson IA, Aguilar PV, Altschuler EL, Basler CF, Crowe JE Jr',
+		title: 'Neutralizing antibodies derived from the B cells of 1918 influenza pandemic survivors',
+		journal: 'Nature',
+		year: 2008,
+		evidence: 'study',
+		noReviewReason:
+			'No review measures how long immunity to the 1918 virus lasted; this study of survivors is the direct evidence.',
+		doi: '10.1038/nature07231',
+		usedFor: ['flu1918.waningDays'],
+		quote:
+			'Here we show that of the 32 individuals tested that were born in or before 1915, each showed seroreactivity with the 1918 virus, nearly 90 years after the pandemic.',
+		location: 'Abstract',
+		why: 'Survivors still had antibodies to the 1918 virus about 90 years later, so immunity to it does not fade in the model (waningDays null).',
+		context: 'US survivors of the 1918 pandemic, tested about 2007',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'A 2012 corrigendum (10.1038/nature11235) corrects one antibody sequence and one virus name and states the conclusions are unaffected; it does not touch the serology quoted.'
 		}
 	}
 ];

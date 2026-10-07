@@ -375,9 +375,20 @@ export const DISEASES = {
 		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },
 		fullEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
 		partialEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
-		hospitalisedShare: { value: 0.012, sources: ['cdc-flu-burden-2022-23', 'cdc-flu-burden-about'] },
+		// Lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.
+		hospitalisedShare: {
+			value: 0.017,
+			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		},
 		// Reported cases by age (Britten 1932, Tables 7 and 28): 15,761 / 25,927 / 666 cases.
 		mortalityByAge: {
+			value: [0.0115, 0.0195, 0.041],
+			per: 'symptomatic-case',
+			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
+			overall: 0.017,
+			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		},
+		hospitalisedByAge: {
 			value: [0.0115, 0.0195, 0.041],
 			per: 'symptomatic-case',
 			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
