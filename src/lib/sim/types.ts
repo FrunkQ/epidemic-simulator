@@ -127,6 +127,11 @@ export interface DiseaseConfig {
 	hospitalisedByAge?: Banded;
 	/** Vaccines on offer; `fullEfficacy` and `partialEfficacy` equal the default's infection values. */
 	vaccines?: Vaccine[];
+	/**
+	 * Which vaccine entry (by vaccineKey) "partly vaccinated" means, when it isn't the default's
+	 * course; e.g. Omicron-era people part-way through a primary course got the original vaccine.
+	 */
+	partialCourse?: string;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */

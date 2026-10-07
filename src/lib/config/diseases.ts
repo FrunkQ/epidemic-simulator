@@ -460,6 +460,7 @@ export const DISEASES = {
 		fullEfficacy: OMICRON_UPDATED.infection,
 		// The updated vaccine has no partial-course figure, so this stays the original vaccine's
 		// one-dose figure (Tan 2022) until step 3 moves the engine onto `vaccines`.
+		partialCourse: 'covid-original',
 		partialEfficacy: OMICRON_ORIGINAL.partial!.infection!,
 		hospitalisedShare: {
 			value: OMICRON_HOSPITAL_PER_INFECTION / (1 - OMICRON_ASYMPTOMATIC.value),
@@ -597,11 +598,8 @@ export const DISEASES = {
 				partial: { infection: SMALLPOX_PARTIAL, severe: null },
 				seriousPer100kDoses: { value: 7.4, sources: ['lane-1969-smallpox-complications'] },
 				deathsPer100kDoses: { value: 0.1, sources: ['lane-1969-smallpox-complications'] },
-				waningDays: {
-					value: null,
-					sources: ['cdc-smallpox-clinical-signs'],
-					provisional: PROVISIONAL_VACCINE_WANING
-				}
+				// Worked out: the 4-year middle of CDC's "about 3 to 5 years", treated as a half-life.
+				waningDays: { value: 4 * 365.25, sources: ['cdc-smallpox-vaccine'] }
 			}
 		]
 	},

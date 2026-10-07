@@ -1316,12 +1316,13 @@ export const CITATIONS: Citation[] = [
 			'smallpox.partialEfficacy',
 			'smallpox.coverageToday',
 			'smallpox.vaccines.vaccinia.infection',
-			'smallpox.vaccines.vaccinia.partial.infection'
+			'smallpox.vaccines.vaccinia.partial.infection',
+			'smallpox.vaccines.vaccinia.waningDays'
 		],
 		quote:
 			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
 		location: 'Effectiveness section',
-		why: "fullEfficacy=0.95 straight from this sentence. partialEfficacy=0.5 is my own pick: the page says 'Smallpox vaccination can protect you from smallpox for about 3 to 5 years', so someone vaccinated decades ago counts as only partly protected. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated.",
+		why: "fullEfficacy=0.95 straight from this sentence. partialEfficacy=0.5 is my own pick: the page says 'Smallpox vaccination can protect you from smallpox for about 3 to 5 years', so someone vaccinated decades ago counts as only partly protected. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = 4 x 365.25 = 1,461 days, worked out as the middle of 'about 3 to 5 years' and treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.",
 		context: 'Official CDC page on the smallpox vaccine; last reviewed October 23, 2024.',
 		verified: {
 			by: 'independent verification pass',
@@ -1844,12 +1845,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/smallpox/hcp/clinical-signs/index.html',
-		usedFor: [
-			'smallpox.waningDays',
-			'smallpox.silentDays',
-			'smallpox.mortality',
-			'smallpox.vaccines.vaccinia.waningDays'
-		],
+		usedFor: ['smallpox.waningDays', 'smallpox.silentDays', 'smallpox.mortality'],
 		quote: 'Recovery from smallpox gives the patient prolonged immunity to re-infection with variola virus.',
 		location: 'Clinical course / immunity',
 		why: "waningDays=null follows from this sentence: CDC describes immunity after recovery as 'prolonged', with no stated end, so for a simulator that models immunity as either present or gone, treating survivor immunity as not waning is the faithful reading. ('Prolonged' is weaker than 'lifelong', so this is the one place in the smallpox preset where null is a simplification of the source.) The page also independently supports two values already in the preset: silentDays=0, from 'During this time, the infected person does not have symptoms, is not contagious, and may feel fine', and mortality=0.30, from 'the case-fatality rate differed for the different clinical forms, but it was approximately 30% overall in unvaccinated individuals.'",

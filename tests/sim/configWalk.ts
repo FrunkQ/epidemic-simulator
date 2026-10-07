@@ -13,7 +13,7 @@ import type { Sourced, Vaccine } from '../../src/lib/sim/types';
 /** Every research-backed config object, keyed by the prefix citations use in usedFor. */
 export const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR, population: POPULATION };
 /** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
+const PLAIN = new Set(['id', 'name', 'group', 'blurb', 'partialCourse']);
 
 export function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;

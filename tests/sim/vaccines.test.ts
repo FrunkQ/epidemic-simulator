@@ -56,8 +56,11 @@ describe('vaccines', () => {
 		for (const d of WITH_VACCINES) {
 			const v = defaultVaccine(d.vaccines)!;
 			expect(d.fullEfficacy.value, d.id).toBe(v.infection.value);
-			expect(v.partial?.infection, `${d.id} default has no partial-course infection value`).toBeTruthy();
-			expect(d.partialEfficacy.value, d.id).toBe(v.partial!.infection!.value);
+			// "Partly vaccinated" means the default's course unless the disease names another entry.
+			const course = d.partialCourse ? d.vaccines!.find((x) => vaccineKey(x) === d.partialCourse) : v;
+			expect(course, `${d.id} partialCourse names no vaccine`).toBeTruthy();
+			expect(course!.partial?.infection, `${d.id} has no partial-course infection value`).toBeTruthy();
+			expect(d.partialEfficacy.value, d.id).toBe(course!.partial!.infection!.value);
 		}
 	});
 
