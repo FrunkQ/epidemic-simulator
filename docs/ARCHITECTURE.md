@@ -198,6 +198,24 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Two separate, labelled figures, never merged. "Expected everyday deaths in the weeks after vaccination" = vaccinated people x background rate x window. These happen anyway and are why "died after vaccine" reports exist (the observed-vs-expected method). "Deaths confirmed as caused by the vaccine" uses the sourced causal rates only. Do not say confirmed vaccine deaths were people about to die anyway: causal harms such as TTS and myocarditis mostly hit younger, healthy people.
 - Wording: no "harmless" or "safe" claims. Numbers sit side by side with a one-line plain explainer per bar, and people compare for themselves.
 
+### 6.14 Guided mode: "How diseases work" (Alex, 7 Oct)
+Alex: people think about their own area and don't grasp the bigger picture, so it must be "built slowly, in front of them". This is the project's principle made into a product: each subsystem is simple on its own, and complexity comes from switching them on one at a time. It is the same engine with the same real parameters, never a separate simpler model.
+- A chapter is pure data: `{ scenario, subsystems on, controls unlocked, camera framing, narration, prediction question, lessonTestId }`. No chapter-specific engine code.
+- Every claim the narration makes is backed by a lesson test that runs that chapter's scenario, so the wizard can never say something the model doesn't do. This is what makes it usable against misinformation.
+- Predict, then watch: before each run the user picks what they think will happen, then sees it. The "my knowledge was wrong" moment comes from their own prediction failing, not from being told. The tone is curious, never mocking. Where the honest answer is "it depends" (lockdowns work while people keep to them; fatigue sets in), the chapter shows that. No tuned demo values; every simplification is said out loud (e.g. "nobody dies yet, because we haven't added that").
+- Zooming out uses the same world: the village is a real rural population on the procedural map, and "pull back" is the camera moving out: village, town, the 3 cities with the strait and flights, then the world. This reuses experimental mode's zoom and rural populations.
+- The village runs at `peoplePerDot = 1`, so every dot is a person and can be followed. Chance fade-out in a small population is a lesson in its own right.
+- Suggested chapters, one new mechanic each (to refine with Alex): a cold in a village (catch, recover, the wave ends on its own); how contagious (cold vs measles); silent spreaders; who gets seriously ill (age); hospitals and pressure; density (town and city); geography and travel; your tools (lockdown or not, testing); vaccines (coverage, herd threshold, efficacy, waning, old vs new); honest vaccine risk beside disease harm; two diseases in winter; free play.
+- Engine needs (built in step 3, since it touches the engine anyway): explicit subsystem switches on `Scenario` that the tick order honours (deaths, hospital, ageBands, silentSpread, illStopsMovement, travel, waning, interventions), and an `infectedBy` Int32Array (-1 for none; 24KB at MAX_AGENTS) so the wizard can draw who caught it from whom.
+- Catalogue: a sourced `commonCold` (rhinovirus) entry under the usual citation rules (Lessler 2009 systematic review for incubation), in the vaccine-list PR or a small follow-up.
+
+### 6.15 Challenge mode: "Think you could have done better? Try it." (Alex, 7 Oct: "a serious game built on serious data"; version 2)
+- What makes it honest and hard: the player sees only what officials saw at the time: reported cases from the testing subsystem with a reporting delay, hospital numbers and deaths. True infections stay hidden; the disease starts as "a new virus" whose identity and numbers are revealed at the end, with the true picture replayed beside the player's view.
+- Scorecard: three numbers side by side: deaths, days hospitals were overwhelmed, and person-days under restrictions, each compared with two reference runs in the same model: "do nothing" and "lock down early and never lift". No single blended score unless its weights are shown and adjustable (a deaths-only score teaches permanent lockdown; a freedom-only score teaches "let it rip").
+- A challenge is pure data: `{ scenario, hidden disease, what the player can see, controls, time limit, reference runs }`. No challenge-specific engine code; the reporting-delay buffer lives in telemetry/UI.
+- Shareable runs: the engine is seeded and deterministic, so a link encoding the seed and the player's decisions replays the run exactly. No backend, no leaderboard (static Cloudflare Pages).
+- A real 2020 policy timeline may be shown only labelled "a 2020-style timeline in this model", never as a claim about what happened.
+
 ## 7. Engine API (all that Svelte sees)
 ```ts
 const sim = createSimulation(scenario, { seed, diseaseId });
@@ -272,6 +290,8 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets including age mix, and "Similar to"); lesson test 7.
 3b. Two diseases at once (6.12): per-slot arrays in use, shared pressure, shapes and legend; lesson test 18.
 5. Impact panel (including `HarmComparison` with vaccine harm, disease harm, the counterfactual worker and baseline deaths, 6.13), About page with full citations, polish, deploy.
+6. Guided mode (6.14): chapters as data, prediction prompts, camera pull-back, a lesson test per narrated claim. After step 5, because the vaccine chapter needs the honest-risk panel.
+7. Challenge mode (6.15), version 2: hidden disease, delayed reported cases, three-number scorecard against two reference runs, shareable seeded replays.
 
 ## 12. Decisions that change the original spec
 - The infection chance per tick is calibrated to R0 (the spec treated R0 as a per-collision probability).
@@ -290,3 +310,4 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 - Hospital strain is shown as fixed capacity plus a moving pressure gauge (Coping / Under pressure / Overwhelmed), with a sourced death curve instead of a flat 3x (7 Oct).
 - Up to two diseases can circulate at once, coupled only through movement, shared hospital pressure and sourced co-infection effects (7 Oct).
 - Vaccine side effects are calculated and shown next to disease harm, including a no-vaccination comparison run (7 Oct).
+- A guided "how diseases work" mode builds the picture up chapter by chapter from one village, and a challenge game follows in version 2 (Alex, 7 Oct).
