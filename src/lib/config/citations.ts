@@ -1441,10 +1441,10 @@ export const CITATIONS: Citation[] = [
 		evidence: 'review',
 		doi: '10.1136/bmjopen-2020-039856',
 		url: 'https://bmjopen.bmj.com/content/10/8/e039856',
-		usedFor: ['covid19.silentDays', 'covid19.illDays'],
+		usedFor: ['covid19.silentDays'],
 		quote: 'One study provided approximate median infectious period for asymptomatic cases of 6.5-9.5 days.',
 		location: 'Abstract — Results',
-		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'. illDays=8 is my own pick: it sits inside the quoted 6.5–9.5 day asymptomatic window and is shorter than the review's mean of 13.4 days from symptom onset to two negative PCR tests, because PCR positivity outlasts infectiousness — the review itself warns about 'limitations of inferring infectiousness from repeated diagnosis, viral loads and viral replication data alone'.",
+		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'.",
 		context:
 			'Rapid scoping review pooling virological, contact-tracing and modelling estimates of how long COVID-19 cases are infectious.',
 		verified: {
@@ -2030,6 +2030,31 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
+		id: 'rahmani-a-2022-covid-shedding',
+		authors: 'Rahmani A, Dini G, Leso V, Montecucco A, Kusznir Vitturi B, Iavicoli I, Durando P',
+		title:
+			'Duration of SARS-CoV-2 shedding and infectivity in the working age population: a systematic review and meta-analysis',
+		journal: 'La Medicina del Lavoro',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.23749/mdl.v113i2.12724',
+		url: 'https://mattioli1885journals.com/index.php/lamedicinadellavoro/article/view/12724',
+		mirrorUrl: 'https://iris.unige.it/retrieve/9b992393-39f0-41b6-8aaa-2e00efada06c/03-mdl-12724-1.pdf',
+		usedFor: ['covid19.illDays'],
+		quote:
+			'Overall, a mean duration of RT-PCR positivity after symptom onset was found equal to 27.9 days (95%CI 23.3-32.5), while the mean duration of replicant competent virus isolation was 7.3 days (95%CI 5.7-8.8).',
+		location: 'Abstract (Results)',
+		why: "A pooled mean of how long live virus can be grown after symptoms start (7.3 days), so it matches the Omicron figure (Wu 2023, 5.16 days), which is also a pooled mean of live virus. Measured slightly differently: this counts from symptom onset to the last positive culture, while Wu counts from the earlier of onset or first positive test to the day after the last positive culture, so on Wu's clock this would be about a day longer. No review pools the 2020 virus on Wu's exact clock (search, 7 Oct 2026).",
+		context:
+			'Studies published 1 Dec 2019 to 10 Sep 2021, before Omicron; 20 studies, 866 people, mostly working age. The immunocompetent subgroup mean is 6.3 days.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked in two copies: the publisher record page (Med Lav 2022;113(2):e2022014) and the publisher PDF in the University of Genoa repository; authors, year, journal and DOI match and the quote is verbatim; no correction or retraction found. doi.org itself was blocked.'
+		}
+	},
+	{
 		id: 'cevik2021-covid-shedding',
 		authors: 'Cevik M, Tate M, Lloyd O, Maraolo AE, Schafers J, Ho A',
 		title:
@@ -2038,11 +2063,11 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s2666-5247(20)30172-5',
-		usedFor: ['covid19.illDays'],
+		usedFor: ['covid19.about'],
 		quote:
 			'No study detected live virus beyond day 9 of illness, despite persistently high viral loads, which were inferred from cycle threshold values.',
 		location: 'Abstract (findings)',
-		why: 'Systematic review and meta-analysis: no live virus after day 9 of illness, which supports about 8 contagious days after symptoms start.',
+		why: 'About-page context: no live virus was found after day 9 of illness, although tests stayed positive far longer. It pools only how long tests stay positive, not how long live virus lasts, so the contagious days come from Rahmani 2022 instead.',
 		context: 'Studies from many countries, 2020',
 		verified: {
 			by: 'independent verification pass',
@@ -2691,6 +2716,55 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'A 2012 corrigendum (10.1038/nature11235) corrects one antibody sequence and one virus name and states the conclusions are unaffected; it does not touch the serology quoted.'
+		}
+	},
+	{
+		id: 'taubenberger-morens-2006',
+		authors: 'Taubenberger JK, Morens DM',
+		title: '1918 Influenza: the Mother of All Pandemics',
+		journal: 'Emerging Infectious Diseases',
+		year: 2006,
+		evidence: 'review',
+		doi: '10.3201/eid1201.050979',
+		url: 'https://wwwnc.cdc.gov/eid/article/12/1/05-0979_article',
+		usedFor: ['flu1918.about'],
+		quote:
+			'Jordan showed that from 1900 to 1917, the 5- to 15-year age group accounted for 11% of total influenza cases, while the >65-year age group accounted for 6% of influenza cases. But in 1918, cases in the 5- to 15-year-old group jumped to 25% of influenza cases (compatible with exposure to an antigenically novel virus strain), while the >65 age group only accounted for 0.6% of the influenza cases, findings consistent with previously acquired protective immunity caused by an identical or closely related viral protein to which older persons had once been exposed.',
+		location:
+			"Main text, section on age-specific clinical influenza (citing Jordan, ref. 21); see also Figure 3 panel A and the sentence 'Persons <35 years of age in 1918 had a disproportionately high influenza incidence (Figure 3, panel A).'",
+		why: 'Shows that older people made up far fewer 1918 influenza cases (over-65s: 0.6% of cases in 1918 vs 6% in 1900-1917) and that people under 35 had disproportionately high incidence, supporting a lower attack rate in older people.',
+		context:
+			"These are shares of cases, not age-specific attack rates; Figure 3A (incidence per 1,000 by age, USPHS house-to-house surveys, 8 states, 1918) is graphical only. The excerpt renders '>' as the HTML entity '&gt;'.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote confirmed verbatim in the full published article (EID 2006;12(1):15-22) from a university-hosted copy; the DOI printed in the article matches, and Crossref and Consensus records agree on title, authors, year and journal. doi.org and the CDC page were blocked.'
+		}
+	},
+	{
+		id: 'mamelund-2016-missed-summer-wave',
+		authors: 'Mamelund SE, Haneberg B, Mjaaland S',
+		title:
+			'A Missed Summer Wave of the 1918–1919 Influenza Pandemic: Evidence From Household Surveys in the United States and Norway',
+		journal: 'Open Forum Infectious Diseases',
+		year: 2016,
+		evidence: 'study',
+		noReviewReason:
+			'No review with readable age-specific 1918 attack-rate figures was accessible; this primary survey reanalysis gives the direct age-morbidity evidence.',
+		doi: '10.1093/ofid/ofw040',
+		usedFor: ['flu1918.about'],
+		quote:
+			'When relating the reported ILI-rates to age, in both areas of Maryland during the second wave, and in Bergen during the first wave, it appeared that the disease was most frequent in school-age children and young adults, with low morbidity rates in the very young children and steadily declining values in older individuals, creating inverted U-shaped curves.',
+		location: "Discussion; abstract Results: 'Individuals <40 years had the highest morbidity'",
+		why: 'Primary household-survey data (Baltimore, rural Maryland, Bergen) showing 1918 illness rates falling steadily with age from about 30 years.',
+		context:
+			'Self-reported influenza-like illness, not laboratory-confirmed infection; age-specific rates are shown in figures only. The authors attribute the lower morbidity in older people to immunity from the 1889-1890 pandemic.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'OFID 2016;3(1):ofw040. Checked in the Norwegian Institute of Public Health repository record and the Consensus full-text record; authors, year, journal and DOI match and the quote is verbatim; no correction found.'
 		}
 	}
 ];

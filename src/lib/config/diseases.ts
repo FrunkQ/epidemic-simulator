@@ -205,7 +205,7 @@ export const DISEASES = {
 			'The 2020 pandemic virus. Many people pass it on before they feel ill, or without ever feeling ill.',
 		r0: { value: 3.32, sources: ['alimohamadi-2020-covid-r0'] },
 		silentDays: { value: 2, sources: ['alene2021-covid-serial-incubation', 'byrne-2020-infectious-period'] },
-		illDays: { value: 8, sources: ['cevik2021-covid-shedding', 'byrne-2020-infectious-period'] },
+		illDays: { value: 7.3, sources: ['rahmani-a-2022-covid-shedding'] },
 		asymptomaticFraction: COVID19_ASYMPTOMATIC,
 		infectionFatalityRate: COVID19_IFR,
 		mortality: {
