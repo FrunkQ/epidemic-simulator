@@ -25,7 +25,7 @@ describe('citations', () => {
 		// A placeholder still counts as a sourced number, so its sources are checked too.
 		expect(keys).toContain('ebola.vaccines.rVSV-ZEBOV.waningDays');
 		expect(isSourced({ value: 1, sources: ['x'], provisional: 'placeholder' })).toBe(true);
-		expect(keys).toContain('covid19.vaccines.covid-2021.deathsPer100kDoses');
+		expect(keys).toContain('covid19.vaccines.covid-original.deathsPer100kDoses');
 	});
 
 	it('gives every research number at least one source', () => {

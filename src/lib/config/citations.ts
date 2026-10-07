@@ -1,3 +1,42 @@
+import {
+	ALL_VACCINE_ANAPHYLAXIS_PER_MILLION,
+	BOBROVITZ,
+	BOLORMAA,
+	CHIT,
+	CHO,
+	CHOI,
+	COVID_INFECTION_HALF_LIFE_MONTHS,
+	DAYS_PER_MONTH,
+	DAYS_PER_YEAR,
+	DTAP_SERIOUS_DOSES,
+	FAMULARE,
+	FEIKIN,
+	FLU_SERIOUS,
+	IPV_ONE_DOSE,
+	IPV_ONE_DOSE_SEROCONVERSION,
+	LANE,
+	LEWNARD_HALF_LIFE_YEARS,
+	MCGIRR,
+	MENEGALE,
+	MMR_SEIZURE_DOSES,
+	MMR_SERIOUS_PER_100K,
+	MORO,
+	MRNA_SERIOUS,
+	OMICRON_VACCINE,
+	OPV_RISK,
+	OPV_SHEDDING_OR,
+	OSTER,
+	RANJEVA_HALF_LIFE_YEARS,
+	SMALLPOX_VACCINE_HALF_LIFE,
+	SMALLPOX_VACCINE_YEARS,
+	WENDELBOE_HALF_LIFE,
+	WENDELBOE_YEARS,
+	YOUNG,
+	fmt,
+	per100kFromPerMillion
+} from './derived';
+import { stackedProtection as stacked } from './vaccines';
+
 /**
  * Every source behind a number in config. The About page is generated from this list.
  * Each entry is checked by a separate verification pass before it is used (verified.ok).
@@ -158,7 +197,7 @@ export const CITATIONS: Citation[] = [
 			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong … MMR vaccine is associated with a very small risk of febrile seizures; approximately one case for every 3,000 to 4,000 doses of MMR vaccine administered.',
 		location:
 			'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024); Vaccine Safety (febrile seizures)',
-		why: 'CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in 3,000 to 4,000 doses = 25 to 33 per 100,000 doses, stored as 30. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. Deaths caused by MMR come from IOM 2012, not this page.',
+		why: `CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in ${fmt(MMR_SEIZURE_DOSES[0])} to ${fmt(MMR_SEIZURE_DOSES[1])} doses, the middle of which is ${fmt(MMR_SERIOUS_PER_100K, 1)} per 100,000 doses. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. Deaths caused by MMR come from IOM 2012, not this page.`,
 		context: 'US; seroconversion data.',
 		verified: {
 			by: 'independent verification pass',
@@ -426,7 +465,7 @@ export const CITATIONS: Citation[] = [
 			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
 		location:
 			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024); OPV vaccine efficacy; Vaccine-associated paralytic polio; IPV safety',
-		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per 2 to 3 million doses = 0.033 to 0.05 per 100,000 doses, stored as 0.04; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). OPV deaths are worked out: 0.04 per 100,000 doses x the middle of the 2% to 5% case fatality ratio for paralytic polio (3.5%) = 0.0014 per 100,000 doses. That no death is established for IPV comes from ACIP 2024.',
+		why: `CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per ${OPV_RISK.millionDosesPerVapp[0]} to ${OPV_RISK.millionDosesPerVapp[1]} million doses, the middle of which is ${fmt(OPV_RISK.vappPer100k, 4)} per 100,000 doses; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). OPV deaths are worked out: ${fmt(OPV_RISK.vappPer100k, 4)} x the middle of the ${OPV_RISK.paralyticCaseFatality[0] * 100}% to ${OPV_RISK.paralyticCaseFatality[1] * 100}% case fatality ratio for paralytic polio (${fmt(OPV_RISK.caseFatality * 100, 1)}%) = ${fmt(OPV_RISK.deathsPer100k, 5)} per 100,000 doses. That no death is established for IPV comes from ACIP 2024.`,
 		context: 'US; children.',
 		verified: {
 			by: 'independent verification pass',
@@ -629,7 +668,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'One full dose of intramuscular IPV seroconverted 33%, 41%, and 47% of infants against serotypes 1, 2, and 3 on average, whereas 2 full doses seroconverted 79%, 80%, and 90%, respectively. … Limited data from case-control studies indicate clinical efficacy equivalent to the proportion seroconverting.',
 		location: 'Abstract, Results',
-		why: 'One IPV dose, a started course: the mean of 33%, 41% and 47% = 0.40 protection against paralysis, since clinical efficacy about equals the share seroconverting.',
+		why: `One IPV dose, a started course: the mean of ${IPV_ONE_DOSE_SEROCONVERSION.map((x) => `${x * 100}%`).join(', ')} = ${fmt(IPV_ONE_DOSE, 3)} protection against paralysis, since clinical efficacy about equals the share seroconverting.`,
 		context: '20 study arms from 12 articles; infants. Seroconversion rises with age at the dose.',
 		verified: {
 			by: 'independent verification pass',
@@ -676,7 +715,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Individuals vaccinated with OPV were protected against infection and shedding of poliovirus in stool samples collected after challenge compared with unvaccinated individuals (summary odds ratio [OR] for shedding 0.13 (95% confidence interval [CI] 0.08–0.24)). In contrast, IPV provided no protection against shedding compared with unvaccinated individuals (summary OR 0.81 [95% CI 0.59–1.11])',
 		location: 'abstract',
-		why: 'OPV: 1 - OR 0.13 = 0.87 protection against infection (an odds ratio overstates the risk reduction a little when shedding is common). IPV: 1 - OR 0.81 = 0.19, but its 95% CI (0.59-1.11) includes no effect, so it is not statistically significant and is stored as 0, for a full or a started course. IPV cuts shedding from the throat more than from the gut; this model has no route of spread (throat or gut), so it uses this gut-shedding result, and an IPV-vaccinated person can still catch and pass on polio while being protected from paralysis.',
+		why: `OPV: 1 - OR ${OPV_SHEDDING_OR} = ${fmt(1 - OPV_SHEDDING_OR, 2)} protection against infection (an odds ratio overstates the risk reduction a little when shedding is common). IPV: 1 - OR 0.81 = 0.19, but its 95% CI (0.59-1.11) includes no effect, so it is not statistically significant and is stored as 0, for a full or a started course. IPV cuts shedding from the throat more than from the gut; this model has no route of spread (throat or gut), so it uses this gut-shedding result, and an IPV-vaccinated person can still catch and pass on polio while being protected from paralysis.`,
 		context: '31 stool-shedding challenge studies through May 2011, mostly trivalent OPV schedules.',
 		verified: {
 			by: 'independent verification pass',
@@ -1018,7 +1057,7 @@ export const CITATIONS: Citation[] = [
 			'Meta-analyses were performed to compare VE 15-90 days after vaccination to VE 91-180 days after vaccination. A significant decline in VE was observed for influenza virus subtype A/H3 (change in VE, -33; 95% confidence interval [CI], -57 to -12) and type B (change in VE, -19; 95% CI, -33 to -6). VE declined for influenza virus subtype A/H1, but this difference was not statistically significant (change in VE -8; 95% CI, -27 to 21).',
 		location:
 			"Abstract (Results); pooled VE by window from Table 4 'Summary of Findings': A(H3) 45 -> 13 (10,736 cases), B 62 -> 43 (6,424 cases), A(H1) 62 -> 54 (5,148 cases), VE 15-90 days -> 91-180 days",
-		why: 'Meta-analysis. Vaccine waningDays 105 is worked out as an exponential half-life between the window midpoints (day 52.5 and day 135.5, 83 days apart), using the mean VE weighted by cases, 53.82 -> 31.10: 83 x ln2 / ln(53.82 / 31.10) = 105 days. By subtype: H3 46, B 157, H1 416 days; unweighted mean 134 days.',
+		why: `Meta-analysis. Vaccine waningDays is worked out as an exponential half-life between the window midpoints (day ${YOUNG.early.day} and day ${YOUNG.late.day}, ${YOUNG.late.day - YOUNG.early.day} days apart), using the mean VE weighted by cases, ${YOUNG.early.ve} -> ${fmt(YOUNG.late.ve, 2)}: ${YOUNG.late.day - YOUNG.early.day} x ln2 / ln(${YOUNG.early.ve} / ${fmt(YOUNG.late.ve, 2)}) = ${fmt(YOUNG.halfLife)} days. By subtype: H3 46, B 157, H1 416 days; unweighted mean 134 days.`,
 		context:
 			"Vaccine-derived protection against medically attended, laboratory-confirmed flu in test-negative studies; each window is pooled from a different set of studies, and part of the decline may be bias from the test-negative design (Tokars 2020), so real waning may be slower. Range: 78 days if subtype decay rates are averaged by cases instead, and Hu 2022's 77.5 days. Infection-acquired protection lasts years (Ranjeva 2019), which is why the disease's own waningDays is far longer.",
 		verified: {
@@ -1301,7 +1340,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
 		location: 'Effectiveness section',
-		why: "fullEfficacy=0.95 straight from this sentence. There is no partial course: someone vaccinated decades ago is a waned vaccination, which the vaccine's waningDays covers, and a waned dot keeps its severe protection. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = 4 x 365.25 = 1,461 days, worked out as the middle of 'about 3 to 5 years' and treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.",
+		why: `fullEfficacy=0.95 straight from this sentence. There is no partial course: someone vaccinated decades ago is a waned vaccination, which the vaccine's waningDays covers, and a waned dot keeps its severe protection. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = the middle of 'about ${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years' x 365.25 = ${fmt(SMALLPOX_VACCINE_HALF_LIFE)} days, treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.`,
 		context: 'Official CDC page on the smallpox vaccine; last reviewed October 23, 2024.',
 		verified: {
 			by: 'independent verification pass',
@@ -1411,7 +1450,7 @@ export const CITATIONS: Citation[] = [
 			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms … Rates of these moderate or severe systemic reactions vary by symptom and vaccine but generally occur in fewer than 1 in 10,000 doses.',
 		location:
 			'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy; Vaccine Safety (DTaP adverse reactions)',
-		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). CDC's 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%' backs fullEfficacy alongside Chit 2018's meta-analysed 0.91, which sets it; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in 10,000 doses = under 10 per 100,000 doses, stored as the upper bound 10 (not all need hospital care). No death caused by DTaP is established (IOM 2003).",
+		why: `illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). CDC's 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%' backs fullEfficacy alongside Chit 2018's meta-analysed 0.91, which sets it; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in ${fmt(DTAP_SERIOUS_DOSES)} doses = under ${fmt(100_000 / DTAP_SERIOUS_DOSES)} per 100,000 doses, stored as that upper bound (not all need hospital care). No death caused by DTaP is established (IOM 2003).`,
 		context: 'Official US reference text; page last reviewed October 19, 2022.',
 		verified: {
 			by: 'independent verification pass',
@@ -1553,7 +1592,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Fitting the waning of protection to a Gompertz curve suggested that effectiveness reaches 50% in the 22nd month and < 10% by the 32nd month.',
 		location: 'Abstract — Results',
-		why: 'waningDays=660 (about 22 months) comes straight from this sentence: the preset models immunity as all-or-nothing, so the half-life point is the natural single number to use. Protection against severe reinfection was far more durable (97.3%, with no evidence of waning), which this one-number preset cannot express.',
+		why: `waningDays comes straight from this sentence: protection reaches 50% in month ${COVID_INFECTION_HALF_LIFE_MONTHS}, so ${COVID_INFECTION_HALF_LIFE_MONTHS} x 365.25 / 12 = ${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days. The preset models immunity as all-or-nothing, so the half-life point is the natural single number to use. Protection against severe reinfection was far more durable (97.3%, with no evidence of waning), which this one-number preset cannot express.`,
 		context:
 			'Three matched national retrospective cohort studies in Qatar covering February 2020 to June 2022, among unvaccinated people with a documented primary infection.',
 		verified: {
@@ -2108,7 +2147,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks.',
 		location: 'Abstract (findings)',
-		why: 'Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (660 days).',
+		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022).`,
 		context: 'Studies from many countries, pre-Omicron variants',
 		verified: {
 			by: 'independent verification pass',
@@ -2652,7 +2691,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The effectiveness of previous infection against reinfection was 65·2% (95% CI 52·9 to 75·9) at 3 months, dropping to 24·7% (16·4 to 35·5) at 12 months',
 		location: 'Results; Table 2 (any infection)',
-		why: 'Measures how well a past infection stops reinfection with Omicron, mostly earlier infections against later Omicron sublineages. That fits the Omicron-era disease, which stands for a virus that kept drifting. Worked out: linear between 65.2% at 3 months and 24.7% at 12 months, protection falls to half at 3 + (65.2 - 50) / (40.5 / 9) = 6.4 months, about 195 days, matching the half-way meaning of covid19.waningDays.',
+		why: `Measures how well a past infection stops reinfection with Omicron, mostly earlier infections against later Omicron sublineages. That fits the Omicron-era disease, which stands for a virus that kept drifting. Worked out: a straight line between ${BOBROVITZ.early.protection}% at ${BOBROVITZ.early.month} months and ${BOBROVITZ.late.protection}% at ${BOBROVITZ.late.month} months falls to half at ${fmt(BOBROVITZ.halfMonths, 2)} months x 365.25 / 12 = ${fmt(BOBROVITZ.halfLife)} days, matching the half-way meaning of covid19.waningDays.`,
 		context:
 			'Studies from many countries, 2021-2022: mostly earlier infections protecting against later Omicron sublineages',
 		verified: {
@@ -2841,8 +2880,8 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'covid19.fullEfficacy',
 			'covid19.partialEfficacy',
-			'covid19.vaccines.covid-2021.full.infection',
-			'covid19.vaccines.covid-2021.partial.infection'
+			'covid19.vaccines.covid-original.full.infection',
+			'covid19.vaccines.covid-original.partial.infection'
 		],
 		quote:
 			'confirmed COVID-19 was defined in the clinical trial as the presence of symptoms and positive RT-PCR test for SARS-CoV-2; while the included studies of our meta-analyses, confirmed COVID-19 was defined as positive RT-PCR test for SARS-CoV-2 regardless of the presence of symptoms. … pooled HR of 0.12 (95% confidence interval: 0.08–0.16; Fig. 2) 14 days or more after the second dose, and thus vaccine effectiveness of 88% (95% confidence interval: 84%–92%).',
@@ -2937,7 +2976,7 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'Not the value source: Ling 2022 (meta-analysis) sets it. Kept because Ling pools myocarditis with pericarditis and gives its age and sex rows for all COVID-19 vaccines only; Oster gives myocarditis alone after mRNA vaccines by age, sex and dose, with chart-reviewed cases. US reports likely undercount.',
 		usedFor: [
-			'covid19.vaccines.covid-2021.seriousPer100kDoses',
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
 		],
@@ -2945,7 +2984,7 @@ export const CITATIONS: Citation[] = [
 			'The rates of myocarditis were highest after the second vaccination dose in adolescent males aged 12 to 15 years (70.7 per million doses of the BNT162b2 vaccine), in adolescent males aged 16 to 17 years (105.9 per million doses of the BNT162b2 vaccine), and in young men aged 18 to 24 years (52.4 and 56.3 per million doses of the BNT162b2 vaccine and the mRNA-1273 vaccine, respectively).',
 		location:
 			"Abstract, Results; also 'Among 192 405 448 persons receiving a total of 354 100 845 mRNA-based COVID-19 vaccines ... 1626 of these reports met the case definition of myocarditis' and 'Approximately 96% of persons (784/813) were hospitalized'",
-		why: "Myocarditis only, from US reports: 1,626 cases in 354,100,845 doses = 0.459 per 100,000, far higher in young men after dose 2 (105.9 per million at 16-17). The value comes from Ling 2022's meta-analysis (myocarditis or pericarditis, 2.26 per 100,000); Oster is kept for the mRNA-specific age and sex detail step 5 uses.",
+		why: `Myocarditis only, from US reports: ${fmt(OSTER.cases)} cases in ${fmt(OSTER.doses)} doses = ${fmt(OSTER.per100k, 3)} per 100,000, far higher in young men after dose 2 (105.9 per million at 16-17). The value comes from Ling 2022's meta-analysis (myocarditis or pericarditis, ${fmt(per100kFromPerMillion(MRNA_SERIOUS.myopericarditisPerMillion), 2)} per 100,000); Oster is kept for the mRNA-specific age and sex detail step 5 uses.`,
 		context:
 			'US passive reports (VAERS), Dec 2020 - Aug 2021, within 7 days of a dose; likely under-counted.',
 		verified: {
@@ -2965,14 +3004,14 @@ export const CITATIONS: Citation[] = [
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/vaccine-safety/vaccines/covid-19.html',
 		usedFor: [
-			'covid19.vaccines.covid-2021.deathsPer100kDoses',
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
 		],
 		quote:
 			'Anaphylaxis occurs at a rate of approximately 5 cases per one million vaccine doses administered. … COVID-19 vaccines do not increase the risk of death from non-COVID causes when compared to those who have not been vaccinated.',
 		location: 'Sections on anaphylaxis and deaths (last updated 31 January 2025)',
-		why: "Context beside Cho 2023's death rate: vaccinated people did not die more often from non-COVID causes, which fits a cause of death as rare as about 1 in 10 million doses. Anaphylaxis comes from Greenhawt 2021, a meta-analysis, rather than this page's 'about 5 per million'.",
+		why: `Context beside Cho 2023's death rate: vaccinated people did not die more often from non-COVID causes, which fits a cause of death as rare as at least ${fmt(CHO.per100k, 3)} per 100,000 doses (about 1 in ${fmt(Math.round(1e5 / CHO.per100k / 1e6))} million). Anaphylaxis comes from Greenhawt 2021, a meta-analysis, rather than this page's 'about 5 per million'.`,
 		context:
 			"US official page; also: 'most patients (80%) were considered by their cardiologist or other healthcare provider to have either fully or probably fully recovered' from myocarditis at 3 months or more.",
 		verified: {
@@ -2994,14 +3033,14 @@ export const CITATIONS: Citation[] = [
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/mmwr/volumes/70/wr/mm7043e2.htm',
 		usedFor: [
-			'covid19.vaccines.covid-2021.deathsPer100kDoses',
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
 		],
 		quote: 'There is no increased risk for mortality among COVID-19 vaccine recipients.',
 		location:
 			"Summary box; also 'COVID-19 vaccine recipients had lower rates of non–COVID-19 mortality than did unvaccinated persons after adjusting for age, sex, race and ethnicity, and study site.'",
-		why: "Context beside Cho 2023's death rate: deaths among vaccinated people were not above those in the unvaccinated, which fits a cause of death as rare as about 1 in 10 million doses; a study this size cannot see it.",
+		why: `Context beside Cho 2023's death rate: deaths among vaccinated people were not above those in the unvaccinated, which fits a cause of death as rare as at least ${fmt(CHO.per100k, 3)} per 100,000 doses; a study this size cannot see it.`,
 		context:
 			'US Vaccine Safety Datalink; MMWR 70(43):1520-1524. Covers Pfizer, Moderna and Janssen. A healthy-vaccinee effect may partly explain the lower rate.',
 		verified: {
@@ -3025,7 +3064,7 @@ export const CITATIONS: Citation[] = [
 			'If there is an increased risk of GBS following flu vaccination, it is small, on the order of one to two additional GBS cases per million doses of flu vaccine administered.',
 		location:
 			"Main text; also 'Most people recover fully from GBS, but some people have long-term nerve damage.' and 'In some cases, people have died of GBS, usually from difficulty breathing.'",
-		why: 'GBS 1 to 2 per million doses plus anaphylaxis 1.35 per million (McNeil 2016) = 2.35 to 3.35 per million, about 0.3 per 100,000 doses. No death is established (Miller 2015, IOM 2012).',
+		why: `GBS ${FLU_SERIOUS.gbsPerMillion[0]} to ${FLU_SERIOUS.gbsPerMillion[1]} per million doses (the middle is used) plus anaphylaxis ${FLU_SERIOUS.anaphylaxisPerMillion} per million (McNeil 2016) = ${fmt(FLU_SERIOUS.per100k, 3)} per 100,000 doses. No death is established (Miller 2015, IOM 2012).`,
 		context:
 			"The risk is stated conditionally ('if there is an increased risk'), so this is an upper estimate. Last updated 17 September 2024.",
 		verified: {
@@ -3050,7 +3089,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The rate of anaphylaxis was 1.31 (95% CI, 0.90-1.84) per million vaccine doses. The incidence did not vary significantly by age, and there was a nonsignificant female predominance. Vaccine-specific rates included 1.35 (95% CI, 0.65-2.47) per million doses for inactivated trivalent influenza vaccine',
 		location: 'Abstract, Results',
-		why: 'Flu: 1.35 per million added to GBS (CDC) gives about 0.3 per 100,000 doses. IPV has no vaccine-specific serious risk (CDC), so the all-vaccine anaphylaxis rate 1.31 per million = 0.131 per 100,000 doses is used.',
+		why: `Flu: ${FLU_SERIOUS.anaphylaxisPerMillion} per million added to GBS (CDC) gives ${fmt(FLU_SERIOUS.per100k, 3)} per 100,000 doses. IPV has no vaccine-specific serious risk (CDC), so the all-vaccine anaphylaxis rate ${ALL_VACCINE_ANAPHYLAXIS_PER_MILLION} per million = ${fmt(per100kFromPerMillion(ALL_VACCINE_ANAPHYLAXIS_PER_MILLION), 3)} per 100,000 doses is used.`,
 		context:
 			'US Vaccine Safety Datalink 2009-2011, 25.2 million doses, chart-confirmed cases; same across age bands.',
 		verified: {
@@ -3079,7 +3118,7 @@ export const CITATIONS: Citation[] = [
 			'During 2006-2020, approximately 132.8 million VAR doses were distributed; 40 684 reports were received in VAERS (30.6/100 000 doses distributed), with 4.1% classified as serious (1.3/100 000 doses distributed).',
 		location:
 			"Abstract, Results; also 'AEs associated with evidence of vaccine strain varicella-zoster virus (vVZV) infection included meningitis, encephalitis, herpes zoster, and 6 deaths (all in immunocompromised persons with contraindications for vaccination).'",
-		why: '1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. Deaths are worked out: 6 vaccine-strain deaths in 132.8 million doses = 0.0045 per 100,000 doses. All were in people with weakened immune systems who should not have had this vaccine; that is said beside the number rather than leaving it out.',
+		why: `1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. Deaths are worked out: ${MORO.deaths} vaccine-strain deaths in ${fmt(MORO.doses / 1e6, 1)} million doses = ${fmt(MORO.per100k, 4)} per 100,000 doses. All were in people with weakened immune systems who should not have had this vaccine; that is said beside the number rather than leaving it out.`,
 		context: 'US passive surveillance, 2006-2020.',
 		verified: {
 			by: 'independent verification pass',
@@ -3103,7 +3142,7 @@ export const CITATIONS: Citation[] = [
 			'Approximately 5% of Guillain-Barré syndrome cases are fatal [52], but given the indeterminate association between influenza vaccination and GBS, risk of death from vaccine-associated GBS would have to be considered theoretical. … Rare cases where a known or plausible theoretical risk of death following vaccination exists include anaphylaxis, … Guillain-Barré syndrome after inactivated influenza vaccine, … and vaccine-associated paralytic poliomyelitis from oral poliovirus vaccine.',
 		location:
 			'Section 4.4 (Guillain–Barré syndrome after seasonal and 2009 H1N1 inactivated influenza vaccines); Abstract',
-		why: "Flu: a death from vaccine-linked GBS is only theoretical, so deaths are 'none established'. If the link were causal, 1-2 GBS cases per million doses x about 5% fatal would be about 0.005-0.01 per 100,000 doses (Censi 2024 gives 4.6% for GBS after COVID-19 vaccines), shown only as context. OPV: names vaccine-caused paralysis as a cause of death, which backs the worked-out OPV rate.",
+		why: `Flu: a death from vaccine-linked GBS is only theoretical, so deaths are 'none established'. If the link were causal, ${FLU_SERIOUS.gbsPerMillion[0]}-${FLU_SERIOUS.gbsPerMillion[1]} GBS cases per million doses x 4.6% fatal (Censi 2024, GBS after COVID-19 vaccines) would be ${fmt(per100kFromPerMillion(FLU_SERIOUS.gbsPerMillion[0] * 0.046), 4)}-${fmt(per100kFromPerMillion(FLU_SERIOUS.gbsPerMillion[1] * 0.046), 4)} per 100,000 doses, shown only as context. OPV: names vaccine-caused paralysis as a cause of death, which backs the worked-out OPV rate.`,
 		context:
 			'Review by CDC authors; it also warns against reading reports of deaths after vaccination as caused by it.',
 		verified: {
@@ -3130,7 +3169,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'There were 74 complications and one death per 1,000,000 primary vaccinations. Morbidity and mortality rates were highest for infants, with 112 complications and five deaths per 1,000,000 primary vaccinations.',
 		location: 'Abstract',
-		why: '74 complications per million primary vaccinations = 7.4 per 100,000 (not all serious, so an upper bound); 1 death per million = 0.1 per 100,000 (infants 0.5). These deaths were caused by the vaccine.',
+		why: `${LANE.complicationsPerMillion} complications per million primary vaccinations = ${fmt(per100kFromPerMillion(LANE.complicationsPerMillion), 1)} per 100,000 (not all serious, so an upper bound); ${LANE.deathsPerMillion} death per million = ${fmt(per100kFromPerMillion(LANE.deathsPerMillion), 1)} per 100,000 (infants 0.5). These deaths were caused by the vaccine.`,
 		context:
 			"US 1968, NYCBH vaccinia strain; deaths from postvaccinial encephalitis, vaccinia necrosum and eczema vaccinatum. Today's populations may fare worse because more people have weakened immunity or eczema.",
 		verified: {
@@ -3158,7 +3197,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Overall, reported vaccine-related serious adverse events were rare. Across 12 clinical trials, out of 15,399 persons who received the vaccine, three serious adverse events were judged to be related or possibly related to the vaccine: one febrile reaction, one anaphylactic reaction, and one influenza-like illness. All resolved without sequelae.',
 		location: "'Vaccine-Related Serious Adverse Events' section; MMWR Recomm Rep 70(1):1-12",
-		why: "Worked out: 3 / 15,399 people = 19.5 per 100,000; the vaccine is one dose, so this is also per 100,000 doses. All three resolved with no lasting harm and no vaccine-related death is reported, so deaths are 'none established'.",
+		why: `Worked out: ${CHOI.events} / ${fmt(CHOI.people)} people = ${fmt(CHOI.per100k, 1)} per 100,000; the vaccine is one dose, so this is also per 100,000 doses. All three resolved with no lasting harm and no vaccine-related death is reported, so deaths are 'none established'.`,
 		context: 'Clinical-trial data (rVSV-ZEBOV); MMWR 70(1):1-12.',
 		verified: {
 			by: 'independent verification pass',
@@ -3180,10 +3219,10 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'covid19.fullEfficacy',
 			'covid19.partialEfficacy',
-			'covid19.vaccines.covid-2021.full.infection',
-			'covid19.vaccines.covid-2021.full.severe',
-			'covid19.vaccines.covid-2021.partial.infection',
-			'covid19.vaccines.covid-2021.partial.severe'
+			'covid19.vaccines.covid-original.full.infection',
+			'covid19.vaccines.covid-original.full.severe',
+			'covid19.vaccines.covid-original.partial.infection',
+			'covid19.vaccines.covid-original.partial.severe'
 		],
 		quote:
 			'For the first dose of SARS-CoV-2 vaccines, the pooled VE was 41% (95% CI: 28–54%) for the prevention of SARS-CoV-2 infection, 52% (95% CI: 31–73%) for the prevention of symptomatic COVID-19, 66% (95% CI: 50–81%) for the prevention of hospital admissions … For the second dose of SARS-CoV-2 vaccines, the pooled VE was 85% (95% CI: 81–89%) for the prevention of SARS-CoV-2 infection, 97% (95% CI: 97–98%) for the prevention of symptomatic COVID-19, 93% (95% CI: 89–96%) for the prevention of hospital admissions',
@@ -3210,11 +3249,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1016/S0140-6736(22)00152-0',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8863502/',
-		usedFor: ['covid19.vaccines.covid-2021.waningDays'],
+		usedFor: ['covid19.vaccines.covid-original.waningDays'],
 		quote:
 			'COVID-19 vaccine efficacy or effectiveness against severe disease remained high, although it did decrease somewhat by 6 months after full vaccination. By contrast, vaccine efficacy or effectiveness against infection and symptomatic disease decreased approximately 20-30 percentage points by 6 months. … On average, vaccine efficacy or effectiveness against SARS-CoV-2 infection decreased from 1 month to 6 months after full vaccination by 21·0 percentage points (95% CI 13·9–29·8) among people of all ages',
 		location: 'Summary: Interpretation; Findings',
-		why: "Worked out: half-life assuming exponential decay from Liu 2021's 0.85 with the stated fall against infection by month 6. With the Findings' 21.0-point fall between months 1 and 6 (5 x 365.25 / 12 = 152.2 days), 0.85 -> 0.64 gives 152.2 x ln2 / ln(0.85 / 0.64) = 372 days; a straight-line fall reaches half of 0.85 after 152.2 x 0.425 / 0.21 = 308 days. The middle of the two, 340 days, is computed in config. Over the whole 20-30 point range in the Interpretation, the exponential gives about 240-390 days.",
+		why: `Worked out: half-life assuming exponential decay from Liu 2021's ${FEIKIN.start} with the Findings' ${fmt(FEIKIN.drop * 100, 1)}-point fall against infection between months 1 and 6 (5 x 365.25 / 12 = ${fmt(FEIKIN.windowDays, 1)} days): ${FEIKIN.start} -> ${fmt(FEIKIN.end, 2)} gives ${fmt(FEIKIN.windowDays, 1)} x ln2 / ln(${FEIKIN.start} / ${fmt(FEIKIN.end, 2)}) = ${fmt(FEIKIN.exponential)} days; a straight-line fall reaches half of ${FEIKIN.start} after ${fmt(FEIKIN.straightLine)} days. The middle of the two, ${fmt(FEIKIN.halfLife)} days, is used. Over the whole 20-30 point range in the Interpretation, the exponential gives about 240-390 days.`,
 		context:
 			"Meta-regression of 18 studies, all before Omicron spread widely; 78 vaccine-specific evaluations (Pfizer 38, Moderna 23, Janssen 9, AstraZeneca 8). Gives falls in percentage points, not a starting value, so the half-life depends on the starting value taken from Liu 2021. In its own words, protection against severe disease 'remained high, although it did decrease somewhat by 6 months' (a 10.0-point fall). Two correction notices: 10.1016/S0140-6736(22)00428-7 fixes one label in Table 4; 10.1016/S0140-6736(23)00331-8 (23 Feb 2023) corrects the appendix's meta-regression methods. Neither changes the figures in the abstract.",
 		verified: {
@@ -3243,7 +3282,7 @@ export const CITATIONS: Citation[] = [
 			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron.',
 		location:
 			"Results, laboratory-confirmed infection paragraph; model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
-		why: "Worked out: the paper's 143-day half-life is defined as log(2)/w + 14 days, a pure exponential decay plus a 14-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = 143 - 14 = 129 days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found.",
+		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found.`,
 		context:
 			'40 studies of original (ancestral) vaccines; Omicron BA.1/BA.2. Pooled VE against laboratory-confirmed Omicron infection 44.4% at 1 month, 20.7% at 6 months and 13.4% at 9 months after the primary course. Laboratory-confirmed infection mixes symptomatic and under-counted symptomless infections. No severe-disease analysis.',
 		verified: {
@@ -3270,7 +3309,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Meta-analysis results showed, compared with the monovalent vaccines (MVs), the relative effectiveness (rVE) of the BVs in COVID-19-associated infections/symptomatic infections, illnesses, hospitalizations, and deaths was 30.90% [95% confidence interval (CI), 8.43–53.37], 39.83% (95% CI, 27.34–52.32), 59.70% (95% CI, 44.08–75.32), and 72.23% (95% CI, 62.08–82.38), respectively.',
 		location: 'Abstract, Results; repeated in the Discussion',
-		why: "Worked out: Cheng gives the bivalent vaccine's protection relative to the original vaccine, not against unvaccinated people, so it is applied on top of Mohammed 2023's original-vaccine figures: infection 1 - (1 - 0.309) x (1 - 0.204) = 0.450, and severe disease (hospital admission) 1 - (1 - 0.597) x (1 - 0.569) = 0.826. This keeps the original and updated vaccines on the same footing, both against unvaccinated people. The calculation is done in code from named constants.",
+		why: `Worked out: Cheng gives the bivalent vaccine's protection relative to the original vaccine, not against unvaccinated people, so it is applied on top of Mohammed 2023's original-vaccine figures: infection 1 - (1 - ${OMICRON_VACCINE.bivalentRelativeInfection}) x (1 - ${OMICRON_VACCINE.originalInfection}) = ${fmt(stacked(OMICRON_VACCINE.bivalentRelativeInfection, OMICRON_VACCINE.originalInfection), 3)}, and severe disease (hospital admission) 1 - (1 - ${OMICRON_VACCINE.bivalentRelativeSevere}) x (1 - ${OMICRON_VACCINE.originalSevere}) = ${fmt(stacked(OMICRON_VACCINE.bivalentRelativeSevere, OMICRON_VACCINE.originalSevere), 3)}. This keeps the original and updated vaccines on the same footing, both against unvaccinated people.`,
 		context:
 			"Systematic review and meta-analysis of 22 observational studies, search to 4 Nov 2023; bivalent (BA.1 or BA.4-5) boosters against original monovalent doses. Infection and symptomatic infection are pooled together (I² = 99.6%). No waning estimate. As a check in words only: Ma 2025's meta-analysis of the XBB.1.5 vaccine gives 0.529 against infection in the first month, but its full text could not be checked and it measures added protection in people who were already immune, so it is not used.",
 		verified: {
@@ -3296,7 +3335,7 @@ export const CITATIONS: Citation[] = [
 			'In adults, the model favors non-HI-correlated protection against H3N2, with a half-life of 4.1y (95% CI (3.2, 5.5)) (Table1).',
 		location:
 			"Results; Table 1. Abstract: 'Protection against circulating strains wanes to half of peak levels 3.5–7 years after infection in both age groups, and wanes faster against influenza A(H3N2) than A(H1N1)pdm09.'",
-		why: 'Already a half-life of infection-acquired protection: H3N2 in adults, 4.1 years = 1,498 days, stored as 1,500. H3N2 is the faster-waning subtype; the abstract range is 3.5-7 years (1,278-2,557 days), and adults against H1N1pdm09 about 6.4 years.',
+		why: `Already a half-life of infection-acquired protection: H3N2 in adults, ${RANJEVA_HALF_LIFE_YEARS} years = ${fmt(RANJEVA_HALF_LIFE_YEARS * DAYS_PER_YEAR, 1)} days. H3N2 is the faster-waning subtype; the abstract range is 3.5-7 years (1,278-2,557 days), and adults against H1N1pdm09 about 6.4 years.`,
 		context:
 			"Hong Kong household cohort; mechanistic models fitted to repeated blood samples. Measures protection 'against circulating strains', so it includes the effect of the virus drifting.",
 		verified: {
@@ -3321,7 +3360,7 @@ export const CITATIONS: Citation[] = [
 			'Applying our estimate of the vaccine waning rate to a model of exponentially distributed durations of protection, we estimated that immunity persists, on average, 27.4 years [95% confidence interval (CI), 16.7 to 51.1 years] after receipt of any dose. … we thus expected that 25% may lose protection within 7.9 years (95% CI, 4.7 to 14.7 years), 50% within 19.0 years (95% CI, 11.2 to 35.4 years), and 75% within 38.0 years (95% CI, 22.4 to 70.8 years).',
 		location:
 			"Results, vaccine waning estimate; abstract: 'wanes on average 27 years (95% confidence interval, 16 to 51 years)'",
-		why: "Read off '50% within 19.0 years': the source uses exponential waning like the model, so 19.0 x 365.25 = 6,940 days (95% CI 4,091-12,930 days). Check: 27.4 x ln2 = 18.99 years.",
+		why: `Read off '50% within ${fmt(LEWNARD_HALF_LIFE_YEARS, 1)} years': the source uses exponential waning like the model, so ${fmt(LEWNARD_HALF_LIFE_YEARS, 1)} x 365.25 = ${fmt(LEWNARD_HALF_LIFE_YEARS * DAYS_PER_YEAR, 2)} days (95% CI 4,091-12,930 days). Check: 27.4 x ln2 = 18.99 years.`,
 		context:
 			'Six published mumps vaccine-effectiveness studies pooled, plus a US transmission model; the clock runs from the last dose. The 3.6% who never respond to the vaccine are covered by the efficacy values, not by waning.',
 		verified: {
@@ -3351,7 +3390,7 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "The verification pass found this sentence in WHO's 2007 position paper at the URL given and recommended it as the official source; it also checked that the CDC Pink Book mumps chapter and CDC's mumps overview pages make no 'lifelong' statement."
+			note: "Separate verification pass, 7 Oct 2026 (not the pass that found it): quote exact in the English text, and the French matches. WHO's catalogue gives pp. 51-60 but the PDF's own page markers read 50-59, so the location is given by section rather than page."
 		}
 	},
 	{
@@ -3373,14 +3412,14 @@ export const CITATIONS: Citation[] = [
 			'We estimate initial childhood series absolute VE is 91% (95% CI: 87% to 95%) and declines at 9.6% annually. … the primary acellular pertussis series (5-dose DTaP) … VEexpected=VEbaseline e−λ(time)',
 		location:
 			"Abstract; Results (primary series: 'estimated at 91% … and declined by 9.6% per year'); Methods (objectives and the exponential model)",
-		why: "The sim vaccinates with the childhood series, so its figures are used: full.infection 0.91, and the exponential decay of 0.096 a year gives a half-life of ln2 / 0.096 = 7.22 years = 2,637 days, computed in config. A meta-analysis, so it sets fullEfficacy over CDC's 80-85%.",
+		why: `The sim vaccinates with the childhood series, so its figures are used: full.infection ${CHIT.start}, and the exponential decay of ${CHIT.decayPerYear} a year gives a half-life of ln2 / ${CHIT.decayPerYear} = ${fmt(CHIT.halfLifeYears, 2)} years = ${fmt(CHIT.halfLife)} days. A meta-analysis, so it sets fullEfficacy over CDC's 80-85%.`,
 		context:
 			'US and other high-income settings. The full 6-dose series with the adolescent Tdap booster is 85% falling 11.7% a year (by year 3 49%, year 5 37%, year 7 28%). The childhood absolute figures are partly modelled: they come from transforming relative odds ratios. A fit to the five pooled points gives 2,839 days. Eight of the nine authors worked for Sanofi Pasteur, which makes pertussis vaccine and funded the study.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: 'Crossref: title, nine authors, PLOS ONE 13(6):e0197970 (18 June 2018) match; no update or relation entries. Results quote verbatim; abstract figures match. Interpolation recomputed: 1,466 days log-linear, 1,491 linear, 1,599 four-point fit.'
+			note: 'Separate verification pass, 7 Oct 2026: the childhood (5-dose DTaP) series figures, 91% and 9.6% a year, confirmed verbatim in the abstract and Results of the PMC text (PMC6005504); 85% falling 11.7% is the 6-dose series with the adolescent booster. Half-life ln2 / 0.096 = 7.22 years = 2,637 days reproduced. No correction notice in PMC.'
 		}
 	},
 	{
@@ -3395,7 +3434,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'For every additional year after the last dose of DTaP, the odds of pertussis increased by 1.33 times (95% confidence interval: 1.23-1.43). Assuming 85% vaccine efficacy, we estimated that 10% of children vaccinated with DTaP would be immune to pertussis 8.5 years after the last dose.',
 		location: 'Abstract (Results)',
-		why: 'Check: 85% immune falling to 10% in 8.5 years gives an exponential half-life of 8.5 x ln2 / ln(8.5) = 2.75 years = 1,006 days, or 1,759 days if the fall is a straight line. That brackets the 1,466 days from Chit 2018.',
+		why: `Check only: ${MCGIRR.start * 100}% immune falling to ${MCGIRR.end * 100}% in ${MCGIRR.years} years gives an exponential half-life of ${fmt(MCGIRR.exponential)} days, or ${fmt(MCGIRR.straightLine)} days if the fall is a straight line. Both are shorter than the ${fmt(CHIT.halfLife)} days from Chit 2018's childhood series, which sets the value as the newer meta-analysis with yearly estimates; McGirr assumes 85% at the start and measures time since the last dose, so it suggests faster waning than the value used.`,
 		context:
 			"11 studies of 3- or 5-dose DTaP in children; the paper's exact model of failure over time is not confirmed (full text not read).",
 		verified: {
@@ -3417,7 +3456,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'A review of the published data on duration of immunity reveals estimates that infection-acquired immunity against pertussis disease wanes after 4-20 years and protective immunity after vaccination wanes after 4-12 years.',
 		location: 'Abstract',
-		why: 'Worked out: the middle of the 4-20 years after infection is 12 years = 4,380 days, treated as a half-life. The review gives times by which waning occurs in individual studies, not half-lives, so this is an approximation.',
+		why: `Worked out: the middle of the ${WENDELBOE_YEARS[0]}-${WENDELBOE_YEARS[1]} years after infection is ${(WENDELBOE_YEARS[0] + WENDELBOE_YEARS[1]) / 2} years = ${fmt(WENDELBOE_HALF_LIFE)} days, treated as a half-life. The review gives times by which waning occurs in individual studies, not half-lives, so this is an approximation.`,
 		context:
 			"Mostly whole-cell vaccine era. Wearing & Rohani 2009 cite this review as '7-20 years' for natural immunity; the 4-20 here is the review's own abstract.",
 		verified: {
@@ -3444,7 +3483,7 @@ export const CITATIONS: Citation[] = [
 			'We modeled waning as a power-law decay [83] during the months since last immunization, NAb(t) ∝ t-λ, with exponent λ = 0.87 (0.73–1.02) (S1 Text Eq F). … Our waning model (S1 Text Eq F, Fig 4) predicts that without reinfection, typical peak OPV-equivalent antibody titers (NAb = 2,048) decline to typical three-dose healthy child immunity (NAb = 512) in 5 (4–7) months and to typical two-dose immunity (NAb = 64) in an additional 4 (2–10) years. … Susceptibility is also strongly impacted by immunity, with the expected fraction shedding after Sabin 2 challenge dropping below half at all relevant doses for NAb ≥ 64 (Fig 7B).',
 		location:
 			"Methods, 'Waning immunity' (power-law model); Results, paragraph after the Fig 7 caption (titre milestones); Results, last sentence of the paragraph introducing Fig 7 (NAb ≥ 64); Methods, 'Oral susceptibility to infection' (unprotected shedding approaches 1)",
-		why: 'Worked out: protection against infection is taken as 1 minus the share shedding after challenge, which is about half once antibodies fall to 64. Peak immunity (2,048) reaches 64 in 5 months plus 4 years = 4.42 years = 1,613 days, computed in config (the reported windows give 850 to 3,865 days). Check: a 32-fold fall under t^-0.87 takes 32^(1/0.87) = 53.7 times as long, month 1 to month 54, about 4.5 years.',
+		why: `Worked out: protection against infection is taken as 1 minus the share shedding after challenge, which is about half once antibodies fall to 64. Peak immunity (2,048) reaches 64 in ${FAMULARE.months} months plus ${FAMULARE.years} years = ${fmt(FAMULARE.halfLife / DAYS_PER_YEAR, 2)} years = ${fmt(FAMULARE.halfLife)} days (the reported windows give 850 to 3,865 days). Check: a 32-fold fall under t^-0.87 takes 32^(1/0.87) = 53.7 times as long, month 1 to month 54, about 4.5 years.`,
 		context:
 			"Gut immunity against infection and shedding after a full OPV series, not protection against paralysis, which is lifelong (cdc-pinkbook-polio). An order-of-magnitude figure that leans towards faster waning: NAb 64 is a threshold, and unprotected shedding is below 1 at realistic doses. The decay is a power law, so an exponential with this half-life overstates waning after about 5 years (the same model has 'residual immunity' persisting for life).",
 		verified: {
@@ -3469,7 +3508,7 @@ export const CITATIONS: Citation[] = [
 			'For two-dose vaccinations, VE decreased from 93.5% (92.1-94.9; I2 = 31.6%) in the first year to 49.6% (46.5-82.7; I2 = 100%) by nine years post-vaccination (Table 3). … The duration of protection showed a slight decline over time. Evidence suggests that both one and two doses of the varicella vaccine offer short-term protection, though this protection wanes rapidly.',
 		location:
 			"Results, paragraph beginning 'Thirteen studies assessed the duration of varicella vaccine protection (Table 2)', with Tables 2 and 3; conclusion in the Abstract",
-		why: 'Worked out from the two-dose series (a full course): exponential fall from 93.5% at year 1 to 49.6% at year 9, k = ln(93.5 / 49.6) / 8 = 0.0792 a year, half-life 8.75 years = 3,195 days, computed in config. The only meta-analysis found that reports effectiveness by year since vaccination. Low confidence; see context.',
+		why: `Worked out from the two-dose series (a full course): exponential fall from ${BOLORMAA.early.ve}% at year ${BOLORMAA.early.year} to ${BOLORMAA.late.ve}% at year ${BOLORMAA.late.year}, half-life ${fmt(BOLORMAA.halfLife / DAYS_PER_YEAR, 2)} years = ${fmt(BOLORMAA.halfLife)} days. The only meta-analysis found that reports effectiveness by year since vaccination. Low confidence; see context.`,
 		context:
 			"Mostly observational outbreak studies. The year-9 two-dose estimate has I2 = 100% and a confidence interval that does not contain its own point estimate as printed. The one-dose series rises again (65.2% at year 6, 70.2% at year 7, 81.8% at year 10), so a fit over all its points implies a half-life of decades; it is not used. Pawaskar 2022's network meta-analysis of trials found no waning over 10 years, so the plausible range runs from about 6 years to no meaningful waning.",
 		verified: {
@@ -3664,7 +3703,7 @@ export const CITATIONS: Citation[] = [
 		doi: '10.1093/eurheartj/ehad339',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10290868/',
 		usedFor: [
-			'covid19.vaccines.covid-2021.deathsPer100kDoses',
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
 		],
@@ -3672,7 +3711,7 @@ export const CITATIONS: Citation[] = [
 			'Eight out of 21 deaths were sudden cardiac death (SCD) attributable to VRM proved by an autopsy, and all cases of SCD attributable to VRM were aged under 45 years and received mRNA vaccines. … BNT162b2 (n = 24 828 152), mRNA-1273 (n = 6 781 796) … BNT162b2 (n = 23 369 725), or mRNA-1273 (n = 6 621 577) … BNT162b2 (n = 11 458 290), mRNA-1273 (n = 6 930 450)',
 		location:
 			"Abstract (Methods and results); Methods, 'Study population' paragraph (doses by vaccine and dose number); Table 3 (the 8 sudden deaths: 5 BNT162b2, 3 mRNA-1273); Discussion: 'Vaccine-related myocarditis was the only possible cause of death in all SCD cases.'",
-		why: 'Worked out: mRNA doses 59,656,167 + 20,333,823 = 79,989,990; 8 / 79,989,990 = 0.010 per 100,000 doses. Stored with lowerBound, shown as "at least", because only autopsy-proven deaths are counted: all 21 deaths among confirmed cases give 0.026 per 100,000 mRNA doses.',
+		why: `Worked out: the six mRNA dose counts sum to ${fmt(CHO.mrnaDoses)}; ${CHO.provenDeaths} / ${fmt(CHO.mrnaDoses)} = ${fmt(CHO.per100k, 3)} per 100,000 doses. Stored with lowerBound, shown as "at least", because only autopsy-proven deaths are counted: all ${CHO.allDeaths} deaths among confirmed cases give ${fmt(CHO.allDeathsPer100k, 3)} per 100,000 mRNA doses.`,
 		context:
 			"South Korea, 26 February to 31 December 2021, doses 1-3; cases confirmed by the national disease agency's expert committee; all 8 aged 22-45, dying 1-6 days after dose 1 or 2. Not every case had viral testing. Cross-checks: Ishisaka 2023 meta-analysis, 19.7 per million x 2.0% = 0.039 per 100,000 (all-cause, not judged). Passive reports of fatal anaphylaxis after mRNA vaccines (Maltezou 2023: 2 in 28,520,812 doses in children, 0.007 per 100,000; Boufidou 2023) are smaller and not established as caused by the vaccine; Greenhawt 2021 found no anaphylaxis deaths. The same rate is used for all mRNA versions, as one platform.",
 		verified: {
@@ -3693,7 +3732,7 @@ export const CITATIONS: Citation[] = [
 		doi: '10.1016/S2213-2600(22)00059-5',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9000914/',
 		usedFor: [
-			'covid19.vaccines.covid-2021.seriousPer100kDoses',
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
 		],
@@ -3701,7 +3740,7 @@ export const CITATIONS: Citation[] = [
 			'the incidence of myopericarditis was significantly higher (p=0·0010) among those who received mRNA vaccines (22·6 cases [12·2–42·0] per million doses; 290730653 doses, nine studies; figure 3)',
 		location:
 			'Results, COVID-19 vaccine subgroups paragraph and figure 3; subgroup table by age, sex and dose',
-		why: 'Worked out: 22.6 per million = 2.26 per 100,000 mRNA doses, added to anaphylaxis (Greenhawt 2021). It counts myocarditis or pericarditis together and gives no myocarditis-only pooled rate, so wherever serious events are broken down this line is labelled "myocarditis or pericarditis" (pericarditis is often mild, so this slightly overstates serious harm).',
+		why: `Worked out: ${MRNA_SERIOUS.myopericarditisPerMillion} per million = ${fmt(per100kFromPerMillion(MRNA_SERIOUS.myopericarditisPerMillion), 2)} per 100,000 mRNA doses, added to anaphylaxis (Greenhawt 2021) for ${fmt(MRNA_SERIOUS.per100k, 2)} serious events per 100,000 doses. It counts myocarditis or pericarditis together and gives no myocarditis-only pooled rate, so wherever serious events are broken down this line is labelled "myocarditis or pericarditis" (pericarditis is often mild, so this slightly overstates serious harm).`,
 		context:
 			'Among all COVID-19 vaccines (not mRNA only), per million doses: under 30 40.9, 30 and over 2.9; males 23.0, females 5.1; males under 30 59.7; dose 2 31.3. Oster 2022 (myocarditis only, US reports) gives mRNA-specific age and sex detail for step 5. Corrected version online 10 May 2022.',
 		verified: {
@@ -3722,7 +3761,7 @@ export const CITATIONS: Citation[] = [
 		doi: '10.1016/j.jaip.2021.06.006',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8248554/',
 		usedFor: [
-			'covid19.vaccines.covid-2021.seriousPer100kDoses',
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
 		],
@@ -3730,7 +3769,7 @@ export const CITATIONS: Citation[] = [
 			'the meta-analyzed incidence of anaphylaxis was 7.91 per million (95% confidence interval [95% CI 4.02-15.59), and no anaphylaxis-related fatalities were reported.',
 		location:
 			'Abstract; Results (adenoviral-vector OR 0.47 and inactivated OR 0.31 compared with mRNA vaccines)',
-		why: 'Worked out: 7.91 per million = 0.791 per 100,000 doses. It pools all vaccine types, but the others had lower odds than mRNA, so this does not overstate mRNA.',
+		why: `Worked out: ${MRNA_SERIOUS.anaphylaxisPerMillion} per million = ${fmt(per100kFromPerMillion(MRNA_SERIOUS.anaphylaxisPerMillion), 3)} per 100,000 doses. It pools all vaccine types, but the others had lower odds than mRNA, so this does not overstate mRNA.`,
 		context:
 			'Studies to 19 March 2021. Alhumaid 2021 (mRNA only) gives 5.0 per million, with publication bias; CDC says about 5 per million.',
 		verified: {

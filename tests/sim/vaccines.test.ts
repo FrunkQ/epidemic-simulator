@@ -96,13 +96,13 @@ describe('vaccines', () => {
 		expect(find(DISEASES.covid19omicron, 'covid-updated').partial).toBeUndefined();
 	});
 
-	it('groups COVID-19 vaccines as one product with versions', () => {
-		for (const d of [DISEASES.covid19, DISEASES.covid19omicron] as DiseaseConfig[]) {
-			for (const v of d.vaccines!) {
-				expect(v.product, d.id).toBe('covid');
-				expect(v.version, d.id).toBeTruthy();
-			}
-		}
+	it('names the same COVID-19 vaccine the same way everywhere', () => {
+		const versions = (d: DiseaseConfig) => d.vaccines!.map((v) => [v.product, v.version]);
+		expect(versions(DISEASES.covid19)).toEqual([['covid', 'original']]);
+		expect(versions(DISEASES.covid19omicron)).toEqual([
+			['covid', 'original'],
+			['covid', 'updated']
+		]);
 	});
 
 	it('keeps every protection between 0 and 1', () => {
@@ -194,26 +194,43 @@ describe('vaccines', () => {
 
 	it('works out each derived number from the figures its source states', () => {
 		const days = (d: DiseaseConfig, key: string) => find(d, key).waningDays.value!;
+		const covid = find(DISEASES.covid19, 'covid-original');
 		// Liu 0.85 falling 21 points over months 1-6 (Feikin): exponential 372, straight line 308.
-		expect(days(DISEASES.covid19, 'covid-2021')).toBeCloseTo(339.9, 0);
+		expect(days(DISEASES.covid19, 'covid-original')).toBeCloseTo(339.9, 0);
 		expect(days(DISEASES.covid19omicron, 'covid-original')).toBe(143 - 14);
 		expect(days(DISEASES.flu, 'inactivated')).toBeCloseTo(105, 0);
 		expect(days(DISEASES.mumps, 'MMR')).toBeCloseTo(19.0 * 365.25, 9);
 		expect(days(DISEASES.pertussis, 'DTaP')).toBeCloseTo(2637, 0);
 		expect(days(DISEASES.smallpox, 'vaccinia')).toBeCloseTo(4 * 365.25, 9);
+		expect(days(DISEASES.polio, 'OPV')).toBeCloseTo((5 / 12 + 4) * 365.25, 9);
+		expect(days(DISEASES.chickenpox, 'varicella')).toBeCloseTo(3195, 0);
 		expect(DISEASES.flu.waningDays.value).toBeCloseTo(4.1 * 365.25, 9);
 		expect(DISEASES.pertussis.waningDays.value).toBeCloseTo(12 * 365.25, 9);
+		expect(DISEASES.covid19.waningDays.value).toBeCloseTo((22 * 365.25) / 12, 9);
+		// Straight line from 65.2% at 3 months to 24.7% at 12 reaches 50% at 6.38 months.
+		expect(DISEASES.covid19omicron.waningDays.value).toBeCloseTo(194.1, 1);
 		// Myocarditis or pericarditis 22.6 plus anaphylaxis 7.91 per million doses.
-		expect(find(DISEASES.covid19, 'covid-2021').seriousPer100kDoses.value).toBeCloseTo(3.051, 9);
-		// At least 8 autopsy-proven deaths in 79,989,990 mRNA doses.
-		expect(rateOf(find(DISEASES.covid19, 'covid-2021'))).toBeCloseTo(0.0100013, 6);
-		expect(find(DISEASES.covid19, 'covid-2021').deathsPer100kDoses).toMatchObject({ lowerBound: true });
+		expect(covid.seriousPer100kDoses.value).toBeCloseTo(3.051, 9);
+		// At least 8 autopsy-proven deaths in 79,989,990 mRNA doses (six counts summed).
+		expect(rateOf(covid)).toBeCloseTo((8 / 79_989_990) * 1e5, 12);
+		expect(covid.deathsPer100kDoses).toMatchObject({ lowerBound: true });
 		expect(DISEASES.measles.vaccines[0].deathsPer100kDoses.kind).toBe('established-no-rate');
+		// Conversions and picks from a range: stored as the source's figures, converted here.
+		expect(DISEASES.measles.vaccines[0].seriousPer100kDoses.value).toBeCloseTo((25 + 100 / 3) / 2, 9);
+		expect(DISEASES.flu.vaccines[0].seriousPer100kDoses.value).toBeCloseTo(0.285, 12);
+		expect(find(DISEASES.polio, 'IPV').seriousPer100kDoses.value).toBeCloseTo(0.131, 12);
+		expect(find(DISEASES.polio, 'IPV').partial!.severe!.value).toBeCloseTo((0.33 + 0.41 + 0.47) / 3, 12);
+		expect(find(DISEASES.polio, 'OPV').full.infection.value).toBeCloseTo(0.87, 12);
+		expect(find(DISEASES.polio, 'OPV').seriousPer100kDoses.value).toBeCloseTo((0.05 + 0.1 / 3) / 2, 12);
+		expect(DISEASES.pertussis.vaccines[0].seriousPer100kDoses.value).toBe(10);
+		expect(find(DISEASES.smallpox, 'vaccinia').seriousPer100kDoses.value).toBeCloseTo(7.4, 12);
+		expect(rateOf(find(DISEASES.smallpox, 'vaccinia'))).toBeCloseTo(0.1, 12);
+		expect(DISEASES.ebola.vaccines[0].seriousPer100kDoses.value).toBeCloseTo((3 / 15_399) * 1e5, 12);
 	});
 
 	it('shows the vaccine deaths that are known, worked out from their sources', () => {
-		// Paralysis from oral polio vaccine (0.04 per 100,000 doses) x 3.5% of paralytic cases dying.
-		expect(rateOf(find(DISEASES.polio, 'OPV'))).toBeCloseTo(0.0014, 9);
+		// Paralysis from oral polio vaccine (1 per 2 to 3 million doses) x 3.5% of paralytic cases dying.
+		expect(rateOf(find(DISEASES.polio, 'OPV'))).toBeCloseTo(((0.05 + 0.1 / 3) / 2) * 0.035, 12);
 		// Six vaccine-strain chickenpox deaths in 132.8 million doses.
 		expect(rateOf(find(DISEASES.chickenpox, 'varicella'))).toBeCloseTo(0.00452, 5);
 	});
