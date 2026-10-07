@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEHAVIOUR } from '../../src/lib/config/behaviour';
-import { CITATIONS } from '../../src/lib/config/citations';
+import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
 import { DISEASES } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
 import type { DiseaseId, Sourced } from '../../src/lib/sim/types';
@@ -102,5 +102,22 @@ describe('citations', () => {
 				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
 		).map((c) => c.id);
 		expect(misused).toEqual([]);
+	});
+
+	it('uses only peer-reviewed papers and named public bodies (Alex: no random websites)', () => {
+		const ranks = new Set<string>(EVIDENCE_RANK);
+		const publishers = new Set<string>(OFFICIAL_PUBLISHERS);
+		for (const c of CITATIONS) {
+			expect(ranks.has(c.evidence), c.id).toBe(true);
+			if (c.evidence === 'official') {
+				expect(publishers.has(c.publisher ?? ''), c.id).toBe(true);
+				expect(c.url, c.id).toBeTruthy();
+			} else {
+				// Papers are cited by DOI, and never by a preprint server's DOI.
+				expect(c.doi, c.id).toBeTruthy();
+				expect(c.doi, c.id).not.toMatch(/^10\.(1101|21203)\//);
+			}
+			if (c.mirrorUrl) expect(c.url ?? c.doi, `${c.id} has a mirror but no original`).toBeTruthy();
+		}
 	});
 });

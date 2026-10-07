@@ -125,7 +125,6 @@ export const DISEASES = {
 		mortality: {
 			value: 0.001,
 			sources: [
-				'filipe2024-flu-cfr-review',
 				'mcdonald2023-flu-cfr-netherlands',
 				'iuliano2017-flu-global-mortality',
 				'cohen2010-flu-mortality-southafrica',
