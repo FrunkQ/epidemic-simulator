@@ -7,7 +7,8 @@ import type { Bands, Sourced } from '../sim/types';
  *   (COVID-19 Forecasting Team 2022, Table 1; age 0 is not given, so it takes age 1's value);
  * - the UK population on 1 January 2019 in 5-year groups (Eurostat demo_pjangroup), with 85+
  *   worked out as the 65+ total minus 65-84.
- * Each group's rate is the plain mean of its single-year rates. How 85+ splits by age is not
+ * Assumptions: each group's rate is the plain mean of its single-year rates, which slightly
+ * overstates older groups (fewer people live to the top of each group); and 85+ is 65+ minus 65-84. How 85+ splits by age is not
  * known, so it takes ages 85-94 (central), 85-89 (low) or 85-100 (high).
  */
 export const COVID19_IFR_PERCENT_BY_AGE: Sourced<number[]> = {
