@@ -1651,7 +1651,7 @@ export const CITATIONS: Citation[] = [
 		title: 'Varicella and herpes zoster vaccines: WHO position paper, June 2014',
 		journal: 'Weekly Epidemiological Record 89(25):265-288',
 		year: 2014,
-		url: 'https://www.nitag-resource.org/sites/default/files/665ff52e4dc61309dde19eef6eac47db1f8abd95_1.pdf',
+		url: 'https://www.who.int/publications/i/item/who-wer-8925-265-288',
 		usedFor: ['chickenpox.asymptomaticFraction'],
 		quote:
 			'VZV is a highly contagious herpes virus which causes both varicella (chickenpox), usually during childhood, and herpes zoster (shingles)',
@@ -1663,7 +1663,7 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Opened twice; title confirmed as 'Varicella and herpes zoster vaccines: WHO position paper, June 2014', Weekly Epidemiological Record vol. 89 no. 25, 20 June 2014; the quoted sentence and the '>90% infections occurred before adolescence' and 'usually confers immunity for life' sentences all confirmed verbatim. Read from the NITAG Resource Centre's hosted copy of the WER issue because who.int's own item page serves a download rather than readable text; no retraction."
+			note: "Opened twice; title confirmed as 'Varicella and herpes zoster vaccines: WHO position paper, June 2014', Weekly Epidemiological Record vol. 89 no. 25, 20 June 2014; the quoted sentence and the '>90% infections occurred before adolescence' and 'usually confers immunity for life' sentences all confirmed verbatim. Quotes were read from the NITAG Resource Centre's copy of the WER issue, because who.int's own item page serves a download rather than readable text; the link points at WHO's own page, confirmed to resolve with the same title and reference number on 2026-10-07; no retraction."
 		}
 	},
 	{
@@ -1672,19 +1672,19 @@ export const CITATIONS: Citation[] = [
 		title: 'Smallpox and Its Eradication — Chapter 1: Clinical Features',
 		journal: 'World Health Organization, Geneva',
 		year: 1988,
-		url: 'https://biotech.law.lsu.edu/blaw/bt/smallpox/who/red-book/Chp%2001%20-%2027-36.pdf',
+		url: 'https://iris.who.int/handle/10665/39485',
 		usedFor: ['smallpox.asymptomaticFraction'],
 		quote:
 			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major.',
 		location: 'Chapter 1, Clinical Features — section on subclinical infection',
 		why: "smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them.",
 		context:
-			"The official WHO history of smallpox and its eradication, the standard reference for a disease that can no longer be studied; chapter hosted by the LSU Law Center's public mirror of the WHO 'red book'.",
+			"The official WHO history of smallpox and its eradication, the standard reference for a disease that can no longer be studied; linked at WHO's own repository record.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Opened twice (the second read requested the full sentences with no ellipses); all three sentences confirmed word for word, and the file identified as Chapter 1 (Clinical Features) of 'Smallpox and Its Eradication'. Caveat: this mirror serves the chapter PDF without its title page, so the editors, publisher and 1988 date come from the standard citation for the work rather than from the page itself; no retraction (and none is possible for a 1988 WHO monograph)."
+			note: "Opened twice (the second read requested the full sentences with no ellipses); all three sentences confirmed word for word, and the file identified as Chapter 1 (Clinical Features) of 'Smallpox and Its Eradication'. Quotes were read from the LSU Law Center's public mirror of the chapter; the link points at WHO's IRIS record, confirmed on 2026-10-07 to be 'Smallpox and its eradication' (Fenner, Henderson, Arita, Jezek, Ladnyi; WHO, 1988). Caveat: the mirror serves the chapter PDF without its title page, so the editors, publisher and 1988 date come from the standard citation for the work rather than from the page itself; no retraction (and none is possible for a 1988 WHO monograph)."
 		}
 	},
 	{
