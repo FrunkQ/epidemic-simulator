@@ -1995,11 +1995,11 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.ijid.2020.09.1464',
-		usedFor: ['covid19.mortality'],
+		usedFor: ['covid19.infectionFatalityRate', 'covid19.mortality'],
 		quote:
 			'The meta-analysis demonstrated a point estimate of IFR of 0.68% (0.53%-0.82%) with high heterogeneity (p < 0.001).',
 		location: 'Abstract (results)',
-		why: 'Meta-analysis of the infection fatality rate before vaccines. Worked out per symptomatic case: 0.68% / (1 - 0.2 asymptomatic) = 0.85%, so mortality 0.0085.',
+		why: 'Meta-analysis of the infection fatality rate before vaccines. The infection fatality rate 0.68% is stored as covid19.infectionFatalityRate; mortality per symptomatic case is worked out in config as 0.68% / (1 - asymptomaticFraction 0.2) = 0.85%.',
 		context: 'Studies from many countries, 2020, before vaccines',
 		verified: {
 			by: 'independent verification pass',

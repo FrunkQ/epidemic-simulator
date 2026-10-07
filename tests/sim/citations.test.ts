@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
-import { DISEASES } from '../../src/lib/config/diseases';
+import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
-import type { DiseaseId, Sourced } from '../../src/lib/sim/types';
+import type { DiseaseConfig, DiseaseId, Sourced } from '../../src/lib/sim/types';
 
 /** Every research-backed config object, keyed by the prefix citations use in usedFor. */
 const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR };
@@ -129,6 +129,15 @@ describe('citations', () => {
 			const reasons = value.sources.map((id) => byId.get(id)!.noReviewReason ?? '').filter(Boolean);
 			expect(reasons.length, `${key} rests on a review or one study; add a noReviewReason`).toBeGreaterThan(
 				0
+			);
+		}
+	});
+	it('works out death per case from death per infection, never as a typed copy', () => {
+		for (const d of Object.values(DISEASES) as DiseaseConfig[]) {
+			if (!d.infectionFatalityRate) continue;
+			expect(d.mortality.value, d.id).toBeCloseTo(
+				perSymptomatic(d.infectionFatalityRate, d.asymptomaticFraction),
+				12
 			);
 		}
 	});

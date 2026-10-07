@@ -57,6 +57,11 @@ export interface DiseaseConfig {
 	 * (smallpox: routine vaccination ended decades ago). New populations start here.
 	 */
 	coverageToday?: Sourced;
+	/**
+	 * Deaths per infection, when the source reports that rather than deaths per case. `mortality`
+	 * is then worked out from it with `perSymptomatic`, so the two can't drift apart.
+	 */
+	infectionFatalityRate?: Sourced;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */

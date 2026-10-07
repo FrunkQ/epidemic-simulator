@@ -1,4 +1,4 @@
-import type { DiseaseConfig } from '../sim/types';
+import type { DiseaseConfig, Sourced } from '../sim/types';
 
 /** How the disease picker groups diseases, in plain words. */
 export const DISEASE_GROUPS = {
@@ -7,6 +7,20 @@ export const DISEASE_GROUPS = {
 	deadly: 'Deadly but burns out fast'
 } as const;
 export type DiseaseGroup = keyof typeof DISEASE_GROUPS;
+
+/**
+ * Death rate per symptomatic case, worked out from a death rate per infection. Cases that never
+ * show symptoms never die in the model, so every death is carried by the symptomatic share.
+ */
+export function perSymptomatic(infectionFatalityRate: Sourced, asymptomaticFraction: Sourced): number {
+	return infectionFatalityRate.value / (1 - asymptomaticFraction.value);
+}
+
+const COVID19_ASYMPTOMATIC: Sourced = {
+	value: 0.2,
+	sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2']
+};
+const COVID19_IFR: Sourced = { value: 0.0068, sources: ['meyerowitzkatz2020-covid-ifr'] };
 
 /**
  * Disease presets. Every number carries the ids of its sources in citations.ts.
@@ -151,8 +165,12 @@ export const DISEASES = {
 		r0: { value: 3.32, sources: ['alimohamadi-2020-covid-r0'] },
 		silentDays: { value: 2, sources: ['alene2021-covid-serial-incubation', 'byrne-2020-infectious-period'] },
 		illDays: { value: 8, sources: ['cevik2021-covid-shedding', 'byrne-2020-infectious-period'] },
-		asymptomaticFraction: { value: 0.2, sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2'] },
-		mortality: { value: 0.0085, sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr'] },
+		asymptomaticFraction: COVID19_ASYMPTOMATIC,
+		infectionFatalityRate: COVID19_IFR,
+		mortality: {
+			value: perSymptomatic(COVID19_IFR, COVID19_ASYMPTOMATIC),
+			sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr']
+		},
 		waningDays: {
 			value: 660,
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
