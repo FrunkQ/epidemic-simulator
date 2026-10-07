@@ -35,6 +35,8 @@ export interface Banded extends Sourced<Bands> {
 	per: BandUnit;
 	reference: Bands;
 	overall: number;
+	/** Required on a death band above its hospital band: why some die without admission (sourced). */
+	outsideHospitalReason?: { text: string; sources: string[] };
 }
 
 /**
