@@ -19,7 +19,7 @@ describe('citations', () => {
 
 	it('checks every number inside the vaccine lists', () => {
 		const keys = sourced.map((n) => n.key);
-		expect(keys).toContain('polio.vaccines.IPV.infection');
+		expect(keys).toContain('polio.vaccines.IPV.full.infection');
 		expect(keys).toContain('polio.vaccines.IPV.partial.severe');
 		expect(keys).toContain('polio.vaccines.IPV.waningDays');
 		// A placeholder still counts as a sourced number, so its sources are checked too.

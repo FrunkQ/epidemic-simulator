@@ -52,24 +52,37 @@ export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
 export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
 
 /**
- * One vaccine a population can be given against a disease, keyed by product and version.
- * Protections are shares from 0 to 1. `severe` is the published protection against severe
- * disease in everyone vaccinated (not only in breakthrough cases); `null` means no pooled figure
- * exists. Risk rates are per 100,000 doses; `deathsPer100kDoses.value` is `null` when no death
- * has been established as caused by the vaccine (never treat that as 0).
+ * Protection from one course of a vaccine, as shares from 0 to 1. `severe` is the published
+ * protection against severe disease in everyone vaccinated (not only in breakthrough cases); it is
+ * left out when no pooled figure exists.
+ */
+export interface VaccineProtection {
+	/** Share of infections prevented. */
+	infection: Sourced;
+	severe?: Sourced;
+}
+
+/**
+ * One vaccine a population can be given against a disease, keyed by product and version (6.13).
+ * Risk rates are per 100,000 doses; `deathsPer100kDoses.value` is `null` only when a source says
+ * no death has been established as caused by the vaccine (never treat that as 0).
  */
 export interface Vaccine {
 	product: string;
+	/** Set when a product has more than one version; the picker groups versions under the product. */
 	version?: string;
 	/** Plain name for the picker. */
 	label: string;
 	/** Exactly one entry per disease is the default. */
 	default?: true;
-	/** A full course: share of infections prevented. */
-	infection: Sourced;
-	severe: Sourced | null;
-	/** A started but unfinished course; `null` where no figure exists. */
-	partial?: { infection: Sourced | null; severe: Sourced | null };
+	/** A completed course. */
+	full: VaccineProtection;
+	/**
+	 * A started but unfinished course, and nothing else (not an old or waned vaccination, which
+	 * waningDays covers). Left out when the vaccine has no multi-dose course; a field is left out
+	 * when no figure exists for it.
+	 */
+	partial?: { infection?: Sourced; severe?: Sourced };
 	/** Serious adverse events (usually needing hospital or emergency care) per 100,000 doses. */
 	seriousPer100kDoses: Sourced<number | null>;
 	/** Deaths caused by the vaccine per 100,000 doses; null when none has been established. */
@@ -107,8 +120,12 @@ export interface DiseaseConfig {
 	waningDays: Sourced<number | null>;
 	/** How much a full course of vaccine cuts the chance of catching it (0 to 1). */
 	fullEfficacy: Sourced;
-	/** The same for a started but unfinished course. */
-	partialEfficacy: Sourced;
+	/**
+	 * The same for a started but unfinished course. Left out when the default vaccine has no
+	 * unfinished course (one dose, e.g. flu or Ebola): nobody is then partly vaccinated, and the UI
+	 * hides that control.
+	 */
+	partialEfficacy?: Sourced;
 	/** Share of symptomatic (red) cases who need a hospital bed. */
 	hospitalisedShare: Sourced;
 	/**
@@ -161,7 +178,10 @@ export interface DiseaseRuntime {
 	waningMeanTicks: number;
 	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
 	fullEfficacy: number;
+	/** 0 when the disease has no unfinished course. */
 	partialEfficacy: number;
+	/** False when the default vaccine has no unfinished course: partly vaccinated dots spawn unprotected. */
+	hasPartialCourse: boolean;
 	hospitalisedShare: number;
 	beta: number;
 	transmissionRadius: number;

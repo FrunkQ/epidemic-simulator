@@ -31,16 +31,13 @@ export function defaultVaccine(vaccines: Vaccine[] | undefined): Vaccine | undef
 }
 
 /**
- * Adds up confirmed vaccine-caused deaths per 100,000 doses. A null rate (no death established as
- * caused by the vaccine) is never counted as 0: it is left out, and when every rate is null the
- * result is null, so the panel shows "No deaths confirmed as caused by this vaccine" instead of 0.
+ * Deaths caused by one vaccine product over a number of doses given, for HarmComparison (6.13).
+ * Products are never added together: each population is given one product. A null rate (a source
+ * says no death has been established as caused by the vaccine) stays null for any number of
+ * doses, so the panel shows "No deaths confirmed as caused by this vaccine" instead of 0.
  */
-export function sumDeathsPer100k(vaccines: Vaccine[]): number | null {
-	let total: number | null = null;
-	for (const v of vaccines) {
-		const rate = v.deathsPer100kDoses.value;
-		if (rate === null) continue;
-		total = (total ?? 0) + rate;
-	}
-	return total;
+export function vaccineCausedDeaths(vaccine: Vaccine, doses: number): number | null {
+	if (!(doses >= 0)) throw new RangeError('doses must be zero or more');
+	const rate = vaccine.deathsPer100kDoses.value;
+	return rate === null ? null : (rate * doses) / 100_000;
 }

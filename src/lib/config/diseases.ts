@@ -63,21 +63,29 @@ const OMICRON_HOSPITAL_PER_INFECTION = COVID19_IHR.value * OMICRON_SEVERITY_RATI
 /*
  * Vaccines. Each disease's `fullEfficacy` and `partialEfficacy` are its default vaccine's
  * infection values (the same objects), until step 3 moves the engine onto `vaccines`.
- * Risk rates are per 100,000 doses; a null death rate means no death has been established as
- * caused by the vaccine.
+ * Risk rates are per 100,000 doses; a null death rate means a source says no death has been
+ * established as caused by the vaccine. Worked-out numbers are computed here from the figures
+ * their sources state, so the arithmetic in each citation's `why` can be checked.
  */
 
-/** Reason on a vaccine waningDays copied from its disease until a vaccine-waning source is found. */
-const PROVISIONAL_VACCINE_WANING =
-	"Provisional: no sourced vaccine-waning figure yet; copied from the disease's waningDays (infection-acquired immunity).";
+const DAYS_PER_YEAR = 365.25;
+const DAYS_PER_MONTH = DAYS_PER_YEAR / 12;
+const PER_100K = 100_000;
 
 /** MMR's risks, the same vaccine whichever of the three diseases it is given against. */
 const MMR_SERIOUS: Sourced = { value: 30, sources: ['cdc-pinkbook-measles'] };
 const MMR_DEATHS: Sourced<null> = { value: null, sources: ['cdc-pinkbook-measles'] };
 
+/** Myocarditis after mRNA vaccines: 1,626 cases in 354,100,845 doses (Oster 2022). */
+const MRNA_MYOCARDITIS_CASES = 1626;
+const MRNA_MYOCARDITIS_DOSES = 354_100_845;
+/** Anaphylaxis after COVID-19 vaccines: about 5 per million doses (CDC). */
+const MRNA_ANAPHYLAXIS_PER_MILLION = 5;
 /** mRNA risks: myocarditis plus anaphylaxis, and no death established as caused by the vaccine. */
 const MRNA_SERIOUS: Sourced = {
-	value: 0.96,
+	value:
+		(MRNA_MYOCARDITIS_CASES / MRNA_MYOCARDITIS_DOSES) * PER_100K +
+		(MRNA_ANAPHYLAXIS_PER_MILLION / 1_000_000) * PER_100K,
 	sources: ['oster-2022-mrna-myocarditis', 'cdc-covid-vaccine-safety-2025']
 };
 const MRNA_DEATHS: Sourced<null> = {
@@ -85,20 +93,39 @@ const MRNA_DEATHS: Sourced<null> = {
 	sources: ['cdc-covid-vaccine-safety-2025', 'xu-2021-covid-vaccine-mortality']
 };
 
+/** Two doses against infection, the 2021 vaccines against the 2020 virus (Liu 2021). */
+const COVID19_2021_INFECTION = 0.85;
+/** Fall in protection against infection from month 1 to month 6 (Feikin 2022: 21.0 points). */
+const FEIKIN_INFECTION_DROP = 0.21;
+const FEIKIN_WINDOW_DAYS = (6 - 1) * DAYS_PER_MONTH;
+/**
+ * Half-life of the 2021 vaccines against infection: the middle of an exponential and a
+ * straight-line fall from Liu's 0.85 by Feikin's 21 points over months 1 to 6.
+ */
+function covid2021WaningDays(): number {
+	const after = COVID19_2021_INFECTION - FEIKIN_INFECTION_DROP;
+	const exponential = (FEIKIN_WINDOW_DAYS * Math.LN2) / Math.log(COVID19_2021_INFECTION / after);
+	const straightLine = (FEIKIN_WINDOW_DAYS * (COVID19_2021_INFECTION / 2)) / FEIKIN_INFECTION_DROP;
+	return (exponential + straightLine) / 2;
+}
+
 /** The 2021 vaccines against the 2020 virus (Liu 2021: all types pooled, mostly mRNA). */
 const COVID19_2021 = {
-	product: 'covid-2021',
+	product: 'covid',
+	version: '2021',
 	label: 'COVID-19 vaccine (2021)',
 	default: true,
-	infection: { value: 0.85, sources: ['liu-2021-realworld-ve-meta', 'kow-2021-bnt-ma'] },
-	severe: { value: 0.93, sources: ['liu-2021-realworld-ve-meta'] },
+	full: {
+		infection: { value: COVID19_2021_INFECTION, sources: ['liu-2021-realworld-ve-meta', 'kow-2021-bnt-ma'] },
+		severe: { value: 0.93, sources: ['liu-2021-realworld-ve-meta'] }
+	},
 	partial: {
 		infection: { value: 0.41, sources: ['liu-2021-realworld-ve-meta', 'kow-2021-bnt-ma'] },
 		severe: { value: 0.66, sources: ['liu-2021-realworld-ve-meta'] }
 	},
 	seriousPer100kDoses: MRNA_SERIOUS,
 	deathsPer100kDoses: MRNA_DEATHS,
-	waningDays: { value: 335, sources: ['feikin-2022-covid-ve-duration'] }
+	waningDays: { value: covid2021WaningDays(), sources: ['feikin-2022-covid-ve-duration'] }
 } satisfies Vaccine;
 
 /** The original vaccine against Omicron, a full course, against unvaccinated people (Mohammed 2023). */
@@ -107,36 +134,44 @@ const OMICRON_ORIGINAL_SEVERE = 0.569;
 /** Bivalent against original vaccines, relative effectiveness (Cheng 2024). */
 const BIVALENT_RELATIVE_INFECTION = 0.309;
 const BIVALENT_RELATIVE_SEVERE = 0.597;
-/** Original vaccine against Omicron infection, waning half-life ln2/w from Menegale 2023. */
-const OMICRON_VACCINE_WANING: Sourced = { value: 129, sources: ['menegale-2023-waning-meta'] };
+/** Menegale 2023's half-life against Omicron infection is ln2/w plus a 14-day ramp-up. */
+const MENEGALE_OMICRON_HALF_LIFE_DAYS = 143;
+const MENEGALE_RAMP_UP_DAYS = 14;
+/** Original vaccine against Omicron infection: the pure exponential part, ln2/w. */
+const OMICRON_VACCINE_WANING: Sourced = {
+	value: MENEGALE_OMICRON_HALF_LIFE_DAYS - MENEGALE_RAMP_UP_DAYS,
+	sources: ['menegale-2023-waning-meta']
+};
 
-const OMICRON_ORIGINAL: Vaccine = {
-	product: 'covid-original',
+const OMICRON_ORIGINAL = {
+	product: 'covid',
+	version: 'original',
 	label: 'Original vaccine',
-	infection: { value: OMICRON_ORIGINAL_INFECTION, sources: ['mohammed-2023-omicron-ve'] },
-	severe: { value: OMICRON_ORIGINAL_SEVERE, sources: ['mohammed-2023-omicron-ve'] },
-	partial: {
-		infection: { value: 0.136, sources: ['tan-2022-omicron-children-partial'] },
-		severe: null
+	full: {
+		infection: { value: OMICRON_ORIGINAL_INFECTION, sources: ['mohammed-2023-omicron-ve'] },
+		severe: { value: OMICRON_ORIGINAL_SEVERE, sources: ['mohammed-2023-omicron-ve'] }
 	},
+	partial: { infection: { value: 0.136, sources: ['tan-2022-omicron-children-partial'] } },
 	seriousPer100kDoses: MRNA_SERIOUS,
 	deathsPer100kDoses: MRNA_DEATHS,
 	waningDays: OMICRON_VACCINE_WANING
-};
+} satisfies Vaccine;
 
 const OMICRON_UPDATED = {
-	product: 'covid-updated',
+	product: 'covid',
+	version: 'updated',
 	label: 'Updated vaccine (bivalent)',
 	default: true,
-	infection: {
-		value: stackedProtection(BIVALENT_RELATIVE_INFECTION, OMICRON_ORIGINAL_INFECTION),
-		sources: ['cheng-2024-bivalent-rve-meta', 'mohammed-2023-omicron-ve']
+	full: {
+		infection: {
+			value: stackedProtection(BIVALENT_RELATIVE_INFECTION, OMICRON_ORIGINAL_INFECTION),
+			sources: ['cheng-2024-bivalent-rve-meta', 'mohammed-2023-omicron-ve']
+		},
+		severe: {
+			value: stackedProtection(BIVALENT_RELATIVE_SEVERE, OMICRON_ORIGINAL_SEVERE),
+			sources: ['cheng-2024-bivalent-rve-meta', 'mohammed-2023-omicron-ve']
+		}
 	},
-	severe: {
-		value: stackedProtection(BIVALENT_RELATIVE_SEVERE, OMICRON_ORIGINAL_SEVERE),
-		sources: ['cheng-2024-bivalent-rve-meta', 'mohammed-2023-omicron-ve']
-	},
-	partial: { infection: null, severe: null },
 	seriousPer100kDoses: MRNA_SERIOUS,
 	deathsPer100kDoses: MRNA_DEATHS,
 	waningDays: OMICRON_VACCINE_WANING
@@ -154,23 +189,27 @@ const FLU_INFECTION: Sourced = {
 	value: 0.414,
 	sources: ['guo2024-flu-ve-review', 'belongia2016-flu-ve-review']
 };
-const FLU_PARTIAL_INFECTION: Sourced = {
-	value: 0.2,
-	sources: ['belongia2016-flu-ve-review', 'young2018-flu-ve-waning-review', 'hu2022-flu-ve-waning']
-};
+/** Young 2018: case-weighted VE 53.82% at day 52.5 and 31.10% at day 135.5 after vaccination. */
+const YOUNG_EARLY = { day: 52.5, ve: 53.82 };
+const YOUNG_LATE = { day: 135.5, ve: 31.1 };
+/** One flu dose a season: no unfinished course, so no partial entry. */
 const FLU_INACTIVATED: Vaccine = {
 	product: 'inactivated',
 	label: 'Typical season',
 	default: true,
-	infection: FLU_INFECTION,
-	severe: { value: 0.42, sources: ['yegorov-2025-flu-severe-ma', 'rondy-2017-flu-hosp-ma'] },
-	partial: { infection: FLU_PARTIAL_INFECTION, severe: null },
+	full: {
+		infection: FLU_INFECTION,
+		severe: { value: 0.42, sources: ['yegorov-2025-flu-severe-ma', 'rondy-2017-flu-hosp-ma'] }
+	},
 	seriousPer100kDoses: { value: 0.3, sources: ['cdc-flu-gbs-2024', 'mcneil-2016-anaphylaxis'] },
 	deathsPer100kDoses: {
 		value: null,
 		sources: ['cdc-flu-gbs-2024', 'miller-2015-deaths-after-vaccination']
 	},
-	waningDays: { value: 105, sources: ['young2018-flu-ve-waning-review', 'hu2022-flu-ve-waning'] }
+	waningDays: {
+		value: ((YOUNG_LATE.day - YOUNG_EARLY.day) * Math.LN2) / Math.log(YOUNG_EARLY.ve / YOUNG_LATE.ve),
+		sources: ['young2018-flu-ve-waning-review', 'hu2022-flu-ve-waning']
+	}
 };
 
 /** IPV hardly stops infection (Hird 2012), for a full or a partial course. */
@@ -180,8 +219,7 @@ const POLIO_IPV: Vaccine = {
 	product: 'IPV',
 	label: 'Inactivated (IPV, injected)',
 	default: true,
-	infection: POLIO_IPV_INFECTION,
-	severe: { value: 0.99, sources: ['cdc-pinkbook-polio'] },
+	full: { infection: POLIO_IPV_INFECTION, severe: { value: 0.99, sources: ['cdc-pinkbook-polio'] } },
 	partial: {
 		infection: POLIO_IPV_PARTIAL_INFECTION,
 		severe: { value: 0.4, sources: ['grassly2014-ipv-doses-review', 'cooper2024-ipv-nigeria'] }
@@ -191,21 +229,34 @@ const POLIO_IPV: Vaccine = {
 	// CDC: IPV "probably provides lifelong immunity after a complete series".
 	waningDays: { value: null, sources: ['cdc-pinkbook-polio'] }
 };
+/** Paralysis caused by OPV (VAPP): one case per 2 to 3 million doses (CDC), stored as 0.04 per 100,000. */
+const OPV_VAPP_PER_100K = 0.04;
+/** Deaths per paralytic polio case in children: the middle of CDC's 2% to 5%. */
+const PARALYTIC_POLIO_CASE_FATALITY = (0.02 + 0.05) / 2;
+/**
+ * Famulare 2018: peak gut immunity falls to the level where about half of people shed after
+ * challenge in 5 months plus a further 4 years. Read as a half-life against infection.
+ */
+const OPV_MONTHS_TO_TWO_DOSE_LEVEL = 5;
+const OPV_YEARS_TO_TWO_DOSE_LEVEL = 4;
 const POLIO_OPV: Vaccine = {
 	product: 'OPV',
 	label: 'Oral (OPV, drops)',
-	infection: { value: 0.87, sources: ['hird2012-ipv-mucosal-review'] },
-	severe: { value: 0.95, sources: ['cdc-pinkbook-polio'] },
-	partial: { infection: null, severe: { value: 0.5, sources: ['cdc-pinkbook-polio'] } },
-	seriousPer100kDoses: { value: 0.04, sources: ['cdc-pinkbook-polio'] },
+	full: {
+		infection: { value: 0.87, sources: ['hird2012-ipv-mucosal-review'] },
+		severe: { value: 0.95, sources: ['cdc-pinkbook-polio'] }
+	},
+	partial: { severe: { value: 0.5, sources: ['cdc-pinkbook-polio'] } },
+	seriousPer100kDoses: { value: OPV_VAPP_PER_100K, sources: ['cdc-pinkbook-polio'] },
+	// Worked out: vaccine-caused paralysis x the death rate for paralytic polio.
 	deathsPer100kDoses: {
-		value: null,
+		value: OPV_VAPP_PER_100K * PARALYTIC_POLIO_CASE_FATALITY,
 		sources: ['cdc-pinkbook-polio', 'miller-2015-deaths-after-vaccination']
 	},
+	// Gut immunity against infection; protection against paralysis lasts (full.severe stays).
 	waningDays: {
-		value: null,
-		sources: ['cdc-pinkbook-polio', 'blake2014-polio-older-ages'],
-		provisional: PROVISIONAL_VACCINE_WANING
+		value: (OPV_MONTHS_TO_TWO_DOSE_LEVEL / 12 + OPV_YEARS_TO_TWO_DOSE_LEVEL) * DAYS_PER_YEAR,
+		sources: ['famulare2018-opv-waning']
 	}
 };
 
@@ -225,16 +276,38 @@ const MEASLES_PARTIAL: Sourced = {
 };
 const MUMPS_FULL: Sourced = { value: 0.88, sources: ['cdc-pinkbook-mumps'] };
 const MUMPS_PARTIAL: Sourced = { value: 0.78, sources: ['cdc-pinkbook-mumps'] };
+/** Lewnard & Grad 2018: half of vaccinated people lose protection within 19.0 years. */
+const MUMPS_VACCINE_HALF_LIFE_YEARS = 19.0;
 const RUBELLA_FULL: Sourced = { value: 0.97, sources: ['cdc-pinkbook-rubella'] };
 const RUBELLA_PARTIAL: Sourced = { value: 0.95, sources: ['cdc-pinkbook-rubella'] };
 const CHICKENPOX_FULL: Sourced = { value: 0.92, sources: ['cdc-pinkbook-varicella'] };
 const CHICKENPOX_PARTIAL: Sourced = { value: 0.82, sources: ['cdc-pinkbook-varicella'] };
+/** Vaccine-strain chickenpox deaths: 6 in 132.8 million doses (Moro 2022). */
+const VARICELLA_VACCINE_STRAIN_DEATHS = 6;
+const VARICELLA_DOSES = 132_800_000;
+/** Bolormaa 2025: two doses, 93.5% effective in year 1 and 49.6% by year 9 (8 years apart). */
+const VARICELLA_TWO_DOSE_YEAR1 = 93.5;
+const VARICELLA_TWO_DOSE_YEAR9 = 49.6;
+const VARICELLA_YEAR9_GAP = (9 - 1) * DAYS_PER_YEAR;
 const PERTUSSIS_FULL: Sourced = { value: 0.85, sources: ['cdc-pinkbook-pertussis'] };
 const PERTUSSIS_PARTIAL: Sourced = { value: 0.5, sources: ['cdc-pinkbook-pertussis'] };
+/** Wendelboe 2005: immunity after infection wanes after 4 to 20 years; the middle is used. */
+const PERTUSSIS_INFECTION_HALF_LIFE_YEARS = (4 + 20) / 2;
+/** Chit 2018: full acellular series VE by year, used to find when it halves (log-linear). */
+const CHIT_START = 85;
+const CHIT_YEAR3 = 49;
+const CHIT_YEAR5 = 37;
+function pertussisVaccineWaningDays(): number {
+	const half = CHIT_START / 2;
+	const years = 3 + (2 * Math.log(CHIT_YEAR3 / half)) / Math.log(CHIT_YEAR3 / CHIT_YEAR5);
+	return years * DAYS_PER_YEAR;
+}
+/** Ranjeva 2019: infection-acquired protection against H3N2 in adults halves in 4.1 years. */
+const FLU_INFECTION_HALF_LIFE_YEARS = 4.1;
 const SMALLPOX_FULL: Sourced = { value: 0.95, sources: ['cdc-smallpox-vaccine'] };
-const SMALLPOX_PARTIAL: Sourced = { value: 0.5, sources: ['cdc-smallpox-vaccine'] };
+/** CDC: vaccination protects "for about 3 to 5 years"; the middle, 4 years, is read as a half-life. */
+const SMALLPOX_VACCINE_HALF_LIFE_YEARS = (3 + 5) / 2;
 const EBOLA_FULL: Sourced = { value: 0.95, sources: ['cdc-ervebo-vaccine'] };
-const EBOLA_PARTIAL: Sourced = { value: 0, sources: ['cdc-ervebo-vaccine'] };
 
 /** One MMR entry for measles, mumps or rubella, with that disease's protection and waning. */
 function mmr(full: Sourced, partial: Sourced, waningDays: Sourced<number | null>): Vaccine {
@@ -242,9 +315,8 @@ function mmr(full: Sourced, partial: Sourced, waningDays: Sourced<number | null>
 		product: 'MMR',
 		label: 'MMR',
 		default: true,
-		infection: full,
-		severe: null,
-		partial: { infection: partial, severe: null },
+		full: { infection: full },
+		partial: { infection: partial },
 		seriousPer100kDoses: MMR_SERIOUS,
 		deathsPer100kDoses: MMR_DEATHS,
 		waningDays
@@ -383,9 +455,11 @@ export const DISEASES = {
 				'nair2011-flu-children-burden'
 			]
 		},
-		waningDays: { value: 1500, sources: ['ranjeva2019-flu-infection-protection'] },
+		waningDays: {
+			value: FLU_INFECTION_HALF_LIFE_YEARS * DAYS_PER_YEAR,
+			sources: ['ranjeva2019-flu-infection-protection']
+		},
 		fullEfficacy: FLU_INFECTION,
-		partialEfficacy: FLU_PARTIAL_INFECTION,
 		hospitalisedShare: { value: 0.012, sources: ['cdc-flu-burden-2022-23', 'cdc-flu-burden-about'] },
 		vaccines: [FLU_INACTIVATED],
 		// US 2018-19 season; the 0-17 and 18-64 groups stand in for 0-14 and 15-64.
@@ -425,7 +499,7 @@ export const DISEASES = {
 			value: 660,
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
 		},
-		fullEfficacy: COVID19_2021.infection,
+		fullEfficacy: COVID19_2021.full.infection,
 		partialEfficacy: COVID19_2021.partial.infection,
 		hospitalisedShare: {
 			value: perSymptomatic(COVID19_IHR, COVID19_ASYMPTOMATIC),
@@ -457,11 +531,11 @@ export const DISEASES = {
 			sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
 		},
 		waningDays: { value: 195, sources: ['bobrovitz-2023-omicron-reinfection'] },
-		fullEfficacy: OMICRON_UPDATED.infection,
+		fullEfficacy: OMICRON_UPDATED.full.infection,
 		// The updated vaccine has no partial-course figure, so this stays the original vaccine's
 		// one-dose figure (Tan 2022) until step 3 moves the engine onto `vaccines`.
 		partialCourse: 'covid-original',
-		partialEfficacy: OMICRON_ORIGINAL.partial!.infection!,
+		partialEfficacy: OMICRON_ORIGINAL.partial.infection,
 		hospitalisedShare: {
 			value: OMICRON_HOSPITAL_PER_INFECTION / (1 - OMICRON_ASYMPTOMATIC.value),
 			sources: ['ward-2024-covid-ihr-ifr', 'perez-guzman-2023-omicron']
@@ -487,18 +561,21 @@ export const DISEASES = {
 				product: 'varicella',
 				label: 'Chickenpox vaccine',
 				default: true,
-				infection: CHICKENPOX_FULL,
-				severe: null,
+				full: { infection: CHICKENPOX_FULL },
 				partial: {
 					infection: CHICKENPOX_PARTIAL,
 					severe: { value: 0.98, sources: ['marin-2016-varicella-ma'] }
 				},
 				seriousPer100kDoses: { value: 1.3, sources: ['moro-2022-varicella-vaers'] },
-				deathsPer100kDoses: { value: null, sources: ['moro-2022-varicella-vaers'] },
+				// Worked out: vaccine-strain deaths per dose, mostly in people the vaccine wasn't recommended for.
+				deathsPer100kDoses: {
+					value: (VARICELLA_VACCINE_STRAIN_DEATHS / VARICELLA_DOSES) * PER_100K,
+					sources: ['moro-2022-varicella-vaers']
+				},
 				waningDays: {
-					value: null,
-					sources: ['cdc-pinkbook-varicella'],
-					provisional: PROVISIONAL_VACCINE_WANING
+					value:
+						(VARICELLA_YEAR9_GAP * Math.LN2) / Math.log(VARICELLA_TWO_DOSE_YEAR1 / VARICELLA_TWO_DOSE_YEAR9),
+					sources: ['bolormaa2025-varicella-duration', 'pawaskar2022-varicella-nma']
 				}
 			}
 		]
@@ -517,7 +594,12 @@ export const DISEASES = {
 		fullEfficacy: MUMPS_FULL,
 		partialEfficacy: MUMPS_PARTIAL,
 		hospitalisedShare: { value: 0.01, sources: ['cdc-pinkbook-mumps'] },
-		vaccines: [mmr(MUMPS_FULL, MUMPS_PARTIAL, { value: 6940, sources: ['lewnard-grad-2018-mumps-waning'] })]
+		vaccines: [
+			mmr(MUMPS_FULL, MUMPS_PARTIAL, {
+				value: MUMPS_VACCINE_HALF_LIFE_YEARS * DAYS_PER_YEAR,
+				sources: ['lewnard-grad-2018-mumps-waning']
+			})
+		]
 	},
 	rubella: {
 		id: 'rubella',
@@ -549,7 +631,10 @@ export const DISEASES = {
 		},
 		mortality: { value: 0.002, sources: ['cdc-pinkbook-pertussis'] },
 		// Worked out: the middle of Wendelboe 2005's 4-20 years after infection, read as a half-life.
-		waningDays: { value: 4380, sources: ['wendelboe2005-pertussis-immunity-duration'] },
+		waningDays: {
+			value: PERTUSSIS_INFECTION_HALF_LIFE_YEARS * DAYS_PER_YEAR,
+			sources: ['wendelboe2005-pertussis-immunity-duration']
+		},
 		fullEfficacy: PERTUSSIS_FULL,
 		partialEfficacy: PERTUSSIS_PARTIAL,
 		hospitalisedShare: { value: 0.05, sources: ['cdc-pinkbook-pertussis'] },
@@ -558,13 +643,12 @@ export const DISEASES = {
 				product: 'DTaP',
 				label: 'Acellular whooping cough vaccine (DTaP)',
 				default: true,
-				infection: PERTUSSIS_FULL,
-				severe: null,
-				partial: { infection: PERTUSSIS_PARTIAL, severe: null },
+				full: { infection: PERTUSSIS_FULL },
+				partial: { infection: PERTUSSIS_PARTIAL },
 				seriousPer100kDoses: { value: 10, sources: ['cdc-pinkbook-pertussis'] },
 				deathsPer100kDoses: { value: null, sources: ['cdc-pinkbook-pertussis'] },
 				waningDays: {
-					value: 1466,
+					value: pertussisVaccineWaningDays(),
 					sources: ['chit2018-acellular-pertussis-ve-waning', 'mcgirr-fisman-2015-dtap-duration']
 				}
 			}
@@ -582,7 +666,6 @@ export const DISEASES = {
 		mortality: { value: 0.3, sources: ['who-smallpox-qa', 'cdc-smallpox-clinical-signs'] },
 		waningDays: { value: null, sources: ['cdc-smallpox-clinical-signs'] },
 		fullEfficacy: SMALLPOX_FULL,
-		partialEfficacy: SMALLPOX_PARTIAL,
 		hospitalisedShare: { value: 0.9, sources: ['cdc-smallpox-signs-symptoms'] },
 		coverageToday: {
 			value: 0,
@@ -593,13 +676,13 @@ export const DISEASES = {
 				product: 'vaccinia',
 				label: 'Vaccinia (the 1960s vaccine)',
 				default: true,
-				infection: SMALLPOX_FULL,
-				severe: null,
-				partial: { infection: SMALLPOX_PARTIAL, severe: null },
+				full: { infection: SMALLPOX_FULL },
 				seriousPer100kDoses: { value: 7.4, sources: ['lane-1969-smallpox-complications'] },
 				deathsPer100kDoses: { value: 0.1, sources: ['lane-1969-smallpox-complications'] },
-				// Worked out: the 4-year middle of CDC's "about 3 to 5 years", treated as a half-life.
-				waningDays: { value: 4 * 365.25, sources: ['cdc-smallpox-vaccine'] }
+				waningDays: {
+					value: SMALLPOX_VACCINE_HALF_LIFE_YEARS * DAYS_PER_YEAR,
+					sources: ['cdc-smallpox-vaccine']
+				}
 			}
 		]
 	},
@@ -619,23 +702,16 @@ export const DISEASES = {
 		mortality: { value: 0.5, sources: ['who-ebola-factsheet', 'vankerkhove-2015-ebola-parameters'] },
 		waningDays: { value: null, sources: ['rimoin-2018-ebola-antibodies-40-years'] },
 		fullEfficacy: EBOLA_FULL,
-		partialEfficacy: EBOLA_PARTIAL,
 		hospitalisedShare: { value: 1, sources: ['who-ebola-treatment-centre'] },
 		vaccines: [
 			{
 				product: 'rVSV-ZEBOV',
 				label: 'Ervebo (rVSV-ZEBOV, one dose)',
 				default: true,
-				infection: EBOLA_FULL,
-				severe: null,
-				partial: { infection: EBOLA_PARTIAL, severe: null },
+				full: { infection: EBOLA_FULL },
 				seriousPer100kDoses: { value: 19.5, sources: ['choi-2021-acip-ebola'] },
 				deathsPer100kDoses: { value: null, sources: ['choi-2021-acip-ebola'] },
-				waningDays: {
-					value: null,
-					sources: ['rimoin-2018-ebola-antibodies-40-years'],
-					provisional: PROVISIONAL_VACCINE_WANING
-				}
+				waningDays: { value: null, sources: ['who-wer-2024-sage-ebola', 'huttner2023-rvsv-zebov-5-year'] }
 			}
 		]
 	},

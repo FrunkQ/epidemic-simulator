@@ -21,8 +21,6 @@ export function isSourced(v: unknown): v is Sourced<number | null> {
 
 /** Vaccine fields that are names and flags, not research numbers. */
 const VACCINE_PLAIN = new Set(['product', 'version', 'label', 'default']);
-/** Vaccine fields where null means "no pooled figure exists" rather than a missing source. */
-const VACCINE_NULLABLE = new Set(['severe', 'partial.infection', 'partial.severe']);
 
 export function walk(): { sourced: { key: string; value: Sourced<number | null> }[]; bare: string[] } {
 	const sourced: { key: string; value: Sourced<number | null> }[] = [];
@@ -33,9 +31,9 @@ export function walk(): { sourced: { key: string; value: Sourced<number | null> 
 			const field = path ? `${path}.${k}` : k;
 			const key = `${base}.${field}`;
 			if (!path && VACCINE_PLAIN.has(k)) continue;
-			if (v === null && VACCINE_NULLABLE.has(field)) continue;
 			if (isSourced(v)) sourced.push({ key, value: v });
-			else if (!path && k === 'partial' && v && typeof v === 'object') walkVaccine(base, k, v);
+			else if (!path && (k === 'full' || k === 'partial') && v && typeof v === 'object')
+				walkVaccine(base, k, v);
 			else bare.push(key);
 		}
 	};

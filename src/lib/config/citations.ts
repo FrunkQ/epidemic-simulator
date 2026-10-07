@@ -147,7 +147,7 @@ export const CITATIONS: Citation[] = [
 			'measles.partialEfficacy',
 			'measles.fullEfficacy',
 			'measles.waningDays',
-			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.full.infection',
 			'measles.vaccines.MMR.partial.infection',
 			'measles.vaccines.MMR.seriousPer100kDoses',
 			'measles.vaccines.MMR.deathsPer100kDoses',
@@ -261,7 +261,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'measles.partialEfficacy',
 			'measles.fullEfficacy',
-			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.full.infection',
 			'measles.vaccines.MMR.partial.infection'
 		],
 		quote: '≥12 months, the median VE was … 92.0% … For 2 doses … the median VE was 94.1%',
@@ -285,7 +285,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'measles.partialEfficacy',
 			'measles.fullEfficacy',
-			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.full.infection',
 			'measles.vaccines.MMR.partial.infection'
 		],
 		quote: '95% after one dose ... and 96% after two doses',
@@ -306,7 +306,7 @@ export const CITATIONS: Citation[] = [
 		year: 2025,
 		evidence: 'study',
 		doi: '10.2807/1560-7917.es.2025.30.46.2500130',
-		usedFor: ['measles.fullEfficacy', 'measles.vaccines.MMR.infection'],
+		usedFor: ['measles.fullEfficacy', 'measles.vaccines.MMR.full.infection'],
 		quote: 'VE was 96.4%',
 		location: 'abstract',
 		why: 'Single outbreak; support only.',
@@ -329,7 +329,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'measles.fullEfficacy',
 			'measles.waningDays',
-			'measles.vaccines.MMR.infection',
+			'measles.vaccines.MMR.full.infection',
 			'measles.vaccines.MMR.waningDays'
 		],
 		quote: 'remained high after 15 years 99.7%',
@@ -417,15 +417,14 @@ export const CITATIONS: Citation[] = [
 			'polio.mortality',
 			'polio.waningDays',
 			'polio.hospitalisedShare',
-			'polio.vaccines.IPV.severe',
+			'polio.vaccines.IPV.full.severe',
 			'polio.vaccines.IPV.seriousPer100kDoses',
 			'polio.vaccines.IPV.deathsPer100kDoses',
-			'polio.vaccines.OPV.severe',
+			'polio.vaccines.OPV.full.severe',
 			'polio.vaccines.OPV.partial.severe',
 			'polio.vaccines.OPV.seriousPer100kDoses',
 			'polio.vaccines.OPV.deathsPer100kDoses',
-			'polio.vaccines.IPV.waningDays',
-			'polio.vaccines.OPV.waningDays'
+			'polio.vaccines.IPV.waningDays'
 		],
 		quote:
 			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
@@ -572,7 +571,7 @@ export const CITATIONS: Citation[] = [
 		year: 2014,
 		evidence: 'study',
 		doi: '10.1073/pnas.1323688111',
-		usedFor: ['polio.r0', 'polio.waningDays', 'polio.vaccines.OPV.waningDays'],
+		usedFor: ['polio.r0', 'polio.waningDays'],
 		quote: 'imperfect, waning intestinal immunity among older children and adults permits reinfection',
 		location: 'abstract',
 		why: 'Fitted outbreak model.',
@@ -674,9 +673,9 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'polio.fullEfficacy',
 			'polio.partialEfficacy',
-			'polio.vaccines.IPV.infection',
+			'polio.vaccines.IPV.full.infection',
 			'polio.vaccines.IPV.partial.infection',
-			'polio.vaccines.OPV.infection'
+			'polio.vaccines.OPV.full.infection'
 		],
 		quote:
 			'Individuals vaccinated with OPV were protected against infection and shedding of poliovirus in stool samples collected after challenge compared with unvaccinated individuals (summary odds ratio [OR] for shedding 0.13 (95% confidence interval [CI] 0.08–0.24)). In contrast, IPV provided no protection against shedding compared with unvaccinated individuals (summary OR 0.81 [95% CI 0.59–1.11])',
@@ -977,12 +976,7 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s1473-3099(16)00129-8',
-		usedFor: [
-			'flu.partialEfficacy',
-			'flu.fullEfficacy',
-			'flu.vaccines.inactivated.infection',
-			'flu.vaccines.inactivated.partial.infection'
-		],
+		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.full.infection'],
 		quote: 'Pooled VE was 33% (95% CI 26-39; I(2)=44·4) for H3N2',
 		location: 'abstract',
 		why: 'Meta-analysis.',
@@ -1002,7 +996,7 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.vaccine.2024.02.059',
-		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.infection'],
+		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.full.infection'],
 		quote: 'The pooled IVE was 41.4 % (95 % CI: 39.2-43.5 %) against any influenza',
 		location: 'abstract',
 		why: 'Largest recent meta-analysis: 0.414 is real-world protection against any flu, all ages, in a typical season.',
@@ -1023,11 +1017,7 @@ export const CITATIONS: Citation[] = [
 		year: 2018,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jix632',
-		usedFor: [
-			'flu.partialEfficacy',
-			'flu.vaccines.inactivated.partial.infection',
-			'flu.vaccines.inactivated.waningDays'
-		],
+		usedFor: ['flu.vaccines.inactivated.waningDays'],
 		quote:
 			'Meta-analyses were performed to compare VE 15-90 days after vaccination to VE 91-180 days after vaccination. A significant decline in VE was observed for influenza virus subtype A/H3 (change in VE, -33; 95% confidence interval [CI], -57 to -12) and type B (change in VE, -19; 95% CI, -33 to -6). VE declined for influenza virus subtype A/H1, but this difference was not statistically significant (change in VE -8; 95% CI, -27 to 21).',
 		location:
@@ -1051,11 +1041,7 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'study',
 		doi: '10.3390/vaccines10060888',
-		usedFor: [
-			'flu.partialEfficacy',
-			'flu.vaccines.inactivated.partial.infection',
-			'flu.vaccines.inactivated.waningDays'
-		],
+		usedFor: ['flu.vaccines.inactivated.waningDays'],
 		quote:
 			'The adjusted overall VE against any medically attended, laboratory-confirmed influenza decreased from 50% (95% confidence interval (CI): 41–58%) in adults vaccinated 14 to 74 days prior to the onset of influenza-like illness (ILI), to 39% (95% CI: 31–47%) in adults vaccinated 75 to 134 days prior to the onset of ILI, then to 17% (95% CI: 0–32%) in adults vaccinated 135 to 194 days prior to the onset of ILI. … wanes within 180 days after 14 days of influenza vaccination',
 		location: 'abstract',
@@ -1216,9 +1202,8 @@ export const CITATIONS: Citation[] = [
 			'chickenpox.partialEfficacy',
 			'chickenpox.hospitalisedShare',
 			'chickenpox.about',
-			'chickenpox.vaccines.varicella.infection',
-			'chickenpox.vaccines.varicella.partial.infection',
-			'chickenpox.vaccines.varicella.waningDays'
+			'chickenpox.vaccines.varicella.full.infection',
+			'chickenpox.vaccines.varicella.partial.infection'
 		],
 		quote:
 			'The period of communicability extends from 1 to 2 days before the onset of rash until all lesions have formed crusts.',
@@ -1313,16 +1298,14 @@ export const CITATIONS: Citation[] = [
 		url: 'https://www.cdc.gov/smallpox/vaccines/index.html',
 		usedFor: [
 			'smallpox.fullEfficacy',
-			'smallpox.partialEfficacy',
 			'smallpox.coverageToday',
-			'smallpox.vaccines.vaccinia.infection',
-			'smallpox.vaccines.vaccinia.partial.infection',
+			'smallpox.vaccines.vaccinia.full.infection',
 			'smallpox.vaccines.vaccinia.waningDays'
 		],
 		quote:
 			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
 		location: 'Effectiveness section',
-		why: "fullEfficacy=0.95 straight from this sentence. partialEfficacy=0.5 is my own pick: the page says 'Smallpox vaccination can protect you from smallpox for about 3 to 5 years', so someone vaccinated decades ago counts as only partly protected. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = 4 x 365.25 = 1,461 days, worked out as the middle of 'about 3 to 5 years' and treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.",
+		why: "fullEfficacy=0.95 straight from this sentence. There is no partial course: someone vaccinated decades ago is a waned vaccination, which the vaccine's waningDays covers, and a waned dot keeps its severe protection. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = 4 x 365.25 = 1,461 days, worked out as the middle of 'about 3 to 5 years' and treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.",
 		context: 'Official CDC page on the smallpox vaccine; last reviewed October 23, 2024.',
 		verified: {
 			by: 'independent verification pass',
@@ -1369,7 +1352,7 @@ export const CITATIONS: Citation[] = [
 			'mumps.fullEfficacy',
 			'mumps.partialEfficacy',
 			'mumps.hospitalisedShare',
-			'mumps.vaccines.MMR.infection',
+			'mumps.vaccines.MMR.full.infection',
 			'mumps.vaccines.MMR.partial.infection'
 		],
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
@@ -1424,7 +1407,7 @@ export const CITATIONS: Citation[] = [
 			'pertussis.fullEfficacy',
 			'pertussis.partialEfficacy',
 			'pertussis.hospitalisedShare',
-			'pertussis.vaccines.DTaP.infection',
+			'pertussis.vaccines.DTaP.full.infection',
 			'pertussis.vaccines.DTaP.partial.infection',
 			'pertussis.vaccines.DTaP.seriousPer100kDoses',
 			'pertussis.vaccines.DTaP.deathsPer100kDoses'
@@ -1662,15 +1645,10 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/vhf/ebola/clinicians/vaccine',
-		usedFor: [
-			'ebola.fullEfficacy',
-			'ebola.partialEfficacy',
-			'ebola.vaccines.rVSV-ZEBOV.infection',
-			'ebola.vaccines.rVSV-ZEBOV.partial.infection'
-		],
+		usedFor: ['ebola.fullEfficacy', 'ebola.vaccines.rVSV-ZEBOV.full.infection'],
 		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
 		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
-		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. partialEfficacy=0.0 follows from the page's statement that ERVEBO is approved 'as a single dose administration' — there is no incomplete course to model. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
+		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
 		context: 'CDC clinician page on the licensed Zaire ebolavirus vaccine; last reviewed 30 January 2025.',
 		verified: {
 			by: 'independent verification pass',
@@ -1749,7 +1727,7 @@ export const CITATIONS: Citation[] = [
 			'rubella.partialEfficacy',
 			'rubella.hospitalisedShare',
 			'rubella.about',
-			'rubella.vaccines.MMR.infection',
+			'rubella.vaccines.MMR.full.infection',
 			'rubella.vaccines.MMR.partial.infection',
 			'rubella.vaccines.MMR.waningDays'
 		],
@@ -1918,7 +1896,7 @@ export const CITATIONS: Citation[] = [
 			'No review of how long immunity lasts after Ebola was found; this long follow-up study is the best evidence.',
 		doi: '10.1093/infdis/jix584',
 		url: 'https://academic.oup.com/jid/article-lookup/doi/10.1093/infdis/jix584',
-		usedFor: ['ebola.waningDays', 'ebola.vaccines.rVSV-ZEBOV.waningDays'],
+		usedFor: ['ebola.waningDays'],
 		quote:
 			"Interestingly, a subset of these survivors' serum antibodies could still neutralize live virus 40 years postinitial infection.",
 		location: 'Abstract — results',
@@ -2336,10 +2314,10 @@ export const CITATIONS: Citation[] = [
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9965204/',
 		usedFor: [
 			'covid19omicron.fullEfficacy',
-			'covid19omicron.vaccines.covid-original.infection',
-			'covid19omicron.vaccines.covid-original.severe',
-			'covid19omicron.vaccines.covid-updated.infection',
-			'covid19omicron.vaccines.covid-updated.severe'
+			'covid19omicron.vaccines.covid-original.full.infection',
+			'covid19omicron.vaccines.covid-original.full.severe',
+			'covid19omicron.vaccines.covid-updated.full.infection',
+			'covid19omicron.vaccines.covid-updated.full.severe'
 		],
 		quote:
 			'For all ages and vaccines, the pooled VE against any SARS-CoV-2 Omicron infection was 20.4% (95%CI: 12.1–28.7%, I2 = 96.4%). … The pooled VE against severe COVID-19 was 56.9% (95%CI: 51.4–62.5%, I2 = 84.4%)',
@@ -2869,7 +2847,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'covid19.fullEfficacy',
 			'covid19.partialEfficacy',
-			'covid19.vaccines.covid-2021.infection',
+			'covid19.vaccines.covid-2021.full.infection',
 			'covid19.vaccines.covid-2021.partial.infection'
 		],
 		quote:
@@ -2896,7 +2874,7 @@ export const CITATIONS: Citation[] = [
 		year: 2025,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.cmi.2025.09.023',
-		usedFor: ['flu.vaccines.inactivated.severe'],
+		usedFor: ['flu.vaccines.inactivated.full.severe'],
 		quote:
 			'Pooled IVE was 42% (95% CI: 39-44) against influenza-associated hospitalisation (very low certainty)',
 		location: 'Abstract, Results',
@@ -2919,7 +2897,7 @@ export const CITATIONS: Citation[] = [
 		year: 2017,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.jinf.2017.09.010',
-		usedFor: ['flu.vaccines.inactivated.severe'],
+		usedFor: ['flu.vaccines.inactivated.full.severe'],
 		quote:
 			'Between 2010-11 and 2014-15, the pooled seasonal IVE was 41% (95%CI:34;48) for any influenza (51% (95%CI:44;58) among people aged 18-64y and 37% (95%CI:30;44) among ≥65 years).',
 		location: 'Abstract, Results',
@@ -3204,8 +3182,8 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'covid19.fullEfficacy',
 			'covid19.partialEfficacy',
-			'covid19.vaccines.covid-2021.infection',
-			'covid19.vaccines.covid-2021.severe',
+			'covid19.vaccines.covid-2021.full.infection',
+			'covid19.vaccines.covid-2021.full.severe',
 			'covid19.vaccines.covid-2021.partial.infection',
 			'covid19.vaccines.covid-2021.partial.severe'
 		],
@@ -3238,7 +3216,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'COVID-19 vaccine efficacy or effectiveness against severe disease remained high, although it did decrease somewhat by 6 months after full vaccination. By contrast, vaccine efficacy or effectiveness against infection and symptomatic disease decreased approximately 20-30 percentage points by 6 months. … On average, vaccine efficacy or effectiveness against SARS-CoV-2 infection decreased from 1 month to 6 months after full vaccination by 21·0 percentage points (95% CI 13·9–29·8) among people of all ages',
 		location: 'Summary: Interpretation; Findings',
-		why: "Worked out: half-life assuming exponential decay from Liu 2021's 0.85 with the stated fall against infection by month 6. With the Findings' 21.0-point fall between months 1 and 6 (150 days), 0.85 -> 0.64 gives 150 x ln2 / ln(0.85 / 0.64) = 366 days; a straight-line fall gives 304 days. That is a range of about 300-370 days, and 335 is the middle. Over the whole 20-30 point range in the Interpretation, the exponential gives about 240-390 days.",
+		why: "Worked out: half-life assuming exponential decay from Liu 2021's 0.85 with the stated fall against infection by month 6. With the Findings' 21.0-point fall between months 1 and 6 (5 x 365.25 / 12 = 152.2 days), 0.85 -> 0.64 gives 152.2 x ln2 / ln(0.85 / 0.64) = 372 days; a straight-line fall reaches half of 0.85 after 152.2 x 0.425 / 0.21 = 308 days. The middle of the two, 340 days, is computed in config. Over the whole 20-30 point range in the Interpretation, the exponential gives about 240-390 days.",
 		context:
 			"Meta-regression of 18 studies, all before Omicron spread widely; 78 vaccine-specific evaluations (Pfizer 38, Moderna 23, Janssen 9, AstraZeneca 8). Gives falls in percentage points, not a starting value, so the half-life depends on the starting value taken from Liu 2021. In its own words, protection against severe disease 'remained high, although it did decrease somewhat by 6 months' (a 10.0-point fall). Two correction notices: 10.1016/S0140-6736(22)00428-7 fixes one label in Table 4; 10.1016/S0140-6736(23)00331-8 (23 Feb 2023) corrects the appendix's meta-regression methods. Neither changes the figures in the abstract.",
 		verified: {
@@ -3288,8 +3266,8 @@ export const CITATIONS: Citation[] = [
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10879625/',
 		usedFor: [
 			'covid19omicron.fullEfficacy',
-			'covid19omicron.vaccines.covid-updated.infection',
-			'covid19omicron.vaccines.covid-updated.severe'
+			'covid19omicron.vaccines.covid-updated.full.infection',
+			'covid19omicron.vaccines.covid-updated.full.severe'
 		],
 		quote:
 			'Meta-analysis results showed, compared with the monovalent vaccines (MVs), the relative effectiveness (rVE) of the BVs in COVID-19-associated infections/symptomatic infections, illnesses, hospitalizations, and deaths was 30.90% [95% confidence interval (CI), 8.43–53.37], 39.83% (95% CI, 27.34–52.32), 59.70% (95% CI, 44.08–75.32), and 72.23% (95% CI, 62.08–82.38), respectively.',
@@ -3443,6 +3421,131 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'DOI found and confirmed. Crossref: title, four authors, Pediatr Infect Dis J 24(5 Suppl):S58-S61 (May 2005) match; no update or relation entries. Abstract wording verbatim; full text not read.'
+		}
+	},
+	{
+		id: 'famulare2018-opv-waning',
+		authors: 'Famulare M, Selinger C, McCarthy KA, Eckhoff PA, Chabot-Couture G',
+		title: 'Assessing the stability of polio eradication after the withdrawal of oral polio vaccine',
+		journal: 'PLOS Biology 16(4):e2002468',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason:
+			'No systematic review or meta-analysis estimates how OPV-induced gut immunity against infection decays with time since the last dose. The two higher-ranked sources in this area measure gut immunity at a single point after a primary series, with no time axis: Grassly 2019 network meta-analysis (10.1016/s1473-3099(19)30301-9) and Hird & Grassly 2012 systematic review and meta-analysis (10.1371/journal.ppat.1002599).',
+		doi: '10.1371/journal.pbio.2002468',
+		url: 'https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.2002468',
+		mirrorUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5942853/',
+		usedFor: ['polio.vaccines.OPV.waningDays'],
+		quote:
+			'We modeled waning as a power-law decay [83] during the months since last immunization, NAb(t) ∝ t-λ, with exponent λ = 0.87 (0.73–1.02) (S1 Text Eq F). … Our waning model (S1 Text Eq F, Fig 4) predicts that without reinfection, typical peak OPV-equivalent antibody titers (NAb = 2,048) decline to typical three-dose healthy child immunity (NAb = 512) in 5 (4–7) months and to typical two-dose immunity (NAb = 64) in an additional 4 (2–10) years. … Susceptibility is also strongly impacted by immunity, with the expected fraction shedding after Sabin 2 challenge dropping below half at all relevant doses for NAb ≥ 64 (Fig 7B).',
+		location:
+			"Methods, 'Waning immunity' (power-law model); Results, paragraph after the Fig 7 caption (titre milestones); Results, last sentence of the paragraph introducing Fig 7 (NAb ≥ 64); Methods, 'Oral susceptibility to infection' (unprotected shedding approaches 1)",
+		why: 'Worked out: protection against infection is taken as 1 minus the share shedding after challenge, which is about half once antibodies fall to 64. Peak immunity (2,048) reaches 64 in 5 months plus 4 years = 4.42 years = 1,613 days, computed in config (the reported windows give 850 to 3,865 days). Check: a 32-fold fall under t^-0.87 takes 32^(1/0.87) = 53.7 times as long, month 1 to month 54, about 4.5 years.',
+		context:
+			"Gut immunity against infection and shedding after a full OPV series, not protection against paralysis, which is lifelong (cdc-pinkbook-polio). An order-of-magnitude figure that leans towards faster waning: NAb 64 is a threshold, and unprotected shedding is below 1 at realistic doses. The decay is a power law, so an exponential with this half-life overstates waning after about 5 years (the same model has 'residual immunity' persisting for life).",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI resolves to PLOS Biology 2018;16(4):e2002468; authors, year and journal match. All quotes found verbatim in the PMC open-access text (PMC5942853.1); locations corrected. Arithmetic reproduced. No correction or retraction on the PLOS or PMC pages; registries (Europe PMC, OpenAlex) could not be reached.'
+		}
+	},
+	{
+		id: 'bolormaa2025-varicella-duration',
+		authors: 'Bolormaa E, Lee YH, Choe YJ, Choe SA',
+		title:
+			'Varicella Vaccine Effectiveness and Duration of Protection: A Systematic Review and Meta-Analysis',
+		journal: 'Journal of Korean Medical Science 40:e286',
+		year: 2025,
+		evidence: 'meta-analysis',
+		doi: '10.3346/jkms.2025.40.e286',
+		url: 'https://jkms.org/DOIx.php?id=10.3346%2Fjkms.2025.40.e286',
+		usedFor: ['chickenpox.vaccines.varicella.waningDays'],
+		quote:
+			'For two-dose vaccinations, VE decreased from 93.5% (92.1-94.9; I2 = 31.6%) in the first year to 49.6% (46.5-82.7; I2 = 100%) by nine years post-vaccination (Table 3). … The duration of protection showed a slight decline over time. Evidence suggests that both one and two doses of the varicella vaccine offer short-term protection, though this protection wanes rapidly.',
+		location:
+			"Results, paragraph beginning 'Thirteen studies assessed the duration of varicella vaccine protection (Table 2)', with Tables 2 and 3; conclusion in the Abstract",
+		why: 'Worked out from the two-dose series (a full course): exponential fall from 93.5% at year 1 to 49.6% at year 9, k = ln(93.5 / 49.6) / 8 = 0.0792 a year, half-life 8.75 years = 3,195 days, computed in config. The only meta-analysis found that reports effectiveness by year since vaccination. Low confidence; see context.',
+		context:
+			"Mostly observational outbreak studies. The year-9 two-dose estimate has I2 = 100% and a confidence interval that does not contain its own point estimate as printed. The one-dose series rises again (65.2% at year 6, 70.2% at year 7, 81.8% at year 10), so a fit over all its points implies a half-life of decades; it is not used. Pawaskar 2022's network meta-analysis of trials found no waning over 10 years, so the plausible range runs from about 6 years to no meaningful waning.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Results paragraph and abstract conclusion confirmed verbatim at jkms.org; the abstract continues "wanes rapidly", so it is quoted in full. Arithmetic reproduced. Tables 2-3 themselves not opened (prose values only). No retraction visible on the publisher page; registries could not be reached.'
+		}
+	},
+	{
+		id: 'pawaskar2022-varicella-nma',
+		authors: 'Pawaskar M, et al.',
+		title: 'Relative efficacy of varicella vaccines: network meta-analysis of randomized controlled trials',
+		journal: 'Current Medical Research and Opinion',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1080/03007995.2022.2091334',
+		usedFor: ['chickenpox.vaccines.varicella.waningDays'],
+		quote:
+			'MBNMA indicated that protection against varicella was sustained without waning over the 10 year follow-up.',
+		location: 'Abstract (Results)',
+		why: 'The counterpoint to Bolormaa 2025, cited so the disagreement is visible: trials alone show no waning over 10 years. Not used for the value because it gives no year-by-year series and covers trial settings with little exposure.',
+		context:
+			'8 randomised trials of Varivax, Varilrix, Priorix-Tetra and Sinovac vaccines; efficacy in trials, not effectiveness in use.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI, journal, year and quote confirmed from the abstract record; the publisher page (403) and volume/pages were not read. No retraction seen.'
+		}
+	},
+	{
+		id: 'who-wer-2024-sage-ebola',
+		authors: 'World Health Organization, Strategic Advisory Group of Experts on Immunization',
+		title:
+			'Extraordinary meeting of the Strategic Advisory Group of Experts on Immunization on Ebola vaccination, May 2024: conclusions and recommendations',
+		journal: 'Weekly Epidemiological Record 99(27):355-362',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/publications/i/item/WER-9927-355-362',
+		mirrorUrl: 'https://www.nitag-resource.org/sites/default/files/2024-07/WER9927-eng-fre.pdf',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.waningDays'],
+		quote:
+			'Duration of protective clinical efficacy has not been formally assessed but Ebola-specific antibodies after rVSVΔG-ZEBOV-GP vaccination have been shown to be sustained without evidence of waning for at least 5 years.',
+		location: "p. 356, section 'rVSVΔG-ZEBOV-GP vaccine'; revaccination guidance on p. 359",
+		why: 'waningDays null: WHO finds no evidence of waning for at least 5 years, so no half-life is established. Huttner 2023 shows the same flat antibody levels from year 1 to year 5.',
+		context:
+			'Based on antibody persistence, not clinical protection over time, which has not been formally assessed; null is a statement about 5 years, not decades. WHO still offers ring contacts vaccinated more than 6 months earlier an extra dose (p. 359).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Published WER wording and pages confirmed by two agreeing reads of the official bilingual PDF (mirror); WHO IRIS returned 403, so not compared character by character there.'
+		}
+	},
+	{
+		id: 'huttner2023-rvsv-zebov-5-year',
+		authors: 'Huttner A, et al.',
+		title:
+			'Antibody responses to recombinant vesicular stomatitis virus-Zaire Ebolavirus vaccination for Ebola virus disease across doses and continents: 5-year durability',
+		journal: 'Clinical Microbiology and Infection 29(12):1587-1594',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review of how long rVSV-ZEBOV protection lasts exists; the official source (WHO SAGE 2024) sets the value and this is the cohort behind it.',
+		doi: '10.1016/j.cmi.2023.08.026',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.waningDays'],
+		quote:
+			'ZEBOV-GP ELISA IgG GMTs plateaued, with no declining trend from 1 year through the last time point assessed (1147.8 [95% CI 874.3-1507.0] at Y1 versus 1548.1 [95% CI 1136.6-2108.5] at Y5 in Geneva volunteers receiving ≥10 million plaque-forming units of rVSV-ZEBOV)',
+		location:
+			"Abstract (Results); 'titres drop to approximately 50% of their peak 1 year post-vaccination' in the Introduction",
+		why: 'Supports null: binding antibodies do not fall between year 1 and year 5, so no half-life can be fitted. The halving from peak to year 1 is the response settling after vaccination, not waning, and is not converted.',
+		context:
+			'168 healthy adults from the 2014-2015 trials in Geneva (5 years) and Lambaréné, Gabon (4 years); antibody levels only.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract and Introduction quotes confirmed verbatim; pages corrected to 29(12):1587-1594 (PMID 37661067) and the published title used. No retraction seen; registries could not be reached.'
 		}
 	}
 ];

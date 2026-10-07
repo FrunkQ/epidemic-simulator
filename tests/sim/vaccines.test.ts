@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { DISEASES, OMICRON_VACCINE_INPUTS } from '../../src/lib/config/diseases';
+import { herdCoverage } from '../../src/lib/config/herd';
 import {
 	breakthroughSevereProtection,
 	defaultVaccine,
 	stackedProtection,
-	sumDeathsPer100k,
+	vaccineCausedDeaths,
 	vaccineKey
 } from '../../src/lib/config/vaccines';
 import type { DiseaseConfig, Sourced, Vaccine } from '../../src/lib/sim/types';
@@ -12,13 +13,13 @@ import type { DiseaseConfig, Sourced, Vaccine } from '../../src/lib/sim/types';
 const WITH_VACCINES = (Object.values(DISEASES) as DiseaseConfig[]).filter((d) => d.vaccines?.length);
 
 /** Every protection share in a vaccine entry, labelled for failure messages. */
-function protections(d: DiseaseConfig, v: Vaccine): [string, Sourced | null][] {
+function protections(d: DiseaseConfig, v: Vaccine): [string, Sourced | undefined][] {
 	const base = `${d.id}.${vaccineKey(v)}`;
 	return [
-		[`${base}.infection`, v.infection],
-		[`${base}.severe`, v.severe],
-		[`${base}.partial.infection`, v.partial?.infection ?? null],
-		[`${base}.partial.severe`, v.partial?.severe ?? null]
+		[`${base}.full.infection`, v.full.infection],
+		[`${base}.full.severe`, v.full.severe],
+		[`${base}.partial.infection`, v.partial?.infection],
+		[`${base}.partial.severe`, v.partial?.severe]
 	];
 }
 
@@ -26,12 +27,17 @@ function vaccine(deaths: number | null): Vaccine {
 	return {
 		product: 'test',
 		label: 'Test',
-		infection: { value: 0.5, sources: ['x'] },
-		severe: null,
+		full: { infection: { value: 0.5, sources: ['x'] } },
 		seriousPer100kDoses: { value: 1, sources: ['x'] },
 		deathsPer100kDoses: { value: deaths, sources: ['x'] },
 		waningDays: { value: null, sources: ['x'] }
 	};
+}
+
+function find(d: DiseaseConfig, key: string): Vaccine {
+	const v = d.vaccines!.find((x) => vaccineKey(x) === key);
+	if (!v) throw new Error(`${d.id} has no vaccine ${key}`);
+	return v;
 }
 
 describe('vaccines', () => {
@@ -55,12 +61,40 @@ describe('vaccines', () => {
 	it("keeps fullEfficacy and partialEfficacy equal to the default vaccine's infection values", () => {
 		for (const d of WITH_VACCINES) {
 			const v = defaultVaccine(d.vaccines)!;
-			expect(d.fullEfficacy.value, d.id).toBe(v.infection.value);
+			expect(d.fullEfficacy.value, d.id).toBe(v.full.infection.value);
 			// "Partly vaccinated" means the default's course unless the disease names another entry.
-			const course = d.partialCourse ? d.vaccines!.find((x) => vaccineKey(x) === d.partialCourse) : v;
-			expect(course, `${d.id} partialCourse names no vaccine`).toBeTruthy();
-			expect(course!.partial?.infection, `${d.id} has no partial-course infection value`).toBeTruthy();
-			expect(d.partialEfficacy.value, d.id).toBe(course!.partial!.infection!.value);
+			const course = d.partialCourse ? find(d, d.partialCourse) : v;
+			if (course.partial?.infection)
+				expect(d.partialEfficacy?.value, d.id).toBe(course.partial.infection.value);
+			else
+				expect(d.partialEfficacy, `${d.id} has no unfinished course, so no partialEfficacy`).toBeUndefined();
+		}
+	});
+
+	it('leaves out a partial course where the vaccine has none, rather than filling it with nulls', () => {
+		for (const d of WITH_VACCINES) {
+			for (const v of d.vaccines!) {
+				const key = `${d.id}.${vaccineKey(v)}`;
+				for (const course of [v.full, v.partial]) {
+					if (!course) continue;
+					for (const field of Object.values(course)) expect(field, key).not.toBeNull();
+				}
+				if (v.partial) expect(Object.keys(v.partial).length, `${key}.partial is empty`).toBeGreaterThan(0);
+			}
+		}
+		// One-dose vaccines, and old vaccinations (which are waning, not a partial course).
+		expect(DISEASES.flu.vaccines[0].partial).toBeUndefined();
+		expect((DISEASES.ebola.vaccines[0] as Vaccine).partial).toBeUndefined();
+		expect((DISEASES.smallpox.vaccines[0] as Vaccine).partial).toBeUndefined();
+		expect(find(DISEASES.covid19omicron, 'covid-updated').partial).toBeUndefined();
+	});
+
+	it('groups COVID-19 vaccines as one product with versions', () => {
+		for (const d of [DISEASES.covid19, DISEASES.covid19omicron] as DiseaseConfig[]) {
+			for (const v of d.vaccines!) {
+				expect(v.product, d.id).toBe('covid');
+				expect(v.version, d.id).toBeTruthy();
+			}
 		}
 	});
 
@@ -81,10 +115,11 @@ describe('vaccines', () => {
 		for (const d of WITH_VACCINES) {
 			for (const v of d.vaccines!) {
 				const key = `${d.id}.${vaccineKey(v)}`;
-				if (v.severe) {
-					expect(breakthroughSevereProtection(v.infection.value, v.severe.value), key).toBeGreaterThanOrEqual(
-						0
-					);
+				if (v.full.severe) {
+					expect(
+						breakthroughSevereProtection(v.full.infection.value, v.full.severe.value),
+						key
+					).toBeGreaterThanOrEqual(0);
 					checked++;
 				}
 				const p = v.partial;
@@ -131,45 +166,67 @@ describe('vaccines', () => {
 
 	it("works out the updated COVID-19 vaccine's protection from the original's and the bivalent's relative effectiveness", () => {
 		const k = OMICRON_VACCINE_INPUTS;
-		const updated = DISEASES.covid19omicron.vaccines.find((v) => v.product === 'covid-updated')!;
-		const original = DISEASES.covid19omicron.vaccines.find((v) => v.product === 'covid-original')!;
-		expect(updated.infection.value).toBe(1 - (1 - k.bivalentRelativeInfection) * (1 - k.originalInfection));
-		expect(updated.severe!.value).toBe(1 - (1 - k.bivalentRelativeSevere) * (1 - k.originalSevere));
-		expect(updated.infection.value).toBeCloseTo(0.45, 3);
-		expect(updated.severe!.value).toBeCloseTo(0.826, 3);
+		const updated = find(DISEASES.covid19omicron, 'covid-updated');
+		const original = find(DISEASES.covid19omicron, 'covid-original');
+		expect(updated.full.infection.value).toBe(
+			1 - (1 - k.bivalentRelativeInfection) * (1 - k.originalInfection)
+		);
+		expect(updated.full.severe!.value).toBe(1 - (1 - k.bivalentRelativeSevere) * (1 - k.originalSevere));
+		expect(updated.full.infection.value).toBeCloseTo(0.45, 3);
+		expect(updated.full.severe!.value).toBeCloseTo(0.826, 3);
 		// The same constants back the original vaccine's own entry.
-		expect(original.infection.value).toBe(k.originalInfection);
-		expect(original.severe!.value).toBe(k.originalSevere);
+		expect(original.full.infection.value).toBe(k.originalInfection);
+		expect(original.full.severe!.value).toBe(k.originalSevere);
 		expect(stackedProtection(0, 0.3)).toBeCloseTo(0.3, 12);
 		expect(stackedProtection(0.5, 0.5)).toBeCloseTo(0.75, 12);
 	});
 
-	describe('sumDeathsPer100k', () => {
-		it('never turns a null death rate into 0', () => {
-			expect(sumDeathsPer100k([vaccine(null)])).toBeNull();
-			expect(sumDeathsPer100k([vaccine(null), vaccine(null)])).toBeNull();
-			expect(sumDeathsPer100k([])).toBeNull();
+	it('works out each derived number from the figures its source states', () => {
+		const days = (d: DiseaseConfig, key: string) => find(d, key).waningDays.value!;
+		// Liu 0.85 falling 21 points over months 1-6 (Feikin): exponential 372, straight line 308.
+		expect(days(DISEASES.covid19, 'covid-2021')).toBeCloseTo(339.9, 0);
+		expect(days(DISEASES.covid19omicron, 'covid-original')).toBe(143 - 14);
+		expect(days(DISEASES.flu, 'inactivated')).toBeCloseTo(105, 0);
+		expect(days(DISEASES.mumps, 'MMR')).toBeCloseTo(19.0 * 365.25, 9);
+		expect(days(DISEASES.pertussis, 'DTaP')).toBeCloseTo(1466, 0);
+		expect(days(DISEASES.smallpox, 'vaccinia')).toBeCloseTo(4 * 365.25, 9);
+		expect(DISEASES.flu.waningDays.value).toBeCloseTo(4.1 * 365.25, 9);
+		expect(DISEASES.pertussis.waningDays.value).toBeCloseTo(12 * 365.25, 9);
+		expect(find(DISEASES.covid19, 'covid-2021').seriousPer100kDoses.value).toBeCloseTo(0.959, 3);
+	});
+
+	it('shows the vaccine deaths that are known, worked out from their sources', () => {
+		// Paralysis from oral polio vaccine (0.04 per 100,000 doses) x 3.5% of paralytic cases dying.
+		expect(find(DISEASES.polio, 'OPV').deathsPer100kDoses.value).toBeCloseTo(0.0014, 9);
+		// Six vaccine-strain chickenpox deaths in 132.8 million doses.
+		expect(find(DISEASES.chickenpox, 'varicella').deathsPer100kDoses.value).toBeCloseTo(0.00452, 5);
+	});
+
+	it('marks polio herd immunity as out of reach with the default injected vaccine', () => {
+		const herd = herdCoverage(DISEASES.polio);
+		expect(herd.reachable).toBe(false);
+		expect(herd.coverage).toBeGreaterThan(1);
+	});
+
+	describe('vaccineCausedDeaths', () => {
+		it('never turns a null death rate into 0, for any number of doses', () => {
+			expect(vaccineCausedDeaths(vaccine(null), 0)).toBeNull();
+			expect(vaccineCausedDeaths(vaccine(null), 1_000_000)).toBeNull();
 		});
 
-		it('adds only confirmed rates when some are null', () => {
-			expect(sumDeathsPer100k([vaccine(null), vaccine(0.25), vaccine(null), vaccine(0.5)])).toBeCloseTo(
-				0.75,
-				12
-			);
-			expect(sumDeathsPer100k([vaccine(0)])).toBe(0);
+		it('scales a known rate by the doses given', () => {
+			expect(vaccineCausedDeaths(vaccine(0.5), 200_000)).toBeCloseTo(1, 12);
+			expect(vaccineCausedDeaths(vaccine(0), 200_000)).toBe(0);
+			expect(() => vaccineCausedDeaths(vaccine(0.5), -1)).toThrow(RangeError);
 		});
 
-		it('never lets a null reach a numeric total for any disease', () => {
+		it('gives every product in the catalogue a number or null, never NaN', () => {
 			for (const d of WITH_VACCINES) {
-				const rates = d.vaccines!.map((v) => v.deathsPer100kDoses.value);
-				const total = sumDeathsPer100k(d.vaccines!);
-				if (rates.every((r) => r === null)) expect(total, d.id).toBeNull();
-				else {
-					expect(total, d.id).toBeCloseTo(
-						rates.reduce<number>((s, r) => (r === null ? s : s + r), 0),
-						12
-					);
-					expect(Number.isNaN(total), d.id).toBe(false);
+				for (const v of d.vaccines!) {
+					const deaths = vaccineCausedDeaths(v, 100_000);
+					const key = `${d.id}.${vaccineKey(v)}`;
+					if (v.deathsPer100kDoses.value === null) expect(deaths, key).toBeNull();
+					else expect(deaths, key).toBeCloseTo(v.deathsPer100kDoses.value, 12);
 				}
 			}
 		});
