@@ -6,9 +6,10 @@ import {
 	defaultVaccine,
 	stackedProtection,
 	vaccineCausedDeaths,
+	vaccineDeathsWords,
 	vaccineKey
 } from '../../src/lib/config/vaccines';
-import type { DiseaseConfig, Sourced, Vaccine } from '../../src/lib/sim/types';
+import type { DiseaseConfig, Sourced, Vaccine, VaccineDeathRate } from '../../src/lib/sim/types';
 
 const WITH_VACCINES = (Object.values(DISEASES) as DiseaseConfig[]).filter((d) => d.vaccines?.length);
 
@@ -23,15 +24,21 @@ function protections(d: DiseaseConfig, v: Vaccine): [string, Sourced | undefined
 	];
 }
 
-function vaccine(deaths: number | null): Vaccine {
+function vaccine(deaths: VaccineDeathRate): Vaccine {
 	return {
 		product: 'test',
 		label: 'Test',
 		full: { infection: { value: 0.5, sources: ['x'] } },
 		seriousPer100kDoses: { value: 1, sources: ['x'] },
-		deathsPer100kDoses: { value: deaths, sources: ['x'] },
+		deathsPer100kDoses: deaths,
 		waningDays: { value: null, sources: ['x'] }
 	};
+}
+
+function rateOf(v: Vaccine): number {
+	const r = v.deathsPer100kDoses;
+	if (r.kind !== 'rate') throw new Error(`${vaccineKey(v)} has no death rate`);
+	return r.value;
 }
 
 function find(d: DiseaseConfig, key: string): Vaccine {
@@ -142,12 +149,16 @@ describe('vaccines', () => {
 		expect(breakthroughSevereProtection(0.9, 0.5)).toBeLessThan(0);
 	});
 
-	it('gives every risk rate a number or null, never a missing or negative value', () => {
+	it('gives every risk rate a number or a sourced reason, never a missing or negative value', () => {
 		for (const d of WITH_VACCINES) {
 			for (const v of d.vaccines!) {
-				for (const r of [v.seriousPer100kDoses, v.deathsPer100kDoses]) {
-					expect(r.value === null || (Number.isFinite(r.value) && r.value >= 0), d.id).toBe(true);
-				}
+				const key = `${d.id}.${vaccineKey(v)}`;
+				const s = v.seriousPer100kDoses.value;
+				expect(s === null || (Number.isFinite(s) && s >= 0), key).toBe(true);
+				const r = v.deathsPer100kDoses;
+				expect(r.sources.length, key).toBeGreaterThan(0);
+				if (r.kind === 'rate') expect(Number.isFinite(r.value) && r.value >= 0, key).toBe(true);
+				if (r.kind === 'established-no-rate') expect(r.group && r.text, key).toBeTruthy();
 			}
 		}
 	});
@@ -188,18 +199,23 @@ describe('vaccines', () => {
 		expect(days(DISEASES.covid19omicron, 'covid-original')).toBe(143 - 14);
 		expect(days(DISEASES.flu, 'inactivated')).toBeCloseTo(105, 0);
 		expect(days(DISEASES.mumps, 'MMR')).toBeCloseTo(19.0 * 365.25, 9);
-		expect(days(DISEASES.pertussis, 'DTaP')).toBeCloseTo(1466, 0);
+		expect(days(DISEASES.pertussis, 'DTaP')).toBeCloseTo(2637, 0);
 		expect(days(DISEASES.smallpox, 'vaccinia')).toBeCloseTo(4 * 365.25, 9);
 		expect(DISEASES.flu.waningDays.value).toBeCloseTo(4.1 * 365.25, 9);
 		expect(DISEASES.pertussis.waningDays.value).toBeCloseTo(12 * 365.25, 9);
-		expect(find(DISEASES.covid19, 'covid-2021').seriousPer100kDoses.value).toBeCloseTo(0.959, 3);
+		// Myocarditis or pericarditis 22.6 plus anaphylaxis 7.91 per million doses.
+		expect(find(DISEASES.covid19, 'covid-2021').seriousPer100kDoses.value).toBeCloseTo(3.051, 9);
+		// At least 8 autopsy-proven deaths in 79,989,990 mRNA doses.
+		expect(rateOf(find(DISEASES.covid19, 'covid-2021'))).toBeCloseTo(0.0100013, 6);
+		expect(find(DISEASES.covid19, 'covid-2021').deathsPer100kDoses).toMatchObject({ lowerBound: true });
+		expect(DISEASES.measles.vaccines[0].deathsPer100kDoses.kind).toBe('established-no-rate');
 	});
 
 	it('shows the vaccine deaths that are known, worked out from their sources', () => {
 		// Paralysis from oral polio vaccine (0.04 per 100,000 doses) x 3.5% of paralytic cases dying.
-		expect(find(DISEASES.polio, 'OPV').deathsPer100kDoses.value).toBeCloseTo(0.0014, 9);
+		expect(rateOf(find(DISEASES.polio, 'OPV'))).toBeCloseTo(0.0014, 9);
 		// Six vaccine-strain chickenpox deaths in 132.8 million doses.
-		expect(find(DISEASES.chickenpox, 'varicella').deathsPer100kDoses.value).toBeCloseTo(0.00452, 5);
+		expect(rateOf(find(DISEASES.chickenpox, 'varicella'))).toBeCloseTo(0.00452, 5);
 	});
 
 	it('marks polio herd immunity as out of reach with the default injected vaccine', () => {
@@ -209,24 +225,56 @@ describe('vaccines', () => {
 	});
 
 	describe('vaccineCausedDeaths', () => {
-		it('never turns a null death rate into 0, for any number of doses', () => {
-			expect(vaccineCausedDeaths(vaccine(null), 0)).toBeNull();
-			expect(vaccineCausedDeaths(vaccine(null), 1_000_000)).toBeNull();
+		const none: VaccineDeathRate = { kind: 'none-established', sources: ['x'] };
+		const noRate: VaccineDeathRate = {
+			kind: 'established-no-rate',
+			group: 'people with severe immune deficiencies',
+			text: 't',
+			sources: ['x']
+		};
+
+		it('never turns a missing rate into 0, for any number of doses', () => {
+			for (const doses of [0, 1_000_000]) {
+				expect(vaccineCausedDeaths(vaccine(none), doses)).toEqual({ kind: 'none-established' });
+				expect(vaccineCausedDeaths(vaccine(noRate), doses)).toEqual({
+					kind: 'established-no-rate',
+					group: 'people with severe immune deficiencies'
+				});
+			}
 		});
 
-		it('scales a known rate by the doses given', () => {
-			expect(vaccineCausedDeaths(vaccine(0.5), 200_000)).toBeCloseTo(1, 12);
-			expect(vaccineCausedDeaths(vaccine(0), 200_000)).toBe(0);
-			expect(() => vaccineCausedDeaths(vaccine(0.5), -1)).toThrow(RangeError);
+		it('scales a known rate by the doses given and keeps "at least"', () => {
+			expect(vaccineCausedDeaths(vaccine({ kind: 'rate', value: 0.5, sources: ['x'] }), 200_000)).toEqual({
+				kind: 'rate',
+				deaths: 1,
+				lowerBound: false
+			});
+			expect(
+				vaccineCausedDeaths(vaccine({ kind: 'rate', value: 0.5, sources: ['x'], lowerBound: true }), 0)
+			).toEqual({ kind: 'rate', deaths: 0, lowerBound: true });
+			expect(() => vaccineCausedDeaths(vaccine(none), -1)).toThrow(RangeError);
 		});
 
-		it('gives every product in the catalogue a number or null, never NaN', () => {
+		it('gives words for every kind without a number', () => {
+			expect(vaccineDeathsWords({ kind: 'none-established' })).toBe(
+				'No deaths confirmed as caused by this vaccine.'
+			);
+			expect(
+				vaccineDeathsWords({ kind: 'established-no-rate', group: 'people with severe immune deficiencies' })
+			).toBe(
+				"Deaths have been confirmed in people with severe immune deficiencies, for whom it isn't recommended. No rate has been published."
+			);
+			expect(vaccineDeathsWords({ kind: 'rate', deaths: 1, lowerBound: false })).toBeNull();
+		});
+
+		it('handles every product in the catalogue, never giving NaN', () => {
 			for (const d of WITH_VACCINES) {
 				for (const v of d.vaccines!) {
-					const deaths = vaccineCausedDeaths(v, 100_000);
+					const result = vaccineCausedDeaths(v, 100_000);
 					const key = `${d.id}.${vaccineKey(v)}`;
-					if (v.deathsPer100kDoses.value === null) expect(deaths, key).toBeNull();
-					else expect(deaths, key).toBeCloseTo(v.deathsPer100kDoses.value, 12);
+					expect(result.kind, key).toBe(v.deathsPer100kDoses.kind);
+					if (result.kind === 'rate') expect(result.deaths, key).toBeCloseTo(rateOf(v), 12);
+					else expect(vaccineDeathsWords(result), key).toBeTruthy();
 				}
 			}
 		});

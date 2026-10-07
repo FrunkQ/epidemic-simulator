@@ -30,14 +30,47 @@ export function defaultVaccine(vaccines: Vaccine[] | undefined): Vaccine | undef
 	return vaccines?.find((v) => v.default === true);
 }
 
+/** Deaths caused by one vaccine product over a number of doses, in each of the three kinds. */
+export type VaccineDeaths =
+	| { kind: 'rate'; deaths: number; lowerBound: boolean }
+	| { kind: 'none-established' }
+	| { kind: 'established-no-rate'; group: string };
+
 /**
  * Deaths caused by one vaccine product over a number of doses given, for HarmComparison (6.13).
- * Products are never added together: each population is given one product. A null rate (a source
- * says no death has been established as caused by the vaccine) stays null for any number of
- * doses, so the panel shows "No deaths confirmed as caused by this vaccine" instead of 0.
+ * Products are never added together: each population is given one product. Only a published
+ * rate becomes a number; the other kinds stay words, so they are never shown or summed as 0.
  */
-export function vaccineCausedDeaths(vaccine: Vaccine, doses: number): number | null {
+export function vaccineCausedDeaths(vaccine: Vaccine, doses: number): VaccineDeaths {
 	if (!(doses >= 0)) throw new RangeError('doses must be zero or more');
-	const rate = vaccine.deathsPer100kDoses.value;
-	return rate === null ? null : (rate * doses) / 100_000;
+	const rate = vaccine.deathsPer100kDoses;
+	switch (rate.kind) {
+		case 'rate':
+			return { kind: 'rate', deaths: (rate.value * doses) / 100_000, lowerBound: rate.lowerBound === true };
+		case 'none-established':
+			return { kind: 'none-established' };
+		case 'established-no-rate':
+			return { kind: 'established-no-rate', group: rate.group };
+		default:
+			return unreachable(rate);
+	}
+}
+
+/** The plain line HarmComparison shows when there is no number to plot. */
+export function vaccineDeathsWords(result: VaccineDeaths): string | null {
+	switch (result.kind) {
+		case 'rate':
+			return null;
+		case 'none-established':
+			return 'No deaths confirmed as caused by this vaccine.';
+		case 'established-no-rate':
+			return `Deaths have been confirmed in ${result.group}, for whom it isn't recommended. No rate has been published.`;
+		default:
+			return unreachable(result);
+	}
+}
+
+/** TypeScript fails here if a kind is added and not handled. */
+function unreachable(x: never): never {
+	throw new Error(`unhandled kind: ${JSON.stringify(x)}`);
 }

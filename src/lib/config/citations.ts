@@ -150,18 +150,15 @@ export const CITATIONS: Citation[] = [
 			'measles.vaccines.MMR.full.infection',
 			'measles.vaccines.MMR.partial.infection',
 			'measles.vaccines.MMR.seriousPer100kDoses',
-			'measles.vaccines.MMR.deathsPer100kDoses',
 			'mumps.vaccines.MMR.seriousPer100kDoses',
-			'mumps.vaccines.MMR.deathsPer100kDoses',
 			'rubella.vaccines.MMR.seriousPer100kDoses',
-			'rubella.vaccines.MMR.deathsPer100kDoses',
 			'measles.vaccines.MMR.waningDays'
 		],
 		quote:
 			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong … MMR vaccine is associated with a very small risk of febrile seizures; approximately one case for every 3,000 to 4,000 doses of MMR vaccine administered.',
 		location:
 			'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024); Vaccine Safety (febrile seizures)',
-		why: 'CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in 3,000 to 4,000 doses = 25 to 33 per 100,000 doses, stored as 30. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. The page gives no rate of deaths caused by the vaccine, so the death rate is null.',
+		why: 'CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in 3,000 to 4,000 doses = 25 to 33 per 100,000 doses, stored as 30. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. Deaths caused by MMR come from IOM 2012, not this page.',
 		context: 'US; seroconversion data.',
 		verified: {
 			by: 'independent verification pass',
@@ -419,7 +416,6 @@ export const CITATIONS: Citation[] = [
 			'polio.hospitalisedShare',
 			'polio.vaccines.IPV.full.severe',
 			'polio.vaccines.IPV.seriousPer100kDoses',
-			'polio.vaccines.IPV.deathsPer100kDoses',
 			'polio.vaccines.OPV.full.severe',
 			'polio.vaccines.OPV.partial.severe',
 			'polio.vaccines.OPV.seriousPer100kDoses',
@@ -430,7 +426,7 @@ export const CITATIONS: Citation[] = [
 			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
 		location:
 			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024); OPV vaccine efficacy; Vaccine-associated paralytic polio; IPV safety',
-		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per 2 to 3 million doses = 0.033 to 0.05 per 100,000 doses, stored as 0.04; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). No death rate is given for either, so both death rates are null.',
+		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per 2 to 3 million doses = 0.033 to 0.05 per 100,000 doses, stored as 0.04; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). OPV deaths are worked out: 0.04 per 100,000 doses x the middle of the 2% to 5% case fatality ratio for paralytic polio (3.5%) = 0.0014 per 100,000 doses. That no death is established for IPV comes from ACIP 2024.',
 		context: 'US; children.',
 		verified: {
 			by: 'independent verification pass',
@@ -1409,14 +1405,13 @@ export const CITATIONS: Citation[] = [
 			'pertussis.hospitalisedShare',
 			'pertussis.vaccines.DTaP.full.infection',
 			'pertussis.vaccines.DTaP.partial.infection',
-			'pertussis.vaccines.DTaP.seriousPer100kDoses',
-			'pertussis.vaccines.DTaP.deathsPer100kDoses'
+			'pertussis.vaccines.DTaP.seriousPer100kDoses'
 		],
 		quote:
 			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms … Rates of these moderate or severe systemic reactions vary by symptom and vaccine but generally occur in fewer than 1 in 10,000 doses.',
 		location:
 			'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy; Vaccine Safety (DTaP adverse reactions)',
-		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). fullEfficacy=0.85 from 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%'; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in 10,000 doses = under 10 per 100,000 doses, stored as the upper bound 10 (not all need hospital care). No death is stated, so the death rate is null.",
+		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). CDC's 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%' backs fullEfficacy alongside Chit 2018's meta-analysed 0.91, which sets it; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in 10,000 doses = under 10 per 100,000 doses, stored as the upper bound 10 (not all need hospital care). No death caused by DTaP is established (IOM 2003).",
 		context: 'Official US reference text; page last reviewed October 19, 2022.',
 		verified: {
 			by: 'independent verification pass',
@@ -1722,7 +1717,6 @@ export const CITATIONS: Citation[] = [
 			'rubella.illDays',
 			'rubella.asymptomaticFraction',
 			'rubella.mortality',
-			'rubella.waningDays',
 			'rubella.fullEfficacy',
 			'rubella.partialEfficacy',
 			'rubella.hospitalisedShare',
@@ -1734,7 +1728,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Characteristics',
-		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
+		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' The vaccine's waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' (immunity after infection comes from WHO 2020) partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
 		context:
 			'Official US reference text; page last reviewed August 18, 2021. The serious burden of rubella is congenital rubella syndrome in pregnancy, which this per-case preset does not represent.',
 		verified: {
@@ -2940,6 +2934,8 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'study',
 		doi: '10.1001/jama.2021.24110',
+		noReviewReason:
+			'Not the value source: Ling 2022 (meta-analysis) sets it. Kept because Ling pools myocarditis with pericarditis and gives its age and sex rows for all COVID-19 vaccines only; Oster gives myocarditis alone after mRNA vaccines by age, sex and dose, with chart-reviewed cases. US reports likely undercount.',
 		usedFor: [
 			'covid19.vaccines.covid-2021.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
@@ -2949,7 +2945,7 @@ export const CITATIONS: Citation[] = [
 			'The rates of myocarditis were highest after the second vaccination dose in adolescent males aged 12 to 15 years (70.7 per million doses of the BNT162b2 vaccine), in adolescent males aged 16 to 17 years (105.9 per million doses of the BNT162b2 vaccine), and in young men aged 18 to 24 years (52.4 and 56.3 per million doses of the BNT162b2 vaccine and the mRNA-1273 vaccine, respectively).',
 		location:
 			"Abstract, Results; also 'Among 192 405 448 persons receiving a total of 354 100 845 mRNA-based COVID-19 vaccines ... 1626 of these reports met the case definition of myocarditis' and 'Approximately 96% of persons (784/813) were hospitalized'",
-		why: 'Worked out: 1,626 myocarditis cases in 354,100,845 doses = 4.59 per million = 0.459 per 100,000 doses. Adding anaphylaxis (about 5 per million = 0.5 per 100,000, CDC) gives 0.96 serious events per 100,000 doses. The rate is far higher in young men after dose 2 (105.9 per million = 10.6 per 100,000 at 16-17). The same rate is used for the 2021 vaccine and for the original and updated vaccines in the Omicron era: they are the same mRNA platform, and no separate pooled rate for the updated doses is used.',
+		why: "Myocarditis only, from US reports: 1,626 cases in 354,100,845 doses = 0.459 per 100,000, far higher in young men after dose 2 (105.9 per million at 16-17). The value comes from Ling 2022's meta-analysis (myocarditis or pericarditis, 2.26 per 100,000); Oster is kept for the mRNA-specific age and sex detail step 5 uses.",
 		context:
 			'US passive reports (VAERS), Dec 2020 - Aug 2021, within 7 days of a dose; likely under-counted.',
 		verified: {
@@ -2969,17 +2965,14 @@ export const CITATIONS: Citation[] = [
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/vaccine-safety/vaccines/covid-19.html',
 		usedFor: [
-			'covid19.vaccines.covid-2021.seriousPer100kDoses',
 			'covid19.vaccines.covid-2021.deathsPer100kDoses',
-			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
-			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses',
 			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
 		],
 		quote:
 			'Anaphylaxis occurs at a rate of approximately 5 cases per one million vaccine doses administered. … COVID-19 vaccines do not increase the risk of death from non-COVID causes when compared to those who have not been vaccinated.',
 		location: 'Sections on anaphylaxis and deaths (last updated 31 January 2025)',
-		why: 'Anaphylaxis 5 per million = 0.5 per 100,000 doses, added to myocarditis (Oster 2022). No death is established as caused by the mRNA vaccines, so the death rate is null. Used for the 2021 vaccine and both Omicron-era vaccines alike, as the same mRNA platform.',
+		why: "Context beside Cho 2023's death rate: vaccinated people did not die more often from non-COVID causes, which fits a cause of death as rare as about 1 in 10 million doses. Anaphylaxis comes from Greenhawt 2021, a meta-analysis, rather than this page's 'about 5 per million'.",
 		context:
 			"US official page; also: 'most patients (80%) were considered by their cardiologist or other healthcare provider to have either fully or probably fully recovered' from myocarditis at 3 months or more.",
 		verified: {
@@ -3008,7 +3001,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'There is no increased risk for mortality among COVID-19 vaccine recipients.',
 		location:
 			"Summary box; also 'COVID-19 vaccine recipients had lower rates of non–COVID-19 mortality than did unvaccinated persons after adjusting for age, sex, race and ethnicity, and study site.'",
-		why: 'Deaths among vaccinated people were not above those in the unvaccinated, so no death rate caused by the vaccine is established: null.',
+		why: "Context beside Cho 2023's death rate: deaths among vaccinated people were not above those in the unvaccinated, which fits a cause of death as rare as about 1 in 10 million doses; a study this size cannot see it.",
 		context:
 			'US Vaccine Safety Datalink; MMWR 70(43):1520-1524. Covers Pfizer, Moderna and Janssen. A healthy-vaccinee effect may partly explain the lower rate.',
 		verified: {
@@ -3027,12 +3020,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/flu/vaccine-safety/guillainbarre.html',
-		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses', 'flu.vaccines.inactivated.deathsPer100kDoses'],
+		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses'],
 		quote:
 			'If there is an increased risk of GBS following flu vaccination, it is small, on the order of one to two additional GBS cases per million doses of flu vaccine administered.',
 		location:
 			"Main text; also 'Most people recover fully from GBS, but some people have long-term nerve damage.' and 'In some cases, people have died of GBS, usually from difficulty breathing.'",
-		why: 'GBS 1 to 2 per million doses plus anaphylaxis 1.35 per million (McNeil 2016) = 2.35 to 3.35 per million, about 0.3 per 100,000 doses. The page gives no rate of deaths caused by the vaccine, so the death rate is null.',
+		why: 'GBS 1 to 2 per million doses plus anaphylaxis 1.35 per million (McNeil 2016) = 2.35 to 3.35 per million, about 0.3 per 100,000 doses. No death is established (Miller 2015, IOM 2012).',
 		context:
 			"The risk is stated conditionally ('if there is an increased risk'), so this is an upper estimate. Last updated 17 September 2024.",
 		verified: {
@@ -3051,6 +3044,8 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'study',
 		doi: '10.1016/j.jaci.2015.07.048',
+		noReviewReason:
+			'The only meta-analysis of anaphylaxis after non-COVID vaccines found (Pennisi 2025) covers adults only and counts per person rather than per dose, with very wide uncertainty, so it cannot set a per-dose rate; it has no IPV stratum in its abstract. McNeil 2016 is the largest active-surveillance study with chart-confirmed cases and per-dose denominators; it has no IPV-alone row, so IPV uses its all-vaccine rate.',
 		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses', 'polio.vaccines.IPV.seriousPer100kDoses'],
 		quote:
 			'The rate of anaphylaxis was 1.31 (95% CI, 0.90-1.84) per million vaccine doses. The incidence did not vary significantly by age, and there was a nonsignificant female predominance. Vaccine-specific rates included 1.35 (95% CI, 0.65-2.47) per million doses for inactivated trivalent influenza vaccine',
@@ -3084,7 +3079,7 @@ export const CITATIONS: Citation[] = [
 			'During 2006-2020, approximately 132.8 million VAR doses were distributed; 40 684 reports were received in VAERS (30.6/100 000 doses distributed), with 4.1% classified as serious (1.3/100 000 doses distributed).',
 		location:
 			"Abstract, Results; also 'AEs associated with evidence of vaccine strain varicella-zoster virus (vVZV) infection included meningitis, encephalitis, herpes zoster, and 6 deaths (all in immunocompromised persons with contraindications for vaccination).'",
-		why: '1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. The 6 vaccine-strain deaths in 132.8 million doses (0.0045 per 100,000) were all in people who should not have had this vaccine, so for recommended use no death is established: null.',
+		why: '1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. Deaths are worked out: 6 vaccine-strain deaths in 132.8 million doses = 0.0045 per 100,000 doses. All were in people with weakened immune systems who should not have had this vaccine; that is said beside the number rather than leaving it out.',
 		context: 'US passive surveillance, 2006-2020.',
 		verified: {
 			by: 'independent verification pass',
@@ -3101,11 +3096,14 @@ export const CITATIONS: Citation[] = [
 		year: 2015,
 		evidence: 'review',
 		doi: '10.1016/j.vaccine.2015.05.023',
+		noReviewReason:
+			'IOM 2012 (systematic review) judged the evidence on seasonal influenza vaccine and GBS inadequate to accept or reject causation but does not discuss deaths; no systematic review or meta-analysis of deaths caused by influenza vaccine was found. This CDC-authored review is the source that addresses vaccine-caused death directly.',
 		usedFor: ['flu.vaccines.inactivated.deathsPer100kDoses', 'polio.vaccines.OPV.deathsPer100kDoses'],
 		quote:
-			'Rare cases where a known or plausible theoretical risk of death following vaccination exists include anaphylaxis, … Guillain-Barré syndrome after inactivated influenza vaccine, … and vaccine-associated paralytic poliomyelitis from oral poliovirus vaccine.',
-		location: 'Abstract',
-		why: 'Names GBS after flu vaccine and paralysis after oral polio vaccine as rare possible causes of death, but gives no per-dose rate, so the death rate stays null with this said plainly rather than shown as 0.',
+			'Approximately 5% of Guillain-Barré syndrome cases are fatal [52], but given the indeterminate association between influenza vaccination and GBS, risk of death from vaccine-associated GBS would have to be considered theoretical. … Rare cases where a known or plausible theoretical risk of death following vaccination exists include anaphylaxis, … Guillain-Barré syndrome after inactivated influenza vaccine, … and vaccine-associated paralytic poliomyelitis from oral poliovirus vaccine.',
+		location:
+			'Section 4.4 (Guillain–Barré syndrome after seasonal and 2009 H1N1 inactivated influenza vaccines); Abstract',
+		why: "Flu: a death from vaccine-linked GBS is only theoretical, so deaths are 'none established'. If the link were causal, 1-2 GBS cases per million doses x about 5% fatal would be about 0.005-0.01 per 100,000 doses (Censi 2024 gives 4.6% for GBS after COVID-19 vaccines), shown only as context. OPV: names vaccine-caused paralysis as a cause of death, which backs the worked-out OPV rate.",
 		context:
 			'Review by CDC authors; it also warns against reading reports of deaths after vaccination as caused by it.',
 		verified: {
@@ -3158,9 +3156,9 @@ export const CITATIONS: Citation[] = [
 			'ebola.vaccines.rVSV-ZEBOV.deathsPer100kDoses'
 		],
 		quote:
-			'Overall, reported vaccine-related serious adverse events were rare. Across 12 clinical trials, out of 15,399 persons who received the vaccine, three serious adverse events were judged to be related or possibly related to the vaccine: one febrile reaction, one anaphylactic reaction, and one influenza-like illness.',
-		location: 'Safety section',
-		why: 'Worked out: 3 / 15,399 people = 19.5 per 100,000; the vaccine is one dose, so this is also per 100,000 doses. No vaccine-related death is described, so the death rate is null.',
+			'Overall, reported vaccine-related serious adverse events were rare. Across 12 clinical trials, out of 15,399 persons who received the vaccine, three serious adverse events were judged to be related or possibly related to the vaccine: one febrile reaction, one anaphylactic reaction, and one influenza-like illness. All resolved without sequelae.',
+		location: "'Vaccine-Related Serious Adverse Events' section; MMWR Recomm Rep 70(1):1-12",
+		why: "Worked out: 3 / 15,399 people = 19.5 per 100,000; the vaccine is one dose, so this is also per 100,000 doses. All three resolved with no lasting harm and no vaccine-related death is reported, so deaths are 'none established'.",
 		context: 'Clinical-trial data (rVSV-ZEBOV); MMWR 70(1):1-12.',
 		verified: {
 			by: 'independent verification pass',
@@ -3193,7 +3191,7 @@ export const CITATIONS: Citation[] = [
 			"Results, 'Vaccine effectiveness for different clinical outcomes of COVID-19', and Table 1. Timing subgroups for infection: one dose 14 days or more 48%, 21 days or more 56%; two doses 14 days or more 81%.",
 		why: 'One meta-analysis of real-world use gives all four numbers on the same outcomes: two doses 0.85 against infection and 0.93 against hospital admission; one dose 0.41 and 0.66. Hospital admission is counted in everyone vaccinated, so it fits the severe slot. Kow & Hasan 2021 checks the infection values for the mRNA vaccine alone.',
 		context:
-			'Observational studies to 22 Jul 2021: original strain and Alpha (some Gamma and Delta in a separate analysis). The outcome is laboratory-confirmed infection, kept separate from symptomatic COVID-19; that it includes screening of people without symptoms is inferred from the included studies (e.g. Zacay, Angel, Hall/SIREN), not stated by the authors. Pools all vaccine types, mostly mRNA (BNT162b2, some mRNA-1273), with some CoronaVac and ChAdOx1 studies. Heterogeneity is very high (I² about 99%).',
+			'Observational studies to 22 Jul 2021: original strain and Alpha (some Gamma and Delta in a separate analysis). The outcome is laboratory-confirmed infection, kept separate from symptomatic COVID-19; that it includes screening of people without symptoms is inferred from the included studies (e.g. Zacay, Angel, Hall/SIREN), not stated by the authors. Pools all vaccine types, mostly mRNA (BNT162b2, some mRNA-1273), with some CoronaVac and ChAdOx1 studies. Heterogeneity is very high (I² about 99%). No mRNA-only figures for one dose, two doses or hospital admission are given (only infection after a full course in Fig. 2B: BNT162b2 89%, mRNA-1273 97%), so the entry stays pooled. Its risks are those of the mRNA vaccines; the rare blood clots with low platelets (TTS) after the AstraZeneca vaccine are a known harm of a vaccine this sim does not model, and the About page says so.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -3344,9 +3342,11 @@ export const CITATIONS: Citation[] = [
 		url: 'https://www.who.int/publications/i/item/WHO-WER8207-51-60',
 		usedFor: ['mumps.waningDays'],
 		quote: 'Natural infection with this virus is thought to confer lifelong protection.',
-		location: 'Weekly Epidemiological Record 82(7):51-60, background on the disease',
+		location:
+			"Weekly Epidemiological Record 82(7):51-60, 16 February 2007; last sentence of the first 'Summary and conclusions' paragraph",
 		why: "waningDays=null for infection-acquired immunity: WHO says natural infection is thought to protect for life, far longer than any run. The CDC Pink Book chapter on mumps does not say this (it notes only that reinfection has been reported), so WHO's position paper is the official source.",
-		context: 'WHO global position paper on mumps vaccines, 2007.',
+		context:
+			"Background also says: 'In general, natural infection confers lifelong protection against the disease, but recurrent mumps attacks have been reported.' The model does not show reinfection.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -3364,14 +3364,18 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1371/journal.pone.0197970',
 		url: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0197970',
-		usedFor: ['pertussis.vaccines.DTaP.waningDays'],
+		usedFor: [
+			'pertussis.vaccines.DTaP.waningDays',
+			'pertussis.fullEfficacy',
+			'pertussis.vaccines.DTaP.full.infection'
+		],
 		quote:
-			'Based on these data, we estimated the absolute VE of the full acellular pertussis series to be 85% (95%CI: 84% to 86%) and to decline by 11.7% (95% CI: 11.1% to 12.3%) per year. As such, by 3 years, 5 years, and 7 years post the full acellular pertussis series, the absolute protection against pertussis is expected to be 49% (95%CI: 48% to 50%), 37% (95%CI: 35% to 37%), and 28% (95%CI: 27% to 29%).',
+			'We estimate initial childhood series absolute VE is 91% (95% CI: 87% to 95%) and declines at 9.6% annually. … the primary acellular pertussis series (5-dose DTaP) … VEexpected=VEbaseline e−λ(time)',
 		location:
-			'Results (absolute VE of the full acellular series); the abstract gives the same 85% and 11.7% per year',
-		why: "Worked out: half of the starting 85% (42.5%) is reached between year 3 (49%) and year 5 (37%). Log-linear interpolation: 3 + 2 x ln(49 / 42.5) / ln(49 / 37) = 4.01 years = 1,466 days (straight-line 1,491; exponential fit through all four points 1,599). The paper's own yearly values are used, not '11.7% per year', which fits neither a relative nor a percentage-point reading of them.",
+			"Abstract; Results (primary series: 'estimated at 91% … and declined by 9.6% per year'); Methods (objectives and the exponential model)",
+		why: "The sim vaccinates with the childhood series, so its figures are used: full.infection 0.91, and the exponential decay of 0.096 a year gives a half-life of ln2 / 0.096 = 7.22 years = 2,637 days, computed in config. A meta-analysis, so it sets fullEfficacy over CDC's 80-85%.",
 		context:
-			"US schedule, acellular vaccines only (5-dose DTaP plus Tdap); few studies pooled. The starting 85% matches the DTaP entry's infection value. McGirr & Fisman 2015 is the check.",
+			'US and other high-income settings. The full 6-dose series with the adolescent Tdap booster is 85% falling 11.7% a year (by year 3 49%, year 5 37%, year 7 28%). The childhood absolute figures are partly modelled: they come from transforming relative odds ratios. A fit to the five pooled points gives 2,839 days. Eight of the nine authors worked for Sanofi Pasteur, which makes pertussis vaccine and funded the study.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -3546,6 +3550,216 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Abstract and Introduction quotes confirmed verbatim; pages corrected to 29(12):1587-1594 (PMID 37661067) and the published title used. No retraction seen; registries could not be reached.'
+		}
+	},
+	{
+		id: 'iom-2012-adverse-effects-vaccines',
+		authors: 'Institute of Medicine (Stratton K, Ford A, Rusch E, Clayton EW, eds.)',
+		title: 'Adverse Effects of Vaccines: Evidence and Causality',
+		journal: 'National Academies Press',
+		year: 2012,
+		evidence: 'systematic-review',
+		doi: '10.17226/13164',
+		url: 'https://nap.nationalacademies.org/read/13164/chapter/6',
+		usedFor: [
+			'measles.vaccines.MMR.deathsPer100kDoses',
+			'mumps.vaccines.MMR.deathsPer100kDoses',
+			'rubella.vaccines.MMR.deathsPer100kDoses',
+			'flu.vaccines.inactivated.deathsPer100kDoses'
+		],
+		quote:
+			'The evidence convincingly supports a causal relationship between MMR vaccine and measles inclusion body encephalitis in individuals with demonstrated immunodeficiencies. … Furthermore, measles inclusion body encephalitis is confined to immunodeficient patients and is inevitably fatal. … No studies were identified in the literature for the committee to evaluate the risk of measles inclusion body encephalitis after the administration of MMR vaccine.',
+		location:
+			'Chapter 4 (Measles, Mumps, and Rubella Vaccine), measles inclusion body encephalitis: Conclusion 4.1 (about p. 126), mechanistic evidence (about p. 125), epidemiologic evidence (about p. 122); Appendix D, Table D-1 (influenza vaccine and GBS: "Inadequate")',
+		why: "MMR: deaths caused by the vaccine are established, but only in people with immune deficiencies, for whom it isn't recommended, and no study gives a rate, so the kind is 'established-no-rate'. Flu: the committee found the evidence on flu vaccine and Guillain-Barré syndrome inadequate to accept or reject causation, which backs 'none-established' alongside Miller 2015.",
+		context:
+			'US expert committee review with systematic literature searches and explicit causality categories. The committee attributes the MMR finding to the measles component. Of the fatal cases it reviews, one has the virus confirmed as the vaccine strain (Bitnun 1999). It also finds MMR and tetanus-toxoid vaccines cause anaphylaxis ("convincingly supports"), without reporting deaths.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Conclusion 4.1, the "inevitably fatal" sentence, the no-studies sentence and the Table D-1 rows confirmed on the NAP openbook pages; printed page numbers came from a page summariser, so they are approximate. doi.org not reachable; the DOI follows NAP record 13164.'
+		}
+	},
+	{
+		id: 'iom-2003-vaccines-sudi',
+		authors: 'Institute of Medicine (Stratton K, Almario DA, Wizemann TM, McCormick MC, eds.)',
+		title: 'Immunization Safety Review: Vaccinations and Sudden Unexpected Death in Infancy',
+		journal: 'National Academies Press',
+		year: 2003,
+		evidence: 'systematic-review',
+		doi: '10.17226/10649',
+		url: 'https://nap.nationalacademies.org/read/10649/chapter/2',
+		usedFor: ['pertussis.vaccines.DTaP.deathsPer100kDoses'],
+		quote:
+			'The committee concludes that the evidence is inadequate to accept or reject a causal relationship between DTaP vaccine and SIDS. … The present committee concludes that the evidence favors acceptance of a causal relationship between diphtheria toxoid and whole cell pertussis vaccine and death due to anaphylaxis in infants. … despite the more than 50 years subsequent to the publication of that case report and despite the widespread use of vaccines in infants, the committee could not identify in the medical literature any additional reports of death in infants due to vaccine-related anaphylaxis.',
+		location: 'Executive Summary, pp. 6-8',
+		why: 'No death has been shown to be caused by the acellular vaccine (DTaP): sudden infant death is not linked, and the one documented anaphylaxis death, in 1946, followed the older whole-cell vaccine. So the kind is none-established.',
+		context:
+			'US expert committee review. It also finds the evidence favours rejecting a link between multiple vaccines and sudden infant death.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'All three sentences confirmed in the NAP Executive Summary, pp. 6-8 (page numbers from a page summariser).'
+		}
+	},
+	{
+		id: 'cdc-acip-2024-ipv-etr',
+		authors: 'Advisory Committee on Immunization Practices (CDC)',
+		title:
+			'ACIP Evidence to Recommendations for Booster Doses of Inactivated Poliovirus Vaccine (IPV) Among Adults Aged ≥18 Years',
+		journal: 'CDC',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/acip/evidence-to-recommendations/booster-IPV-polio-vax-adults-etr.html',
+		usedFor: ['polio.vaccines.IPV.deathsPer100kDoses'],
+		quote:
+			'No serious adverse events have been causally associated with use of the current formulation of IPV.',
+		location: "'Benefits and Harms' section (page dated 5 September 2024)",
+		why: 'An official statement that no serious harm, and so no death, has been shown to be caused by IPV: none-established.',
+		context:
+			"Also: 'Data from more than 20 years of use as part of the routine childhood vaccination schedule have demonstrated that IPV has an excellent safety profile.'",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Both sentences confirmed in the Benefits and Harms section.'
+		}
+	},
+	{
+		id: 'halperin-2017-rvsv-zebov-phase3-safety',
+		authors: 'Halperin SA, Arribas JR, Rupp R, et al.',
+		title:
+			'Six-Month Safety Data of Recombinant Vesicular Stomatitis Virus–Zaire Ebola Virus Envelope Glycoprotein Vaccine in a Phase 3 Double-Blind, Placebo-Controlled Randomized Study in Healthy Adults',
+		journal: 'Journal of Infectious Diseases 215(12):1789-1798',
+		year: 2017,
+		evidence: 'study',
+		noReviewReason:
+			'Supports the official ACIP review (Choi 2021), which carries the value; the systematic reviews found (Bache 2020, Zarro 2025) give no explicit statement about vaccine-related deaths in their abstracts.',
+		doi: '10.1093/infdis/jix189',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.deathsPer100kDoses'],
+		quote:
+			'Twenty-one SAEs and 2 deaths were reported, all assessed by investigators as unrelated to vaccine. … no vaccine-related SAEs or deaths.',
+		location: 'Abstract (Results; Conclusions)',
+		why: 'An explicit statement that no death was caused by the vaccine in a placebo-controlled trial, supporting none-established.',
+		context: '1,061 vaccinated and 133 given placebo, followed for 6 months.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract wording confirmed. Volume and pages not confirmed (no PMC copy; publisher not opened).'
+		}
+	},
+	{
+		id: 'cho-2023-korea-vaccine-myocarditis',
+		authors: 'Cho JY, Kim KH, Lee N, et al.',
+		title: 'COVID-19 vaccination-related myocarditis: a Korean nationwide study',
+		journal: 'European Heart Journal 44(24):2234-2243',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'Systematic reviews of vaccine myocarditis (e.g. Ishisaka 2023) report all-cause deaths among cases without judging cause; Cho 2023 is the only nationwide study found with official expert judgement of cause, autopsy-proven vaccine-caused deaths and complete dose counts.',
+		doi: '10.1093/eurheartj/ehad339',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10290868/',
+		usedFor: [
+			'covid19.vaccines.covid-2021.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
+		],
+		quote:
+			'Eight out of 21 deaths were sudden cardiac death (SCD) attributable to VRM proved by an autopsy, and all cases of SCD attributable to VRM were aged under 45 years and received mRNA vaccines. … BNT162b2 (n = 24 828 152), mRNA-1273 (n = 6 781 796) … BNT162b2 (n = 23 369 725), or mRNA-1273 (n = 6 621 577) … BNT162b2 (n = 11 458 290), mRNA-1273 (n = 6 930 450)',
+		location:
+			"Abstract (Methods and results); Methods, 'Study population' paragraph (doses by vaccine and dose number); Table 3 (the 8 sudden deaths: 5 BNT162b2, 3 mRNA-1273); Discussion: 'Vaccine-related myocarditis was the only possible cause of death in all SCD cases.'",
+		why: 'Worked out: mRNA doses 59,656,167 + 20,333,823 = 79,989,990; 8 / 79,989,990 = 0.010 per 100,000 doses. Stored with lowerBound, shown as "at least", because only autopsy-proven deaths are counted: all 21 deaths among confirmed cases give 0.026 per 100,000 mRNA doses.',
+		context:
+			"South Korea, 26 February to 31 December 2021, doses 1-3; cases confirmed by the national disease agency's expert committee; all 8 aged 22-45, dying 1-6 days after dose 1 or 2. Not every case had viral testing. Cross-checks: Ishisaka 2023 meta-analysis, 19.7 per million x 2.0% = 0.039 per 100,000 (all-cause, not judged). Passive reports of fatal anaphylaxis after mRNA vaccines (Maltezou 2023: 2 in 28,520,812 doses in children, 0.007 per 100,000; Boufidou 2023) are smaller and not established as caused by the vaccine; Greenhawt 2021 found no anaphylaxis deaths. The same rate is used for all mRNA versions, as one platform.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quotes verbatim in the PMC full text (PMC10290868); dose counts are in the Methods, not Table 1 (location corrected). Arithmetic reproduced. No retraction or correction notice in PMC; a web search found none.'
+		}
+	},
+	{
+		id: 'ling-2022-myopericarditis-meta',
+		authors: 'Ling RR, Ramanathan K, Tan FL, Tai BC, Somani J, Fisher D, MacLaren G',
+		title:
+			'Myopericarditis following COVID-19 vaccination and non-COVID-19 vaccination: a systematic review and meta-analysis',
+		journal: 'The Lancet Respiratory Medicine 10(7):679-688',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/S2213-2600(22)00059-5',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9000914/',
+		usedFor: [
+			'covid19.vaccines.covid-2021.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
+		],
+		quote:
+			'the incidence of myopericarditis was significantly higher (p=0·0010) among those who received mRNA vaccines (22·6 cases [12·2–42·0] per million doses; 290730653 doses, nine studies; figure 3)',
+		location:
+			'Results, COVID-19 vaccine subgroups paragraph and figure 3; subgroup table by age, sex and dose',
+		why: 'Worked out: 22.6 per million = 2.26 per 100,000 mRNA doses, added to anaphylaxis (Greenhawt 2021). It counts myocarditis or pericarditis together and gives no myocarditis-only pooled rate, so wherever serious events are broken down this line is labelled "myocarditis or pericarditis" (pericarditis is often mild, so this slightly overstates serious harm).',
+		context:
+			'Among all COVID-19 vaccines (not mRNA only), per million doses: under 30 40.9, 30 and over 2.9; males 23.0, females 5.1; males under 30 59.7; dose 2 31.3. Oster 2022 (myocarditis only, US reports) gives mRNA-specific age and sex detail for step 5. Corrected version online 10 May 2022.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote and the mRNA row (9 studies, 290,730,653 doses, 22.6) confirmed in the PMC text (PMC9000914); the subgroup table is readable there and covers all COVID-19 vaccines.'
+		}
+	},
+	{
+		id: 'greenhawt-2021-covid-vaccine-anaphylaxis-meta',
+		authors: 'Greenhawt M, Abrams EM, Shaker M, et al.',
+		title:
+			'The Risk of Allergic Reaction to SARS-CoV-2 Vaccines and Recommended Evaluation and Management: A Systematic Review, Meta-Analysis, GRADE Assessment, and International Consensus Approach',
+		journal: 'Journal of Allergy and Clinical Immunology: In Practice 9(10):3546-3567',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.jaip.2021.06.006',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8248554/',
+		usedFor: [
+			'covid19.vaccines.covid-2021.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
+		],
+		quote:
+			'the meta-analyzed incidence of anaphylaxis was 7.91 per million (95% confidence interval [95% CI 4.02-15.59), and no anaphylaxis-related fatalities were reported.',
+		location:
+			'Abstract; Results (adenoviral-vector OR 0.47 and inactivated OR 0.31 compared with mRNA vaccines)',
+		why: 'Worked out: 7.91 per million = 0.791 per 100,000 doses. It pools all vaccine types, but the others had lower odds than mRNA, so this does not overstate mRNA.',
+		context:
+			'Studies to 19 March 2021. Alhumaid 2021 (mRNA only) gives 5.0 per million, with publication bias; CDC says about 5 per million.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract and Results wording confirmed in the PMC text (PMC8248554). Arithmetic reproduced.'
+		}
+	},
+	{
+		id: 'who-2020-rubella-position-paper',
+		authors: 'World Health Organization',
+		title: 'Rubella vaccines: WHO position paper – July 2020',
+		journal: 'Weekly Epidemiological Record 95(27):306-324',
+		year: 2020,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/publications/i/item/WHO-WER9527',
+		usedFor: ['rubella.waningDays'],
+		quote:
+			'A rubella-specific T-cell response begins 1 week after the humoral response, and cell-mediated immunity appears to persist throughout life. However, occasional re-infections have been reported.',
+		location: "Section 'Immunity acquired through infection', p. 311",
+		why: 'waningDays null for immunity after infection: WHO says it appears to last for life, far longer than any run. This is about infection, not the vaccine.',
+		context: 'Occasional re-infections are reported; the model does not show them.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Paragraph wording confirmed on p. 311 of the WER 95(27) PDF (read through a mirror of the official PDF).'
 		}
 	}
 ];

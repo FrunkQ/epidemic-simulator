@@ -1,4 +1,4 @@
-import type { Banded, Bands, DiseaseConfig, Sourced, Vaccine } from '../sim/types';
+import type { Banded, Bands, DiseaseConfig, Sourced, Vaccine, VaccineDeathRate } from '../sim/types';
 import { covid19BandsPerInfection, covid19SevereBandsPerInfection } from './covidAgeIfr';
 import { stackedProtection } from './vaccines';
 
@@ -74,23 +74,43 @@ const PER_100K = 100_000;
 
 /** MMR's risks, the same vaccine whichever of the three diseases it is given against. */
 const MMR_SERIOUS: Sourced = { value: 30, sources: ['cdc-pinkbook-measles'] };
-const MMR_DEATHS: Sourced<null> = { value: null, sources: ['cdc-pinkbook-measles'] };
-
-/** Myocarditis after mRNA vaccines: 1,626 cases in 354,100,845 doses (Oster 2022). */
-const MRNA_MYOCARDITIS_CASES = 1626;
-const MRNA_MYOCARDITIS_DOSES = 354_100_845;
-/** Anaphylaxis after COVID-19 vaccines: about 5 per million doses (CDC). */
-const MRNA_ANAPHYLAXIS_PER_MILLION = 5;
-/** mRNA risks: myocarditis plus anaphylaxis, and no death established as caused by the vaccine. */
-const MRNA_SERIOUS: Sourced = {
-	value:
-		(MRNA_MYOCARDITIS_CASES / MRNA_MYOCARDITIS_DOSES) * PER_100K +
-		(MRNA_ANAPHYLAXIS_PER_MILLION / 1_000_000) * PER_100K,
-	sources: ['oster-2022-mrna-myocarditis', 'cdc-covid-vaccine-safety-2025']
+/** MMR: deaths confirmed only in people with immune deficiencies, for whom it isn't recommended (IOM 2012). */
+const MMR_DEATHS: VaccineDeathRate = {
+	kind: 'established-no-rate',
+	group: 'people with severe immune deficiencies',
+	text: 'The measles part of the vaccine can cause a brain infection (measles inclusion body encephalitis) in people with severe immune deficiencies, and it is almost always fatal. No study has measured how often.',
+	sources: ['iom-2012-adverse-effects-vaccines']
 };
-const MRNA_DEATHS: Sourced<null> = {
-	value: null,
-	sources: ['cdc-covid-vaccine-safety-2025', 'xu-2021-covid-vaccine-mortality']
+
+/** Myocarditis or pericarditis after mRNA vaccines: 22.6 per million doses (Ling 2022 meta-analysis). */
+const MRNA_MYOPERICARDITIS_PER_MILLION = 22.6;
+/** Anaphylaxis after COVID-19 vaccines: 7.91 per million doses (Greenhawt 2021 meta-analysis). */
+const COVID_ANAPHYLAXIS_PER_MILLION = 7.91;
+/**
+ * mRNA serious events: myocarditis or pericarditis, plus anaphylaxis. Ling counts pericarditis,
+ * which is often mild, so any breakdown labels that line "myocarditis or pericarditis".
+ */
+const MRNA_SERIOUS: Sourced = {
+	value: ((MRNA_MYOPERICARDITIS_PER_MILLION + COVID_ANAPHYLAXIS_PER_MILLION) / 1_000_000) * PER_100K,
+	sources: [
+		'ling-2022-myopericarditis-meta',
+		'greenhawt-2021-covid-vaccine-anaphylaxis-meta',
+		'oster-2022-mrna-myocarditis'
+	]
+};
+/** Autopsy-proven sudden deaths from vaccine myocarditis in Korea, 2021: 8 in 79,989,990 mRNA doses (Cho 2023). */
+const MRNA_PROVEN_DEATHS = 8;
+const MRNA_DOSES_KOREA_2021 = 79_989_990;
+/** At least this many: Cho counts only deaths proven at autopsy. */
+const MRNA_DEATHS: VaccineDeathRate = {
+	kind: 'rate',
+	value: (MRNA_PROVEN_DEATHS / MRNA_DOSES_KOREA_2021) * PER_100K,
+	lowerBound: true,
+	sources: [
+		'cho-2023-korea-vaccine-myocarditis',
+		'xu-2021-covid-vaccine-mortality',
+		'cdc-covid-vaccine-safety-2025'
+	]
 };
 
 /** Two doses against infection, the 2021 vaccines against the 2020 virus (Liu 2021). */
@@ -203,8 +223,8 @@ const FLU_INACTIVATED: Vaccine = {
 	},
 	seriousPer100kDoses: { value: 0.3, sources: ['cdc-flu-gbs-2024', 'mcneil-2016-anaphylaxis'] },
 	deathsPer100kDoses: {
-		value: null,
-		sources: ['cdc-flu-gbs-2024', 'miller-2015-deaths-after-vaccination']
+		kind: 'none-established',
+		sources: ['miller-2015-deaths-after-vaccination', 'iom-2012-adverse-effects-vaccines']
 	},
 	waningDays: {
 		value: ((YOUNG_LATE.day - YOUNG_EARLY.day) * Math.LN2) / Math.log(YOUNG_EARLY.ve / YOUNG_LATE.ve),
@@ -225,7 +245,7 @@ const POLIO_IPV: Vaccine = {
 		severe: { value: 0.4, sources: ['grassly2014-ipv-doses-review', 'cooper2024-ipv-nigeria'] }
 	},
 	seriousPer100kDoses: { value: 0.131, sources: ['cdc-pinkbook-polio', 'mcneil-2016-anaphylaxis'] },
-	deathsPer100kDoses: { value: null, sources: ['cdc-pinkbook-polio'] },
+	deathsPer100kDoses: { kind: 'none-established', sources: ['cdc-acip-2024-ipv-etr'] },
 	// CDC: IPV "probably provides lifelong immunity after a complete series".
 	waningDays: { value: null, sources: ['cdc-pinkbook-polio'] }
 };
@@ -250,6 +270,7 @@ const POLIO_OPV: Vaccine = {
 	seriousPer100kDoses: { value: OPV_VAPP_PER_100K, sources: ['cdc-pinkbook-polio'] },
 	// Worked out: vaccine-caused paralysis x the death rate for paralytic polio.
 	deathsPer100kDoses: {
+		kind: 'rate',
 		value: OPV_VAPP_PER_100K * PARALYTIC_POLIO_CASE_FATALITY,
 		sources: ['cdc-pinkbook-polio', 'miller-2015-deaths-after-vaccination']
 	},
@@ -289,19 +310,16 @@ const VARICELLA_DOSES = 132_800_000;
 const VARICELLA_TWO_DOSE_YEAR1 = 93.5;
 const VARICELLA_TWO_DOSE_YEAR9 = 49.6;
 const VARICELLA_YEAR9_GAP = (9 - 1) * DAYS_PER_YEAR;
-const PERTUSSIS_FULL: Sourced = { value: 0.85, sources: ['cdc-pinkbook-pertussis'] };
+/** Chit 2018: the childhood acellular series is 91% effective at first and decays by 0.096 a year. */
+const CHIT_CHILDHOOD_START = 0.91;
+const CHIT_CHILDHOOD_DECAY_PER_YEAR = 0.096;
+const PERTUSSIS_FULL: Sourced = {
+	value: CHIT_CHILDHOOD_START,
+	sources: ['chit2018-acellular-pertussis-ve-waning', 'cdc-pinkbook-pertussis']
+};
 const PERTUSSIS_PARTIAL: Sourced = { value: 0.5, sources: ['cdc-pinkbook-pertussis'] };
 /** Wendelboe 2005: immunity after infection wanes after 4 to 20 years; the middle is used. */
 const PERTUSSIS_INFECTION_HALF_LIFE_YEARS = (4 + 20) / 2;
-/** Chit 2018: full acellular series VE by year, used to find when it halves (log-linear). */
-const CHIT_START = 85;
-const CHIT_YEAR3 = 49;
-const CHIT_YEAR5 = 37;
-function pertussisVaccineWaningDays(): number {
-	const half = CHIT_START / 2;
-	const years = 3 + (2 * Math.log(CHIT_YEAR3 / half)) / Math.log(CHIT_YEAR3 / CHIT_YEAR5);
-	return years * DAYS_PER_YEAR;
-}
 /** Ranjeva 2019: infection-acquired protection against H3N2 in adults halves in 4.1 years. */
 const FLU_INFECTION_HALF_LIFE_YEARS = 4.1;
 const SMALLPOX_FULL: Sourced = { value: 0.95, sources: ['cdc-smallpox-vaccine'] };
@@ -569,6 +587,7 @@ export const DISEASES = {
 				seriousPer100kDoses: { value: 1.3, sources: ['moro-2022-varicella-vaers'] },
 				// Worked out: vaccine-strain deaths per dose, mostly in people the vaccine wasn't recommended for.
 				deathsPer100kDoses: {
+					kind: 'rate',
 					value: (VARICELLA_VACCINE_STRAIN_DEATHS / VARICELLA_DOSES) * PER_100K,
 					sources: ['moro-2022-varicella-vaers']
 				},
@@ -611,7 +630,7 @@ export const DISEASES = {
 		illDays: { value: 7, sources: ['cdc-pinkbook-rubella'] },
 		asymptomaticFraction: { value: 0.5, sources: ['cdc-pinkbook-rubella'] },
 		mortality: { value: 1e-5, sources: ['cdc-pinkbook-rubella'] },
-		waningDays: { value: null, sources: ['cdc-pinkbook-rubella'] },
+		waningDays: { value: null, sources: ['who-2020-rubella-position-paper'] },
 		fullEfficacy: RUBELLA_FULL,
 		partialEfficacy: RUBELLA_PARTIAL,
 		hospitalisedShare: { value: 0.001, sources: ['cdc-pinkbook-rubella'] },
@@ -646,9 +665,9 @@ export const DISEASES = {
 				full: { infection: PERTUSSIS_FULL },
 				partial: { infection: PERTUSSIS_PARTIAL },
 				seriousPer100kDoses: { value: 10, sources: ['cdc-pinkbook-pertussis'] },
-				deathsPer100kDoses: { value: null, sources: ['cdc-pinkbook-pertussis'] },
+				deathsPer100kDoses: { kind: 'none-established', sources: ['iom-2003-vaccines-sudi'] },
 				waningDays: {
-					value: pertussisVaccineWaningDays(),
+					value: (Math.LN2 / CHIT_CHILDHOOD_DECAY_PER_YEAR) * DAYS_PER_YEAR,
 					sources: ['chit2018-acellular-pertussis-ve-waning', 'mcgirr-fisman-2015-dtap-duration']
 				}
 			}
@@ -678,7 +697,7 @@ export const DISEASES = {
 				default: true,
 				full: { infection: SMALLPOX_FULL },
 				seriousPer100kDoses: { value: 7.4, sources: ['lane-1969-smallpox-complications'] },
-				deathsPer100kDoses: { value: 0.1, sources: ['lane-1969-smallpox-complications'] },
+				deathsPer100kDoses: { kind: 'rate', value: 0.1, sources: ['lane-1969-smallpox-complications'] },
 				waningDays: {
 					value: SMALLPOX_VACCINE_HALF_LIFE_YEARS * DAYS_PER_YEAR,
 					sources: ['cdc-smallpox-vaccine']
@@ -710,7 +729,10 @@ export const DISEASES = {
 				default: true,
 				full: { infection: EBOLA_FULL },
 				seriousPer100kDoses: { value: 19.5, sources: ['choi-2021-acip-ebola'] },
-				deathsPer100kDoses: { value: null, sources: ['choi-2021-acip-ebola'] },
+				deathsPer100kDoses: {
+					kind: 'none-established',
+					sources: ['choi-2021-acip-ebola', 'halperin-2017-rvsv-zebov-phase3-safety']
+				},
 				waningDays: { value: null, sources: ['who-wer-2024-sage-ebola', 'huttner2023-rvsv-zebov-5-year'] }
 			}
 		]

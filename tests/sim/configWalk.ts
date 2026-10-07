@@ -2,7 +2,7 @@ import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { DISEASES } from '../../src/lib/config/diseases';
 import { POPULATION } from '../../src/lib/config/population';
 import { vaccineKey } from '../../src/lib/config/vaccines';
-import type { Sourced, Vaccine } from '../../src/lib/sim/types';
+import type { Sourced, Vaccine, VaccineDeathRate } from '../../src/lib/sim/types';
 
 /*
  * Walks all research config, including inside each disease's vaccine list, and returns every
@@ -31,7 +31,11 @@ export function walk(): { sourced: { key: string; value: Sourced<number | null> 
 			const field = path ? `${path}.${k}` : k;
 			const key = `${base}.${field}`;
 			if (!path && VACCINE_PLAIN.has(k)) continue;
-			if (isSourced(v)) sourced.push({ key, value: v });
+			if (!path && k === 'deathsPer100kDoses') {
+				// A death-rate union: only the 'rate' kind holds a number; the others are sourced words.
+				const r = v as VaccineDeathRate;
+				sourced.push({ key, value: { value: r.kind === 'rate' ? r.value : null, sources: r.sources } });
+			} else if (isSourced(v)) sourced.push({ key, value: v });
 			else if (!path && (k === 'full' || k === 'partial') && v && typeof v === 'object')
 				walkVaccine(base, k, v);
 			else bare.push(key);

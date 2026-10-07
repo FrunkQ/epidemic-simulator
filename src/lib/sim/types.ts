@@ -52,6 +52,19 @@ export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
 export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
 
 /**
+ * Deaths caused by a vaccine (6.13). Every kind carries sources, so "no deaths" can't be claimed
+ * without one, and code that shows it must handle all three kinds.
+ * - rate: deaths per 100,000 doses; `lowerBound` when the source counts only proven cases.
+ * - none-established: a source says no death has been shown to be caused by the vaccine.
+ * - established-no-rate: deaths are confirmed in `group` (people it isn't recommended for), but no
+ *   rate has been published; `text` says what the source found.
+ */
+export type VaccineDeathRate =
+	| { kind: 'rate'; value: number; sources: string[]; lowerBound?: true }
+	| { kind: 'none-established'; sources: string[] }
+	| { kind: 'established-no-rate'; group: string; text: string; sources: string[] };
+
+/**
  * Protection from one course of a vaccine, as shares from 0 to 1. `severe` is the published
  * protection against severe disease in everyone vaccinated (not only in breakthrough cases); it is
  * left out when no pooled figure exists.
@@ -64,8 +77,7 @@ export interface VaccineProtection {
 
 /**
  * One vaccine a population can be given against a disease, keyed by product and version (6.13).
- * Risk rates are per 100,000 doses; `deathsPer100kDoses.value` is `null` only when a source says
- * no death has been established as caused by the vaccine (never treat that as 0).
+ * Risk rates are per 100,000 doses; deaths use `VaccineDeathRate`, so a missing rate is never 0.
  */
 export interface Vaccine {
 	product: string;
@@ -85,8 +97,8 @@ export interface Vaccine {
 	partial?: { infection?: Sourced; severe?: Sourced };
 	/** Serious adverse events (usually needing hospital or emergency care) per 100,000 doses. */
 	seriousPer100kDoses: Sourced<number | null>;
-	/** Deaths caused by the vaccine per 100,000 doses; null when none has been established. */
-	deathsPer100kDoses: Sourced<number | null>;
+	/** Deaths caused by the vaccine: a rate per 100,000 doses, or a sourced reason there is none (6.13). */
+	deathsPer100kDoses: VaccineDeathRate;
 	/**
 	 * Half-life of the vaccine's protection against infection: days until that protection has
 	 * fallen to half its starting value (vaccinated dots wane with this, 6.3). null when no
