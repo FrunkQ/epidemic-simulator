@@ -22,8 +22,16 @@ function walk(): { sourced: { key: string; value: Sourced<number | null> }[]; ba
 		for (const [k, v] of Object.entries(obj)) {
 			const key = `${prefix}.${k}`;
 			if (PLAIN.has(k)) continue;
-			if (isSourced(v)) sourced.push({ key, value: v });
-			else bare.push(key);
+			if (isSourced(v)) {
+				sourced.push({ key, value: v });
+				// Nested sourced reasons, e.g. a band's outsideHospitalReason.
+				for (const [nk, nv] of Object.entries(v))
+					if (nv && typeof nv === 'object' && 'text' in nv && 'sources' in nv)
+						sourced.push({
+							key: `${key}.${nk}`,
+							value: { value: null, sources: (nv as { sources: string[] }).sources }
+						});
+			} else bare.push(key);
 		}
 	}
 	return { sourced, bare };
@@ -71,6 +79,21 @@ describe('citations', () => {
 				.map((u) => `${c.id} -> ${u}`)
 		);
 		expect(missing).toEqual([]);
+	});
+
+	it('lists every number a source backs in its usedFor', () => {
+		const byId = new Map(CITATIONS.map((c) => [c.id, c]));
+		const missing = sourced.flatMap((n) =>
+			n.value.sources
+				.filter((s) => byId.get(s) && !byId.get(s)!.usedFor.includes(n.key))
+				.map((s) => `${s} -> ${n.key}`)
+		);
+		expect(missing).toEqual([]);
+	});
+
+	it('has no two citations for the same paper', () => {
+		const dois = CITATIONS.filter((c) => c.doi).map((c) => c.doi!.toLowerCase());
+		expect(dois.filter((d, i) => dois.indexOf(d) !== i)).toEqual([]);
 	});
 
 	it('only uses sources that passed verification', () => {

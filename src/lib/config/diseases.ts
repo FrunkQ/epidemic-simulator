@@ -23,6 +23,8 @@ const COVID19_ASYMPTOMATIC: Sourced = {
 	sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2']
 };
 const COVID19_IFR: Sourced = { value: 0.0068, sources: ['meyerowitzkatz2020-covid-ifr'] };
+/** Hospital admissions per infection, England's pre-vaccine peak (Ward 2024: 3.39%). */
+const COVID19_IHR: Sourced = { value: 0.0339, sources: ['ward-2024-covid-ihr-ifr'] };
 const COVID19_AGE = covid19BandsPerInfection();
 const ukWeighted = (b: Bands) => b.reduce((a, v, i) => a + v * COVID19_AGE.shares[i], 0);
 /** Deaths per infection by band, derived in covidAgeIfr.ts; UK 2019 ages are the reference. */
@@ -55,7 +57,7 @@ const OMICRON_IFR: Sourced = {
 	sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
 };
 /** The 2020 virus's hospital share per infection, scaled the same way (an assumption). */
-const OMICRON_HOSPITAL_PER_INFECTION = 0.042 * (1 - 0.2) * OMICRON_SEVERITY_RATIO;
+const OMICRON_HOSPITAL_PER_INFECTION = COVID19_IHR.value * OMICRON_SEVERITY_RATIO;
 
 /** A disease's banded rate as per-symptomatic-case values, whatever unit its source used. */
 export function perSymptomaticBands(banded: Banded, asymptomaticFraction: Sourced): Bands {
@@ -240,7 +242,10 @@ export const DISEASES = {
 		},
 		fullEfficacy: { value: 0.35, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
 		partialEfficacy: { value: 0.2, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
-		hospitalisedShare: { value: 0.042, sources: ['ward-2024-covid-ihr-ifr'] }
+		hospitalisedShare: {
+			value: perSymptomatic(COVID19_IHR, COVID19_ASYMPTOMATIC),
+			sources: ['ward-2024-covid-ihr-ifr', 'buitrago-garcia-2020-asymptomatic-sars-cov-2']
+		}
 	},
 	covid19omicron: {
 		id: 'covid19omicron',
@@ -249,7 +254,15 @@ export const DISEASES = {
 		blurb:
 			'The 2022 variant. It spreads far faster than the 2020 virus and is milder per case, and the original vaccine stops it less well.',
 		r0: { value: 8.4, sources: ['perez-guzman-2023-omicron', 'liu-rocklov-2022-omicron-r'] },
-		silentDays: { value: 0.3, sources: ['madewell-2023-omicron-serial', 'wu-2022-incubation-variants'] },
+		silentDays: {
+			value: 0.3,
+			sources: [
+				'madewell-2023-omicron-serial',
+				'wu-2022-incubation-variants',
+				'alene2021-covid-serial-incubation',
+				'byrne-2020-infectious-period'
+			]
+		},
 		illDays: { value: 5, sources: ['wu-2023-omicron-shedding'] },
 		asymptomaticFraction: OMICRON_ASYMPTOMATIC,
 		infectionFatalityRate: OMICRON_IFR,
@@ -388,10 +401,27 @@ export const DISEASES = {
 		group: 'historic',
 		blurb:
 			'The 1918 pandemic flu. Unlike ordinary flu, a large share of the people it killed were young adults.',
-		r0: { value: 1.8, sources: ['biggerstaff-2014-flu-r'] },
+		r0: { value: 1.8, sources: ['biggerstaff2014-flu-r-review'] },
 		// No 1918-specific contagious periods exist: seasonal flu's, checked against the 1918 serial interval.
-		silentDays: { value: 1, sources: ['white-pagano-2008-1918-serial', 'vink-2014-serial-intervals'] },
-		illDays: { value: 4, sources: ['white-pagano-2008-1918-serial', 'vink-2014-serial-intervals'] },
+		silentDays: {
+			value: 1,
+			sources: [
+				'memoli2015-flu-challenge',
+				'suess2012-flu-shedding-germany',
+				'lau2010-flu-shedding-hk',
+				'white-pagano-2008-1918-serial',
+				'vink-2014-serial-intervals'
+			]
+		},
+		illDays: {
+			value: 4,
+			sources: [
+				'carrat2008-flu-timelines-review',
+				'suess2012-flu-shedding-germany',
+				'white-pagano-2008-1918-serial',
+				'vink-2014-serial-intervals'
+			]
+		},
 		asymptomaticFraction: { value: 0, sources: ['fraser-2011-1918-households'] },
 		mortality: { value: 0.017, sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass'] },
 		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },

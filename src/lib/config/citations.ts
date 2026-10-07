@@ -655,10 +655,11 @@ export const CITATIONS: Citation[] = [
 		year: 2014,
 		evidence: 'systematic-review',
 		doi: '10.1186/1471-2334-14-480',
-		usedFor: ['flu.r0', 'flu.herdImmunityThreshold'],
-		quote: 'median R value for seasonal influenza was 1.28',
-		location: 'abstract',
-		why: 'Systematic review.',
+		usedFor: ['flu.r0', 'flu.herdImmunityThreshold', 'flu1918.r0'],
+		quote:
+			'median R value for seasonal influenza was 1.28 … The median R value for 1918 was 1.80 (interquartile range [IQR]: 1.47-2.27).',
+		location: 'Abstract, Results',
+		why: 'Systematic review giving median R for both seasonal flu (1.28, rounded to 1.3) and the 1918 pandemic (1.80).',
 		context: 'Threshold derived as 1 - 1/1.3.',
 		verified: {
 			by: 'independent verification pass',
@@ -714,7 +715,7 @@ export const CITATIONS: Citation[] = [
 		year: 2008,
 		evidence: 'systematic-review',
 		doi: '10.1093/aje/kwm375',
-		usedFor: ['flu.illDays', 'flu.asymptomaticFraction'],
+		usedFor: ['flu.illDays', 'flu.asymptomaticFraction', 'flu1918.illDays'],
 		quote: 'duration of viral shedding averaged over 375 participants was 4.80 days',
 		location: 'abstract',
 		why: 'Systematic review of volunteer challenge studies. Shedding lasts 4.8 days in all and starts about 1 day before symptoms, so illDays = 4.8 - 1 = about 4 (worked out).',
@@ -736,7 +737,7 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No meta-analysis measures how long flu is contagious before symptoms start; the pooled challenge-study review (Carrat 2008) times shedding from infection, not from symptoms.',
 		doi: '10.1093/cid/ciu924',
-		usedFor: ['flu.silentDays'],
+		usedFor: ['flu.silentDays', 'flu1918.silentDays'],
 		quote: 'Viral shedding preceded symptoms by 12-24 hours',
 		location: 'abstract',
 		why: 'Direct observation.',
@@ -756,7 +757,7 @@ export const CITATIONS: Citation[] = [
 		year: 2012,
 		evidence: 'study',
 		doi: '10.1371/journal.pone.0051653',
-		usedFor: ['flu.silentDays', 'flu.illDays'],
+		usedFor: ['flu.silentDays', 'flu.illDays', 'flu1918.silentDays', 'flu1918.illDays'],
 		quote: 'infectiousness as measured by viral culture lasted approximately until illness days 4-6',
 		location: 'abstract',
 		why: 'Household study.',
@@ -775,7 +776,7 @@ export const CITATIONS: Citation[] = [
 		year: 2010,
 		evidence: 'study',
 		doi: '10.1086/652241',
-		usedFor: ['flu.silentDays'],
+		usedFor: ['flu.silentDays', 'flu1918.silentDays'],
 		quote: '1%-8% of infectiousness occurs prior to illness onset',
 		location: 'abstract',
 		why: 'Community study.',
@@ -1441,7 +1442,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'review',
 		doi: '10.1136/bmjopen-2020-039856',
 		url: 'https://bmjopen.bmj.com/content/10/8/e039856',
-		usedFor: ['covid19.silentDays'],
+		usedFor: ['covid19.silentDays', 'covid19omicron.silentDays'],
 		quote: 'One study provided approximate median infectious period for asymptomatic cases of 6.5-9.5 days.',
 		location: 'Abstract — Results',
 		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'.",
@@ -1466,7 +1467,7 @@ export const CITATIONS: Citation[] = [
 			'No meta-analysis of the share of all symptomatic cases admitted to hospital before vaccines was found (search, 7 Oct 2026).',
 		doi: '10.1038/s41467-024-47199-3',
 		url: 'https://www.nature.com/articles/s41467-024-47199-3',
-		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare'],
+		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare', 'covid19omicron.hospitalisedShare'],
 		quote:
 			'The IHR and the IFR in England peaked in January 2021 at 3.39% (95% Credible Intervals (CrI): 2.79, 3.97) and 0.97% (95% CrI: 0.62, 1.36), respectively.',
 		location: 'Abstract',
@@ -1569,29 +1570,6 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Re-opened: Scientific Data 2015, article 150019, DOI 10.1038/sdata.2015.19; both the R0 range and the CFR range confirmed; no retraction.'
-		}
-	},
-	{
-		id: 'dean-2016-ebola-household-sar',
-		authors: 'Dean NE, Halloran ME, Yang Y, Longini IM',
-		title:
-			'Transmissibility and Pathogenicity of Ebola Virus: A Systematic Review and Meta-analysis of Household Secondary Attack Rate and Asymptomatic Infection',
-		journal: 'Clinical Infectious Diseases',
-		year: 2016,
-		evidence: 'meta-analysis',
-		doi: '10.1093/cid/ciw114',
-		url: 'https://academic.oup.com/cid/article-lookup/doi/10.1093/cid/ciw114',
-		usedFor: ['ebola.about'],
-		quote: 'The greatest risk factor was the provision of nursing care (SAR, 47.9% [95% CI, 23.3%-72.6%]).',
-		location: 'Abstract — results',
-		why: "The strongest single piece of evidence that Ebola spreads almost only to people physically caring for someone too ill to move, set against 'little transmission occurring in its absence (SAR, 0.8% [95% CI, 0%-2.3%])'. Its 27% asymptomatic estimate is not used: Glynn 2017 found silent infection uncommon, and no study shows silent cases spreading it.",
-		context:
-			'Meta-analysis of household secondary attack rates from 1976 to 2014, disaggregated by exposure type.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true,
-			note: 'Re-opened: Clin Infect Dis 2016;62(10):1277-1286, DOI 10.1093/cid/ciw114, first author Natalie E. Dean; the 12.5%, 0.8%, 47.9% and 27.1% figures all confirmed verbatim; no retraction.'
 		}
 	},
 	{
@@ -1823,7 +1801,7 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1371/journal.pmed.1003346',
-		usedFor: ['covid19.asymptomaticFraction'],
+		usedFor: ['covid19.asymptomaticFraction', 'covid19.hospitalisedShare'],
 		quote:
 			'The overall estimate of the proportion of people who become infected with SARS-CoV-2 and remain asymptomatic throughout infection was 20% (95% confidence interval [CI] 17–25)',
 		location: 'Abstract — results',
@@ -1995,7 +1973,12 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.ijid.2020.09.1464',
-		usedFor: ['covid19.infectionFatalityRate', 'covid19.mortality'],
+		usedFor: [
+			'covid19.infectionFatalityRate',
+			'covid19.mortality',
+			'covid19omicron.infectionFatalityRate',
+			'covid19omicron.mortality'
+		],
 		quote:
 			'The meta-analysis demonstrated a point estimate of IFR of 0.68% (0.53%-0.82%) with high heterogeneity (p < 0.001).',
 		location: 'Abstract (results)',
@@ -2016,7 +1999,7 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'meta-analysis',
 		doi: '10.1186/s12879-021-05950-x',
-		usedFor: ['covid19.silentDays'],
+		usedFor: ['covid19.silentDays', 'covid19omicron.silentDays'],
 		quote: 'the weighted pooled mean serial interval of COVID-19 was 5.2 (95%CI: 4.9-5.5) days',
 		location:
 			'Abstract (results); the same abstract gives a pooled incubation period of 6.5 (95%CI: 5.9-7.1) days',
@@ -2148,10 +2131,11 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'meta-analysis',
 		doi: '10.1093/cid/ciw114',
-		usedFor: ['ebola.asymptomaticFraction'],
-		quote: 'We estimate that 27.1% (95% CI, 14.5%-39.6%) of Ebola infections are asymptomatic.',
+		usedFor: ['ebola.asymptomaticFraction', 'ebola.about'],
+		quote:
+			'We estimate that 27.1% (95% CI, 14.5%-39.6%) of Ebola infections are asymptomatic. … The greatest risk factor was the provision of nursing care (SAR, 47.9% [95% CI, 23.3%-72.6%]).',
 		location: 'Abstract (results)',
-		why: 'Meta-analysis: about 27% of Ebola infections have no symptoms, but there is no evidence those people pass it on. The model sets asymptomaticFraction to 0 because it only counts cases that spread the disease; the About page says so.',
+		why: "Meta-analysis: about 27% of Ebola infections have no symptoms, but there is no evidence those people pass it on. The model sets asymptomaticFraction to 0 because it only counts cases that spread the disease; the About page says so. About page: the strongest single piece of evidence that Ebola spreads almost only to people physically caring for someone too ill to move, set against 'little transmission occurring in its absence (SAR, 0.8% [95% CI, 0%-2.3%])'. Its 27% asymptomatic estimate is not used: Glynn 2017 found silent infection uncommon, and no study shows silent cases spreading it.",
 		context: 'Ebola serosurveys, Africa',
 		verified: {
 			by: 'independent verification pass',
@@ -2195,7 +2179,8 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'covid19omicron.r0',
 			'covid19omicron.infectionFatalityRate',
-			'covid19omicron.hospitalisedShare'
+			'covid19omicron.hospitalisedShare',
+			'covid19omicron.mortality'
 		],
 		quote:
 			'Omicron (BA.1) had the highest basic reproduction number at 8.4 (95% credible interval (CrI) 7.8-9.1).',
@@ -2320,27 +2305,6 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
-		id: 'biggerstaff-2014-flu-r',
-		authors: 'Biggerstaff M, Cauchemez S, Reed C, Gambhir M, Finelli L',
-		title:
-			'Estimates of the reproduction number for seasonal, pandemic, and zoonotic influenza: a systematic review of the literature',
-		journal: 'BMC Infectious Diseases',
-		year: 2014,
-		evidence: 'systematic-review',
-		doi: '10.1186/1471-2334-14-480',
-		usedFor: ['flu1918.r0'],
-		quote: 'The median R value for 1918 was 1.80 (interquartile range [IQR]: 1.47-2.27).',
-		location: 'Abstract, Results',
-		why: 'r0 1.80.',
-		context: 'Estimates from the 1918 pandemic',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true,
-			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
-		}
-	},
-	{
 		id: 'britten-1932-phr-1918-canvass',
 		authors: 'Britten RH',
 		title:
@@ -2368,7 +2332,7 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Scanned PDF on CDC Stacks read twice through text extraction. The Table 28 rows matched on both reads. The table title is quoted from the extraction. Article title and pages 303-337 confirmed. Morabia 2021 independently confirms the 25-29 (~3%), 45-49 (<1.5%), 70+ (5.1%) and 'Table 28, p332' values. Table 7 check: the 65-69 count was read once as 332 and once as 392; 332 fits the printed rate of 135/1,000 (332/2,456 = 0.135) and is used. The 40-44 count printed as 2,219 does not fit its rate of 256/1,000, and age rows sum to 42,354 against 42,920; effect on band values is under 0.01 percentage points. No DOI was found; no retraction applies to a 1932 government report."
+			note: "Scanned PDF on CDC Stacks read twice through text extraction. The Table 28 rows matched on both reads. The table title is quoted from the extraction. Article title and pages 303-337 confirmed. Morabia 2021 independently confirms the 25-29 (~3%), 45-49 (<1.5%), 70+ (5.1%) and 'Table 28, p332' values. Table 7 check: the 65-69 count was read once as 332 and once as 392; 332 fits the printed rate of 135/1,000 (332/2,456 = 0.135) and is used. The 40-44 count printed as 2,219 does not fit its rate of 256/1,000, and age rows sum to 42,354 against 42,920; effect on band values is under 0.01 percentage points. The JSTOR DOI 10.2307/4580340 was later found and matches the title, journal and pages; no retraction applies to a 1932 government report."
 		}
 	},
 	{
@@ -2807,7 +2771,7 @@ export const CITATIONS: Citation[] = [
 			'Examples of this are the rate of severe infections (Infection-severe rate, ISR), which we define as infections resulting in hospitalization or out-of-hospital death',
 		location:
 			'Background, paragraph 1 (definition); Additional file 1, Table S1 (5-year ages to 85+), stored in covidAgeIfr.ts',
-		why: "The only multi-country meta-analysis of severe cases by age per infection before vaccines. Weighted by UK 2019 ages: 0-14 0.13%, 15-64 2.35%, 65+ 18.7% per infection. It counts deaths outside hospital as severe, so beds for 65+ are slightly high; in England and Wales 67.8% of 2020 COVID-19 deaths happened in hospital (ONS weekly deaths, week ending 1 January 2021). That definition matches the model's assumption that as many deaths as possible happen in hospital. For UK ages the bands give about 4.7% per infection, above Ward 2024's all-ages 3.39%; each figure matches its own source, and the About page gives both.",
+		why: "The only multi-country meta-analysis of severe cases by age per infection before vaccines. Weighted by UK 2019 ages: 0-14 0.13%, 15-64 2.35%, 65+ 18.7% per infection. It counts deaths outside hospital as severe, so beds for 65+ are slightly high; in England and Wales 67.8% of 2020 COVID-19 deaths happened in hospital (ONS weekly deaths, week ending 1 January 2021). That definition matches the model's assumption that as many deaths as possible happen in hospital. For UK ages the bands give 4.97% per infection, above Ward 2024's all-ages 3.39%; each figure matches its own source, and the About page gives both.",
 		context:
 			'Serosurveys from early to mid 2020 in 16 high-income locations, England included. The paper says rates for under-10s may be too low; its alternative 0-9 figure (0.42%) would make 0-14 0.34%.',
 		verified: {
