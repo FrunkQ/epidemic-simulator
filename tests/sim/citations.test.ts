@@ -7,7 +7,7 @@ import { isSourced, walk } from './configWalk';
 
 describe('citations', () => {
 	const ids = new Set(CITATIONS.map((c) => c.id));
-	const { sourced, bare } = walk();
+	const { sourced, bare, seen } = walk();
 
 	it('has unique ids', () => {
 		expect(ids.size).toBe(CITATIONS.length);
@@ -28,8 +28,28 @@ describe('citations', () => {
 		expect(keys).toContain('covid19.vaccines.covid-original.deathsPer100kDoses');
 	});
 
-	it('gives every research number at least one source', () => {
-		expect(sourced.filter((n) => n.value.sources.length === 0).map((n) => n.key)).toEqual([]);
+	it('gives every research number at least one source, unless it is a marked placeholder', () => {
+		expect(
+			sourced
+				.filter((n) => n.value.sources.length === 0 && n.value.provisional === undefined)
+				.map((n) => n.key)
+		).toEqual([]);
+	});
+
+	it('walks every sourced number that any config module exports', () => {
+		const modules = import.meta.glob('../../src/lib/config/*.ts', { eager: true });
+		const missed: string[] = [];
+		const visited = new Set<object>();
+		const visit = (v: unknown, path: string, depth: number) => {
+			if (!v || typeof v !== 'object' || visited.has(v) || depth > 6) return;
+			visited.add(v);
+			if (isSourced(v) && !seen.has(v)) missed.push(path);
+			for (const [k, child] of Object.entries(v)) visit(child, `${path}.${k}`, depth + 1);
+		};
+		for (const [file, mod] of Object.entries(modules))
+			for (const [name, value] of Object.entries(mod as object))
+				visit(value, `${file.split('/').pop()}:${name}`, 0);
+		expect(missed).toEqual([]);
 	});
 
 	it('has an entry for every source id used', () => {
@@ -128,6 +148,8 @@ describe('citations', () => {
 		const rank = (id: string) => EVIDENCE_RANK.indexOf(byId.get(id)!.evidence);
 		const firstWeak = EVIDENCE_RANK.indexOf('review');
 		for (const { key, value } of sourced) {
+			// A placeholder has no source yet; the provisional test lists it instead.
+			if (value.sources.length === 0) continue;
 			if (Math.min(...value.sources.map(rank)) < firstWeak) continue;
 			const reasons = value.sources.map((id) => byId.get(id)!.noReviewReason ?? '').filter(Boolean);
 			expect(reasons.length, `${key} rests on a review or one study; add a noReviewReason`).toBeGreaterThan(

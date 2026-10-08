@@ -41,7 +41,7 @@ A fixed pool of `MAX_AGENTS = 6000` dots in typed arrays, allocated once (struct
 - `region`: Int16Array (-1 while travelling)
 - `stateTicks`: Int32Array (ticks left in the current state)
 - `fatigueTicks`: Int32Array (how long this dot tolerates lockdown; drawn at spawn)
-- `route`: Int16Array (-1 when not travelling), `routeS`: Float32Array (distance along the route), `routeDir`: Int8Array (+1 or -1), `routeSeg`: Int16Array (current segment)
+- `route`: Int16Array (-1 when not travelling), `routeS`: Float32Array (distance along the route), `routeDir`: Int8Array (+1 or -1), `routeSeg`: Int16Array (current segment of a ground route), `planeOf`: Int16Array (the plane an air traveller rides in; -1 otherwise)
 - `infectedTick`, `infectedBy`: Int32Array (so a dot cannot spread on the tick it caught it, and for measuring R0)
 - `activeCount`: slots [0, activeCount) are in use.
 - Each dot stands for `peoplePerDot` people, shown in the UI ("each dot = about N people"). When added populations would exceed MAX_AGENTS, `peoplePerDot` rises so the total stays within budget, with a minimum of 30 dots per population.
@@ -53,8 +53,8 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Suggested population sites come from a suitability score (on land, low ground, near the coast, not too close to other sites) spread out with Poisson-disc sampling. The Add population tool highlights good spots, and an Auto-fill button can populate the world with sensible cities and rural areas.
 - The starting microcosm is guaranteed, not left to chance: the default start seed comes from a short curated list whose start area has an island and a mainland separated by one strait narrow enough for a ferry, with the 3 cities placed there. A test checks every curated seed meets this. `scripts/curate-maps.ts` finds the layout on each curated seed and stores the three city positions in `config/startMaps.generated.ts`, so the app does not search at load; the test also checks the stored positions still match what the finder produces.
 - Camera: pan and zoom (wheel, pinch, and on-screen buttons), starting framed on the microcosm. All drawing goes through the camera transform. Dots outside the view are skipped when drawing but still simulated. Coastlines are cached `Path2D` shapes drawn each frame, not one giant offscreen bitmap. The engine exposes `worldToScreen` and `screenToWorld` including the camera; overlays and clicks use them, never raw pixels.
-- Scenario (`config/scenarios.ts`): map seed, `regions`, `routes`.
-- Region: `{ id, name, kind: 'city' | 'rural', cx, cy, population, density, radius (derived), hasAirport, vaccinatedFull, vaccinatedPartial, hospitalBedsPerThousand, hub? }`.
+- Scenario (`config/scenarios.ts`): `mapSeed` (null means no map, so no routes: tests) and `regions`. The engine builds the map and the routes from them in `setup(scenario, diseaseId, seed)`, so a run is reproducible from the scenario and the seed (needed for version 2 replays); the page reads them back through `sim.map`, `sim.routes` and `sim.planes`.
+- Region: `{ id, name, kind: 'city' | 'rural', cx, cy, population, density, radius (derived), hasAirport, vaccinatedFull, vaccinatedPartial, policy (its resolved `HealthPolicy`, 4.2), hub? }`.
   - Radius comes from the number of dots and a sim density: `radius = sqrt(dots / (simDensity x PI))`, with `simDensity` in dots per world unit², clamped to a sensible range. Using dots (not people) keeps the contact rate at the calibrated level whatever `peoplePerDot` is. Real density (people per km²) maps to `simDensity` as in 4.1. City default: dense, has an airport and a gathering hub. Rural default: small, sparse, no airport, no hub.
   - Density acts only through how often dots meet. Never add a density multiplier to the infection chance. Sparse rural areas spread slower because dots meet less.
 - Adding a population (Setup mode): the user picks city or rural, clicks a spot on land, and sets size and density. Validation: centre on land, disc mostly on land, no overlap with other discs, total population at most MAX_AGENTS (the UI shows the remaining budget). Users can also remove or resize populations.
@@ -80,7 +80,9 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
   - `config/countryProfiles.generated.json`, written by `scripts/fetch-data.ts`: per-country beds per 1,000, bed occupancy (giving `spareBedShare`), vaccination coverage per disease and density, each with source, indicator code and year.
   - `config/behaviourPresets.ts`, hand-sourced: fields no bulk dataset gives per country (lockdown compliance, fatigue days, testing reach) in `{ value, sources }` form with `citations.ts` entries. Countries without their own figure fall back to a sourced general default, and the card says "general estimate".
   - `config/healthPolicy.ts`: the `HealthPolicy` type, `presetFor(country)` (merges the two files), `similarTo(policy)` and the general default. Steps 2 and 3 use the general default.
-- Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run. Population, density, age mix and vaccination changes restart from day 0 (rule 1.8 stands).
+- Step 2's card ships only the sliders the engine already reads, live and per population: travel frequency, beds per 1,000 and spare-bed share (capacity is recounted at once). Compliance, fatigue and testing sliders arrive in step 3 with their engine hooks, so no slider is inert. There is no global travel slider.
+- Route rule (8 Oct): a route runs at its base trip rate x the lower of its two end populations' travel frequency, the same rate both ways, so cutting travel in one population cuts all its routes and populations stay level.
+- Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run, sent as a queued `{ type: 'policy', region, policy }` command. Population, density, age mix and vaccination changes restart from day 0 (rule 1.8 stands).
 - Every slider and card has a one-line plain-English "what this means" explainer, taken from the same citation entry. The About page has one short section per subsystem.
 
 ## 5. Tick order (engine.ts; never reorder)
@@ -114,7 +116,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ### 6.3 Waning immunity
 - Two waning figures, both half-lives (7 Oct): the disease's `waningDays` is infection-acquired immunity (recovered dots); each Vaccine entry has its own sourced `waningDays: number | null` for vaccine protection against infection (vaccinated dots). `null` means no meaningful waning is established within the time the sim covers, and needs a source saying so (e.g. measles). Do not invent waning where research says there is none; the booster lesson shows with flu (vaccine about 105 days, infection about 1,500).
-- Placeholders are explicit (7 Oct): a number may carry `provisional: string` (why it isn't sourced yet). A test lists every provisional number; it passes in normal CI and fails with RELEASE=1, so version 1 can't ship with placeholders. The About page shows them as "not yet sourced". Every vaccine half-life is sourced as of the vaccine-list PR (7 Oct): OPV about 1,613 days (Famulare 2018, gut immunity against infection, an order-of-magnitude figure), varicella about 3,195 days (Bolormaa 2025 two-dose series, low confidence, with Pawaskar 2022's "no waning" cited beside it), and rVSV-ZEBOV null (WHO SAGE 2024: no waning for at least 5 years). No vaccine number is provisional.
+- Placeholders are explicit (7 Oct): a number may carry `provisional: string` (why it isn't sourced yet). A test lists every provisional number; it passes in normal CI and fails with RELEASE=1, so version 1 can't ship with placeholders. `sources: []` is allowed only when `provisional` is set (8 Oct), and the walk covers every sourced number any config module exports, not just the disease, behaviour and population objects; a test checks nothing exported is missed. The About page shows them as "not yet sourced". Every vaccine half-life is sourced as of the vaccine-list PR (7 Oct): OPV about 1,613 days (Famulare 2018, gut immunity against infection, an order-of-magnitude figure), varicella about 3,195 days (Bolormaa 2025 two-dose series, low confidence, with Pawaskar 2022's "no waning" cited beside it), and rVSV-ZEBOV null (WHO SAGE 2024: no waning for at least 5 years). No vaccine number is provisional.
 - When a working vaccine's infection protection wanes, the dot becomes catchable but keeps its breakthrough severe protection (6.2, 6.13). Assumption, recorded on the About page: real-world protection against severe disease fades far more slowly than protection against infection (Feikin 2022 meta-regression for COVID, once verified).
 - Steps: FULL to PARTIAL to NONE; RECOVERED to SUSCEPTIBLE with PARTIAL. Each protected dot counts down `waneTicks`; at zero it drops a level and draws a new countdown.
 - When a dot's protection drops a level, a working vaccine stays working with chance `efficacyNew / efficacyOld`; a vaccine that didn't take never starts working. Waning can only lower protection.
@@ -142,10 +144,11 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 - Cooldown (e.g. once per 7 sim days) and a radar-sweep animation.
 
 ### 6.8 Travel
-- Each route has `kind`, `from`, `to`, points, `travelDays`, `tripsPerDay` (scaled by the Travel slider), `open`, and for ground routes an optional `barrierS`.
+- Each route has `kind`, `from`, `to`, points, `travelDays`, `tripsPerDay` (the base rate; it runs at base x the lower of its two ends' travel frequency, 4.2), `open`, and for ground routes an optional `barrierS`.
 - Departures: Poisson per route per tick using the RNG, with equal rates both ways so populations stay roughly level. Eligible: alive, not SYMPTOMATIC, not isolated, not frozen by lockdown.
-- Air: travellers board a plane (up to K seats) leaving on a schedule; draw the plane, hide the passengers, release them at the destination. Road and ferry: dots visibly move along the route.
+- Air: travellers board a plane (`behaviour.planeSeats`) leaving on a schedule (`behaviour.flightsPerDay`); a flight with more passengers than seats sends another plane, and a flight with none does not leave; draw the plane, hide the passengers, release them at the destination. Road and ferry: dots visibly move along the route.
 - Grounding flights: no new departures; planes in the air land. Closing a border: a barrier is drawn at `barrierS`; travellers reaching it turn back; no new departures.
+- Death on the way: it counts in the trip's origin (`routeDir > 0 ? route.from : route.to`) and the dot stays where it died (on a plane, at the plane). Living travellers are counted in telemetry's in-transit bucket, so every dot is counted exactly once.
 - Arrival: the dot is placed just inside the destination disc at the route end with a random velocity, and `region` is set.
 
 ### 6.9 Calibration
@@ -233,6 +236,8 @@ sim.send(command)          // queued, applied at the next tick
 sim.snapshot(): Telemetry  // cheap copy, called about 10 Hz
 sim.setup(scenarioSetup)   // Setup change: restart at day 0; takes diseaseId, the engine loads the disease itself
 sim.view                   // worldToScreen / screenToWorld
+sim.map, sim.routes, sim.planes  // read-only: the map, routes and planes built from scenario.mapSeed
+sim.history(region)        // daily history, read only when historyVersion changes
 
 type Command =
   | { type: 'lockdown'; region: number; on: boolean }
@@ -240,15 +245,16 @@ type Command =
   | { type: 'route'; route: number; open: boolean }
   | { type: 'massTest'; region: number }
   | { type: 'speed'; value: 0 | 0.5 | 1 | 2 | 4 }
-  | { type: 'seed'; region: number; count: number };
+  | { type: 'seed'; region: number; count: number }
+  | { type: 'policy'; region: number; policy: HealthPolicy };   // live: travel and beds
 ```
-Telemetry: `{ day, regions: [{ id, counts per colour, deaths per age band, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], totals, latest (this day's history sample per region), historyVersion, events (last 100 only) }`. From step 3, each daily history sample also carries, per region, counts per age band (susceptible, infected, in hospital, recovered, dead, vaccinated) and hospital occupancy against capacity, one sample per simulated day; this is what the age-curve charts read. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
+Telemetry: `{ day, regions: [{ id, counts per colour, deaths per age band, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], inTransit (counts per colour of living travellers), totals (regions + inTransit), latest (this day's history sample per region), historyVersion, events (last 100 only) }`. From step 3, each daily history sample also carries, per region, counts per age band (susceptible, infected, in hospital, recovered, dead, vaccinated) and hospital occupancy against capacity, one sample per simulated day; this is what the age-curve charts read. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
 
 ## 8. Rendering
 - Dots: small squares or circles batched by colour (one fill per colour per frame).
 - Colour priority: DECEASED grey; SYMPTOMATIC or isolated red; SILENT orange; RECOVERED purple; otherwise by protection: FULL green, PARTIAL yellow, NONE blue. Make sure orange and yellow are clearly different (and colour-blind safe); give infectious dots a faint pulse ring.
 - With two diseases (6.12), shape shows which disease: circle = none or disease A, diamond = disease B, hexagon = both; colour = the most serious state across both. The legend shows both.
-- Charts (Alex, 7 Oct): a small fixed set of reusable plain Svelte SVG components, no charting library (the data is at most a few hundred daily points): line over time with optional reference lines (hospital capacity, herd-immunity threshold); stacked area by state over time (the epidemic curve); bars by age band (age mix, deaths or hospital cases by age); a level gauge with thresholds (hospital pressure; vaccine coverage against the herd line). No animation.
+- Charts (Alex, 7 Oct): a small fixed set of reusable plain Svelte SVG components, no charting library (the data is at most a few hundred daily points): line over time with optional reference lines (hospital capacity, herd-immunity threshold); stacked area by state over time (the epidemic curve); bars by age band (age mix, deaths or hospital cases by age); a level gauge with thresholds (hospital pressure; vaccine coverage against the herd line). No animation. They live in `ui/charts/`. Step 2 ships `LineChart` (with a reference-line prop) and `StackedAreaChart`; each city's chart is a stacked area by state in the dot colours, with silent and ill as separate bands. Bars by age band and the level gauge arrive in step 3, with their data.
 - Chart rules: a plain-words title saying what it shows; labelled axes with units; state colours identical to the dots on the map, so the map legend carries over; the three age bands in the same three colours everywhere; never colour alone (pair it with a label or a line style).
 - Each guided-mode chapter names its chart in the chapter data (e.g. chapter 1: the village epidemic curve; the herd-immunity chapter: the coverage gauge with its threshold line).
 - Control cards float over each population via `worldToScreen`, as in the mockup; on small screens they collapse to a tap-to-open card.
@@ -259,6 +265,7 @@ src/lib/sim/     constants.ts rng.ts types.ts agents.ts grid.ts disease.ts movem
 src/lib/config/  diseases.ts diseases.generated.ts scenarios.ts realData.generated.json citations.ts
                  behaviour.ts herd.ts healthPolicy.ts behaviourPresets.ts countryProfiles.generated.json
 src/lib/ui/      SimCanvas.svelte RegionCard.svelte TopBar.svelte SetupPanel.svelte Legend.svelte Charts.svelte ImpactPanel.svelte
+src/lib/ui/charts/  LineChart.svelte StackedAreaChart.svelte (step 3 adds AgeBarsChart.svelte LevelGauge.svelte)
 src/routes/      +page.svelte (ssr off), about/+page.svelte
 scripts/         calibrate.ts fetch-data.ts
 tests/sim/       *.test.ts
@@ -295,8 +302,8 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 ## 11. Build order (one PR per step)
 1. Headless engine: constants, rng, agents, grid, disease, in-region movement, calibration script, citations file, determinism, speed and herd-immunity tests; a bare canvas page to watch it.
 1b. Disease catalogue: research, verify and calibrate the extra diseases in 6.11 as its own PR (config, citations and evidence table only, no engine changes). It can run alongside step 2. A small config-only follow-up adds the COVID-19 variants, 1918 flu, the vaccine-version numbers, the vaccine adverse-event rates and general background death rates by age band (country values come in step 4).
-2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card's live healthcare and behaviour sliders, 4.2), legend, charts.
-3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital capacity and pressure (6.6), hubs, waning; build the illness arrays slot-aware (6.12) from the start to avoid a second refactor; engine hooks for per-region compliance and live capacity changes; per-band death and hospital rules with the `ageBand` array; the severe-protection rule and the Vaccine version picker; lesson tests 2 to 6, 10 (moved from 1b, since it needs travel and illness timing), 12, 13, 14, 15 and 17.
+2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card with its live travel, beds and spare-bed sliders, 4.2), legend, the line and stacked-area charts (8).
+3. Interventions and modifiers: lockdown with fatigue, flights, borders, testing, hospital capacity and pressure (6.6), hubs, waning; build the illness arrays slot-aware (6.12) from the start to avoid a second refactor; engine hooks for per-region compliance, fatigue and testing, with their Health policy sliders; the bars-by-age chart and the level gauge (8); per-band death and hospital rules with the `ageBand` array; the severe-protection rule and the Vaccine version picker; lesson tests 2 to 6, 10 (moved from 1b, since it needs travel and illness timing), 12, 13, 14, 15 and 17.
 4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets including age mix, and "Similar to"); lesson test 7.
 3b. Two diseases at once (6.12): per-slot arrays in use, shared pressure, shapes and legend; lesson test 18.
 5. Impact panel (including `HarmComparison` with vaccine harm, disease harm, the counterfactual worker and baseline deaths, 6.13; vaccine risk rates by age band with their own test), About page with full citations, polish, deploy.

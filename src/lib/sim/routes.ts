@@ -1,11 +1,16 @@
+import { BEHAVIOUR } from '../config/behaviour';
 import { MAX_FERRY_GAP } from './constants';
 import { waterAlong, type World } from './geography';
 import type { Region, Route, RouteKind } from './types';
 
 /** Travel time per route kind, in days (see docs/ARCHITECTURE.md section 2). */
 export const TRAVEL_DAYS: Record<RouteKind, number> = { air: 0.7, ferry: 16, road: 14 };
-/** Trips per day each way at the default travel setting. */
-export const TRIPS_PER_DAY: Record<RouteKind, number> = { air: 6, ferry: 1.5, road: 2 };
+/** Base trips per day each way, by route kind (provisional config numbers, 6.3). */
+const TRIPS_PER_DAY: Record<RouteKind, number> = {
+	air: BEHAVIOUR.airTripsPerDay.value,
+	ferry: BEHAVIOUR.ferryTripsPerDay.value,
+	road: BEHAVIOUR.roadTripsPerDay.value
+};
 
 /**
  * Builds the travel links between populations:

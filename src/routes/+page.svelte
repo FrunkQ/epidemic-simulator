@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { DISEASES } from '../lib/config/diseases';
+	import { withValue, type LivePolicyKey } from '../lib/config/healthPolicy';
 	import { microcosm } from '../lib/config/scenarios';
 	import { START_MAPS } from '../lib/config/startMaps.generated';
 	import { createSimulation } from '../lib/sim/engine';
-	import { generateWorld } from '../lib/sim/geography';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
@@ -18,12 +18,7 @@
 	let scenario: Scenario = $state(microcosm(0));
 	let seed = $state(1);
 	let speed: Speed = $state(1);
-	let world = generateWorld(microcosm(0).mapSeed);
-	const sim = createSimulation(microcosm(0), {
-		seed: 1,
-		diseaseId: 'measles',
-		world
-	});
+	const sim = createSimulation(microcosm(0), { seed: 1, diseaseId: 'measles' });
 	let telemetry: Telemetry | null = $state.raw(null);
 	let histories: RegionHistory[] = $state.raw([]);
 	let historyVersion = -1;
@@ -59,7 +54,7 @@
 	}
 
 	function restart() {
-		sim.setup($state.snapshot(scenario), diseaseId, seed, world);
+		sim.setup($state.snapshot(scenario), diseaseId, seed);
 		historyVersion = -1;
 		setTelemetry(sim.snapshot());
 	}
@@ -73,12 +68,22 @@
 		restart();
 	}
 
+	/** A live policy change: kept for the next restart, and sent to the running sim as a command. */
+	function setPolicy(region: number, key: LivePolicyKey, value: number) {
+		const r = scenario.regions[region];
+		r.policy = withValue($state.snapshot(r.policy), key, value);
+		sim.send({ type: 'policy', region, policy: $state.snapshot(r.policy) });
+	}
+
 	function newMap() {
 		mapIndex = (mapIndex + 1) % START_MAPS.length;
-		const vaccination = scenario.regions.map((r) => [r.vaccinatedFull, r.vaccinatedPartial]);
+		const kept = $state.snapshot(scenario.regions);
 		scenario = microcosm(mapIndex);
-		scenario.regions.forEach((r, i) => ([r.vaccinatedFull, r.vaccinatedPartial] = vaccination[i]));
-		world = generateWorld(scenario.mapSeed);
+		scenario.regions.forEach((r, i) => {
+			r.vaccinatedFull = kept[i].vaccinatedFull;
+			r.vaccinatedPartial = kept[i].vaccinatedPartial;
+			r.policy = kept[i].policy;
+		});
 		restart();
 		frame();
 	}
@@ -134,7 +139,6 @@
 	<TopBar
 		{diseaseId}
 		{speed}
-		travel={scenario.travelScale ?? 1}
 		day={telemetry?.day ?? 0}
 		ondisease={(id) => {
 			diseaseId = id;
@@ -143,10 +147,6 @@
 		onspeed={(s) => {
 			speed = s;
 			sim.send({ type: 'speed', value: s });
-		}}
-		ontravel={(t) => {
-			scenario.travelScale = t;
-			restart();
 		}}
 		onrestart={() => {
 			seed++;
@@ -176,6 +176,7 @@
 					x={pos.x}
 					y={pos.y}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
+					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 				/>
 			{/each}
@@ -211,6 +212,7 @@
 					y={0}
 					docked
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
+					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 				/>
 			{/each}

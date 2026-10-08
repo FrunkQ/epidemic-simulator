@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, Region, RegionTelemetry } from '../sim/types';
 
@@ -13,6 +14,8 @@
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
 		onvaccination: (full: number, partial: number) => void;
+		/** A health policy slider moved; applies live, without a restart. */
+		onpolicy: (key: LivePolicyKey, value: number) => void;
 		onseed: () => void;
 	}
 
@@ -25,9 +28,13 @@
 		y,
 		docked = false,
 		onvaccination,
+		onpolicy,
 		onseed
 	}: Props = $props();
-	let open = $state(false);
+	/** Which settings panel is open, if any. */
+	let panel: 'vaccination' | 'policy' | null = $state(null);
+	let open = $derived(panel !== null);
+	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
 	const people = (dots: number) => (dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
@@ -45,9 +52,20 @@
 >
 	<header>
 		<h2>{region.name}</h2>
-		<button class="toggle" onclick={() => (open = !open)} aria-expanded={open}>
-			{open ? 'Done' : 'Vaccination'}
-		</button>
+		<div class="toggles">
+			<button
+				class="toggle"
+				class:active={panel === 'vaccination'}
+				onclick={() => toggle('vaccination')}
+				aria-expanded={panel === 'vaccination'}>Vaccination</button
+			>
+			<button
+				class="toggle"
+				class:active={panel === 'policy'}
+				onclick={() => toggle('policy')}
+				aria-expanded={panel === 'policy'}>Health policy</button
+			>
+		</div>
 	</header>
 	<p class="summary">
 		<i style:background={COLOURS.full}></i>{pct(region.vaccinatedFull)}
@@ -56,7 +74,25 @@
 		{/if}
 		vaccinated
 	</p>
-	{#if open}
+	{#if panel === 'policy'}
+		<p class="note">Changes apply straight away, without restarting.</p>
+		{#each LIVE_POLICY_FIELDS as f (f.key)}
+			{@const value = region.policy[f.key].value}
+			<label>
+				<span>{f.label} <b>{f.format(value)}</b></span>
+				<input
+					type="range"
+					min={f.min}
+					max={f.max}
+					step={f.step}
+					{value}
+					onchange={(e) => onpolicy(f.key, Number(e.currentTarget.value))}
+				/>
+				<small>{f.explain}</small>
+			</label>
+		{/each}
+	{/if}
+	{#if panel === 'vaccination'}
 		<label>
 			<span>Fully vaccinated <b>{pct(region.vaccinatedFull)}</b></span>
 			<input
@@ -109,10 +145,10 @@
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 	}
 	.card {
-		width: 200px;
+		width: 210px;
 	}
 	.card.open {
-		width: 230px;
+		width: 250px;
 		z-index: 2;
 	}
 	.card.docked {
@@ -133,13 +169,15 @@
 	}
 	header {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: center;
-		gap: 8px;
+		gap: 2px 8px;
 	}
 	h2 {
 		font-size: 13px;
 		margin: 0 0 4px;
+		white-space: nowrap;
 	}
 	label {
 		display: block;
@@ -173,9 +211,20 @@
 		width: 100%;
 		margin-top: 6px;
 	}
+	.toggles {
+		display: flex;
+		gap: 4px;
+	}
 	.toggle {
 		padding: 1px 6px;
 		font-size: 11px;
+	}
+	.toggle.active {
+		background: #3a6590;
+	}
+	.note {
+		margin: 2px 0 4px;
+		color: #9fb3c8;
 	}
 	.counts {
 		display: flex;

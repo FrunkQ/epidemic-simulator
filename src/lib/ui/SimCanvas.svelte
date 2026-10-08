@@ -17,6 +17,9 @@
 	let { sim, ontelemetry, onresize, onview }: Props = $props();
 	let canvas: HTMLCanvasElement;
 	let host: HTMLDivElement;
+	/** Dev builds only (10): frames per second, refreshed twice a second. */
+	const showFps = import.meta.env.DEV;
+	let fps = $state(0);
 
 	// Pan with one pointer, pinch-zoom with two, wheel to zoom at the cursor.
 	// Not reactive on purpose: only the event handlers read it.
@@ -91,7 +94,17 @@
 		let lastPublish = 0;
 		let carry = 0;
 		let frame = 0;
+		let fpsFrames = 0;
+		let fpsSince = last;
 		const loop = (now: number) => {
+			if (showFps) {
+				fpsFrames++;
+				if (now - fpsSince >= 500) {
+					fps = Math.round((fpsFrames * 1000) / (now - fpsSince));
+					fpsFrames = 0;
+					fpsSince = now;
+				}
+			}
 			const dt = Math.min(250, now - last);
 			last = now;
 			// Fixed timestep: turn elapsed time into whole ticks, capped per frame.
@@ -125,6 +138,7 @@
 		{onwheel}
 		aria-label="Map of the populations. Drag to move around, scroll or pinch to zoom."
 	></canvas>
+	{#if showFps}<span class="fps">{fps} fps</span>{/if}
 </div>
 
 <style>
@@ -142,5 +156,15 @@
 	}
 	canvas:active {
 		cursor: grabbing;
+	}
+	.fps {
+		position: absolute;
+		left: 8px;
+		bottom: 8px;
+		font:
+			11px ui-monospace,
+			monospace;
+		color: #9fb3c8;
+		pointer-events: none;
 	}
 </style>

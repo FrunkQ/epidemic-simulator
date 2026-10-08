@@ -11,11 +11,10 @@ import {
 	TICKS_PER_DAY
 } from './constants';
 import { loadDisease } from '../config';
-import { BEHAVIOUR } from '../config/behaviour';
 import { advanceIllness, infect, transmit, type DiseaseHooks } from './disease';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
-import type { World } from './geography';
+import { generateWorld, type World } from './geography';
 import { Renderer } from './render';
 import { generateRoutes } from './routes';
 import { Transit } from './transit';
@@ -27,6 +26,7 @@ import {
 	type Command,
 	type DiseaseId,
 	type DiseaseRuntime,
+	type HealthPolicy,
 	type Region,
 	type RegionHistory,
 	type Route,
@@ -45,8 +45,6 @@ export interface SimulationOptions {
 	diseaseId: DiseaseId;
 	/** Calibration and tests only: use these disease numbers instead of loading diseaseId. */
 	disease?: DiseaseRuntime;
-	/** The map. Without one there are no routes, so no travel. */
-	world?: World;
 	/** Dot pool size; tests may use a smaller one. */
 	capacity?: number;
 	/**
@@ -120,7 +118,6 @@ export class Simulation {
 			onDeath: () => {}
 		};
 		this.diseaseOverride = options.disease ?? null;
-		this.world = options.world ?? null;
 		this.setup(scenario, options.diseaseId, options.seed);
 	}
 
@@ -141,10 +138,12 @@ export class Simulation {
 		return this.routeList;
 	}
 
+	/** The map built from scenario.mapSeed (null when the scenario has none). */
 	get map(): World | null {
 		return this.world;
 	}
 
+	/** Planes in the air, for overlays and tests. */
 	get planes(): Transit {
 		return this.transit;
 	}
@@ -153,14 +152,13 @@ export class Simulation {
 		return this.radii[region];
 	}
 
-	/** Setup change: rebuild everything and restart at day 0. Pass a world to change the map. */
-	setup(
-		scenario: Scenario,
-		diseaseId: DiseaseId = this.diseaseId,
-		seed: number = this.seed,
-		world: World | null = this.world
-	): void {
-		this.world = world;
+	/**
+	 * Setup change: rebuild everything and restart at day 0. The map comes from scenario.mapSeed,
+	 * so a run is reproducible from the scenario and the seed.
+	 */
+	setup(scenario: Scenario, diseaseId: DiseaseId = this.diseaseId, seed: number = this.seed): void {
+		if (scenario.mapSeed === null) this.world = null;
+		else if (this.world?.seed !== scenario.mapSeed) this.world = generateWorld(scenario.mapSeed);
 		this.scenario = scenario;
 		this.diseaseId = diseaseId;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
@@ -179,21 +177,16 @@ export class Simulation {
 		const { dots, peoplePerDot } = allocateDots(regions, this.agents.capacity);
 		this.regionDots = dots;
 		this.peoplePerDot = peoplePerDot;
-		// Beds an outbreak could use, in dots (the same unit as the counts), so a small population
-		// still gets a fraction of a bed rather than none. The UI multiplies by peoplePerDot.
-		this.bedCapacity = dots.map(
-			(count, r) => (count * regions[r].hospitalBedsPerThousand * BEHAVIOUR.spareBedShare.value) / 1000
-		);
+		this.bedCapacity = regions.map((reg, r) => bedsInDots(dots[r], reg.policy));
 		this.spawn();
 		this.routeList = this.world ? generateRoutes(this.world, regions, this.radii) : [];
 		this.transit = new Transit(this.agents.capacity, regions.length);
-		this.transit.travelScale = scenario.travelScale ?? 1;
 		this.grid = new SpatialGrid(
 			regions.map((reg, r) => [reg.cx, reg.cy, this.radii[r]]),
 			disease.transmissionRadius,
 			this.agents.capacity
 		);
-		this.counters.recount(this.agents);
+		this.counters.recount(this.agents, this.routeList);
 		this.counters.sample(0);
 	}
 
@@ -202,9 +195,9 @@ export class Simulation {
 		const rng = this.rng;
 		a.reset();
 		let slot = 0;
-		const fatigueMean = BEHAVIOUR.lockdownFatigueMeanDays.value * TICKS_PER_DAY;
-		const fatigueSd = BEHAVIOUR.lockdownFatigueSdDays.value * TICKS_PER_DAY;
 		this.scenario.regions.forEach((reg, r) => {
+			const fatigueMean = reg.policy.lockdownFatigueMeanDays.value * TICKS_PER_DAY;
+			const fatigueSd = reg.policy.lockdownFatigueSdDays.value * TICKS_PER_DAY;
 			const density = Math.min(MAX_DENSITY, Math.max(MIN_DENSITY, reg.density));
 			const count = this.regionDots[r];
 			const rad = regionRadius(count, density);
@@ -275,16 +268,28 @@ export class Simulation {
 		advanceIllness(a, this.disease, this.rng, this.mortalityMultiplier, this.hooks);
 		// 7. Waning immunity: arrives with step 3 of the build.
 		// 8. Telemetry counters.
-		this.counters.recount(a);
+		this.counters.recount(a, this.routeList);
 		if (this.tick % TICKS_PER_DAY === 0) this.counters.sample(this.day);
 	}
 
 	private applyCommands(): void {
 		for (const c of this.queue) {
 			if (c.type === 'seed') this.seedCases(c.region, c.count);
+			else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
 			// lockdown, flights, route and massTest arrive with step 3 of the build.
 		}
 		this.queue.length = 0;
+	}
+
+	/**
+	 * A live policy change for one population: travel reads it on the next departure, and its spare
+	 * beds are recounted. Nothing else about the population changes, and no other population.
+	 */
+	private setPolicy(region: number, policy: HealthPolicy): void {
+		const reg = this.scenario.regions[region];
+		if (!reg) return;
+		reg.policy = policy;
+		this.bedCapacity[region] = bedsInDots(this.regionDots[region], policy);
 	}
 
 	/** Infect `count` random unprotected dots in a region (index cases). */
@@ -349,6 +354,7 @@ export class Simulation {
 			fatiguedShare: 0,
 			testCooldown: 0
 		}));
+		const inTransit = c.regionCounts(this.scenario.regions.length);
 		return {
 			tick: this.tick,
 			day: this.day,
@@ -356,12 +362,21 @@ export class Simulation {
 			peoplePerDot: this.peoplePerDot,
 			travelling: this.transit.travellers(this.agents),
 			regions,
-			totals: sumCounts(regions.map((r) => r.counts)),
+			inTransit,
+			totals: sumCounts([...regions.map((r) => r.counts), inTransit]),
 			latest: this.scenario.regions.map((_, r) => c.latest(r)),
 			historyVersion: c.version,
 			events: this.events.slice()
 		};
 	}
+}
+
+/**
+ * Spare hospital beds an outbreak could use, in dots (the same unit as the counts), so a small
+ * population still gets a fraction of a bed rather than none. The UI multiplies by peoplePerDot.
+ */
+function bedsInDots(dots: number, policy: HealthPolicy): number {
+	return (dots * policy.hospitalBedsPerThousand.value * policy.spareBedShare.value) / 1000;
 }
 
 export function createSimulation(scenario: Scenario, options: SimulationOptions): Simulation {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { microcosm } from '../../src/lib/config/scenarios';
-import { START_MAPS } from '../../src/lib/config/startMaps.generated';
+import { DISEASES } from '../../src/lib/config/diseases';
+import { withValue } from '../../src/lib/config/healthPolicy';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
-import { generateWorld } from '../../src/lib/sim/geography';
+import { TRAVEL_DAYS } from '../../src/lib/sim/routes';
 import { State } from '../../src/lib/sim/types';
 
 /**
@@ -11,14 +12,13 @@ import { State } from '../../src/lib/sim/types';
  * still infectious when they arrive, per kind of route.
  */
 function arrivals(seed: number) {
-	const world = generateWorld(START_MAPS[0].seed);
 	const scenario = microcosm(0);
 	for (const r of scenario.regions) {
 		r.vaccinatedFull = 0;
 		r.vaccinatedPartial = 0;
+		r.policy = withValue(r.policy, 'travelFrequency', 3);
 	}
-	scenario.travelScale = 3;
-	const sim = createSimulation(scenario, { seed, diseaseId: 'measles', world });
+	const sim = createSimulation(scenario, { seed, diseaseId: 'measles' });
 	sim.send({ type: 'seed', region: 1, count: 20 });
 	const a = sim.agents;
 	const leftSilent = new Map<number, string>();
@@ -64,8 +64,7 @@ describe('lesson 2: fast travel beats burnout, slow travel does not', () => {
 
 describe('travel keeps populations level', () => {
 	it('moves people both ways without draining any city', () => {
-		const world = generateWorld(START_MAPS[0].seed);
-		const sim = createSimulation(microcosm(0), { seed: 9, diseaseId: 'flu', world });
+		const sim = createSimulation(microcosm(0), { seed: 9, diseaseId: 'flu' });
 		const before = sim.snapshot().regions.map((r) => r.dots);
 		sim.step(60 * TICKS_PER_DAY);
 		const snap = sim.snapshot();
@@ -74,5 +73,51 @@ describe('travel keeps populations level', () => {
 			const now = Object.values({ ...r.counts, everInfected: 0 }).reduce((a, b) => a + b, 0);
 			expect(Math.abs(now - before[i]) / before[i]).toBeLessThan(0.1);
 		});
+	});
+});
+
+describe('every dot is counted once, travellers included', () => {
+	it('keeps totals equal to the dots, and deaths on a route in the counts, every day', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 3);
+		}
+		const sim = createSimulation(scenario, { seed: 7, diseaseId: 'pertussis' });
+		sim.send({ type: 'seed', region: 1, count: 20 });
+		const a = sim.agents;
+		let diedOnRoute = 0;
+		const counted = new Uint8Array(a.capacity);
+		for (let day = 1; day <= 150; day++) {
+			for (let t = 0; t < TICKS_PER_DAY; t++) {
+				sim.step(1);
+				for (let i = 0; i < a.activeCount; i++)
+					if (a.route[i] >= 0 && a.state[i] === State.DECEASED && !counted[i]) {
+						counted[i] = 1;
+						diedOnRoute++;
+					}
+			}
+			const snap = sim.snapshot();
+			let dead = 0;
+			for (let i = 0; i < a.activeCount; i++) if (a.state[i] === State.DECEASED) dead++;
+			expect(snap.totals.deceased, `day ${day}`).toBe(dead);
+			const t = snap.totals;
+			const everyone =
+				t.unprotected + t.full + t.partial + t.silent + t.symptomatic + t.recovered + t.deceased;
+			expect(everyone, `day ${day}`).toBe(a.activeCount);
+		}
+		// The scenario that lost deaths before: some people did die on the way.
+		expect(diedOnRoute).toBeGreaterThan(0);
+	});
+});
+
+describe('journey times (config)', () => {
+	it('keeps road and ferry trips longer than a measles case lasts, so it burns out on the way', () => {
+		const measles = DISEASES.measles;
+		const caseDays = measles.silentDays.value + measles.illDays.value;
+		expect(TRAVEL_DAYS.road).toBeGreaterThan(caseDays);
+		expect(TRAVEL_DAYS.ferry).toBeGreaterThan(caseDays);
+		expect(TRAVEL_DAYS.air).toBeLessThan(measles.silentDays.value);
 	});
 });

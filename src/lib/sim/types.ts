@@ -50,6 +50,7 @@ export interface Banded extends Sourced<Bands> {
  */
 export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
 export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
+export type HealthPolicy = import('../config/healthPolicy').HealthPolicy;
 
 /**
  * Deaths caused by a vaccine (6.13). Every kind carries sources, so "no deaths" can't be claimed
@@ -214,8 +215,8 @@ export interface Region {
 	vaccinatedFull: number;
 	/** Share partly vaccinated, 0 to 1. */
 	vaccinatedPartial: number;
-	/** Hospital beds per 1,000 people, so capacity scales with the population. */
-	hospitalBedsPerThousand: number;
+	/** Healthcare and behaviour settings (4.2); beds and travel change live via a 'policy' command. */
+	policy: HealthPolicy;
 	hub?: { x: number; y: number };
 }
 
@@ -232,7 +233,10 @@ export interface Route {
 	cumulative: number[];
 	length: number;
 	travelDays: number;
-	/** Trips per day in each direction at the default travel setting. */
+	/**
+	 * Base trips per day in each direction. The running rate is this x the lower of its two end
+	 * populations' travel frequency, the same both ways (4.2).
+	 */
 	tripsPerDay: number;
 	open: boolean;
 	/** Distance along the route where a closed border's barrier stands (ground routes). */
@@ -240,11 +244,12 @@ export interface Route {
 }
 
 export interface Scenario {
-	/** Seed of the procedural map; routes are generated from it and the regions. */
-	mapSeed: number;
+	/**
+	 * Seed of the procedural map. The engine builds the map and routes from it and the regions, so
+	 * a run is reproducible from the scenario and the seed. null: no map, so no routes (tests).
+	 */
+	mapSeed: number | null;
 	regions: Region[];
-	/** Multiplies how often people travel (the Travel slider); 1 is normal. */
-	travelScale?: number;
 }
 
 export type Speed = 0 | 0.5 | 1 | 2 | 4;
@@ -255,7 +260,9 @@ export type Command =
 	| { type: 'route'; route: number; open: boolean }
 	| { type: 'massTest'; region: number }
 	| { type: 'speed'; value: Speed }
-	| { type: 'seed'; region: number; count: number };
+	| { type: 'seed'; region: number; count: number }
+	/** Replace one population's health policy; applies live (beds, travel), without a restart. */
+	| { type: 'policy'; region: number; policy: HealthPolicy };
 
 /** Counts by display colour. */
 export interface Counts {
@@ -293,6 +300,9 @@ export interface Telemetry {
 	/** Dots on a road, ferry or plane right now. */
 	travelling: number;
 	regions: RegionTelemetry[];
+	/** Dots on a road, ferry or plane, by colour. A death on a route counts in its origin region. */
+	inTransit: Counts;
+	/** Every dot: the regions plus inTransit. */
 	totals: Counts;
 	/** Today's history sample per region. The full history comes from sim.history(region). */
 	latest: Record<HistoryChannel, number>[];
