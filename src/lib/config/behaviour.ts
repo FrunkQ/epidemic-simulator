@@ -32,7 +32,6 @@ export interface BehaviourConfig {
 	strainSlope: Sourced;
 }
 
-
 /** Why the travel numbers are placeholders: they are sized for the sim, not taken from data. */
 const TRAVEL_PLACEHOLDER =
 	'Sized so a few dots a day travel between the 3 cities; real trip and flight rates per city pair come with country data in step 4.';

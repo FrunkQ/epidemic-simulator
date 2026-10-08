@@ -5,9 +5,9 @@ import { POPULATION } from '../../src/lib/config/population';
 import { defaultPolicy, ENGLAND_POLICY, withValue } from '../../src/lib/config/healthPolicy';
 import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { DISEASES } from '../../src/lib/config/diseases';
-import { vaccineKey } from '../../src/lib/config/vaccines';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation, strainMultiplier } from '../../src/lib/sim/engine';
+import { hospitalRegion } from '../../src/lib/sim/disease';
 import {
 	Protection,
 	State,
@@ -130,15 +130,17 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(Math.abs(rate - d * 0.2)).toBeLessThan(tol(d * 0.2, n));
 	});
 
-	it('gives an unfinished course no severe protection where none is sourced, so it is never better than a full one', () => {
+	it('never protects an unfinished course better than a full one, against infection or serious illness', () => {
+		// Overall protection against serious illness: kept from catching it, or caught it but protected.
+		const overall = (infection: number, breakthrough: number) => 1 - (1 - infection) * (1 - breakthrough);
 		for (const config of Object.values(DISEASES) as DiseaseConfig[]) {
-			const disease = loadDisease(config.id as DiseaseId);
-			for (const v of disease.vaccines) {
-				if (!v.hasPartialCourse || v.partialSevere <= v.fullSevere) continue;
-				// Only a sourced partial-course figure may beat the full course.
-				const entry = config.vaccines?.find((e) => vaccineKey(e) === v.key);
-				const named = config.vaccines?.find((e) => vaccineKey(e) === config.partialCourse);
-				expect((entry?.partial ?? named?.partial)?.severe, `${config.id} ${v.key}`).toBeDefined();
+			for (const v of loadDisease(config.id as DiseaseId).vaccines) {
+				if (!v.hasPartialCourse) continue;
+				const key = `${config.id} ${v.key}`;
+				expect(v.fullInfection, key).toBeGreaterThanOrEqual(v.partialInfection);
+				expect(overall(v.fullInfection, v.fullSevere), key).toBeGreaterThanOrEqual(
+					overall(v.partialInfection, v.partialSevere) - 1e-9
+				);
 			}
 		}
 	});
@@ -179,7 +181,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(after.pressure - before.pressure).toBeCloseTo(h / after.beds, 6);
 	});
 
-	it('counts every ill dot’s expected beds, travellers at their trip’s origin', () => {
+	it('counts every ill dot’s expected beds in its region, and an ill traveller’s bed and strain in its origin', () => {
 		const scenario = microcosm(0);
 		for (const r of scenario.regions) {
 			r.vaccinatedFull = 0;
@@ -190,17 +192,25 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		const disease = loadDisease('covid19');
 		sim.send({ type: 'seed', region: 0, count: 50 });
 		const a = sim.agents;
+		const routes = sim.routes;
 		let travellersIll = 0;
 		for (let day = 0; day < 40; day++) {
 			sim.step(TICKS_PER_DAY);
-			let expected = 0;
+			const expected = new Array(scenario.regions.length).fill(0);
 			for (let i = 0; i < a.activeCount; i++) {
 				if (a.state[i] !== State.SYMPTOMATIC) continue;
-				expected += disease.hospitalByBand[a.ageBand[i]] * (1 - a.severe[i]);
-				if (a.region[i] < 0) travellersIll++;
+				let home = a.region[i];
+				if (home < 0) {
+					// Worked out here from the route, not with the engine's helper.
+					const route = routes[a.route[i]];
+					home = a.routeDir[i] > 0 ? route.from : route.to;
+					travellersIll++;
+					// Its strain comes from the same region its bed is counted in.
+					expect(hospitalRegion(a, routes, i)).toBe(home);
+				}
+				expected[home] += disease.hospitalByBand[a.ageBand[i]] * (1 - a.severe[i]);
 			}
-			const total = sim.snapshot().regions.reduce((t, r) => t + r.patients, 0);
-			expect(total).toBeCloseTo(expected, 4);
+			sim.snapshot().regions.forEach((r, k) => expect(r.patients, `region ${k}`).toBeCloseTo(expected[k], 4));
 		}
 		expect(travellersIll).toBeGreaterThan(0);
 	});

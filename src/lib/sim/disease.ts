@@ -31,23 +31,29 @@ function breakthrough(infection: number, severe: number | undefined): number {
 }
 
 /**
- * One vaccine for the engine. "Partly vaccinated" means an unfinished course of this vaccine, or,
- * when it has none, of the entry the disease's `partialCourse` names (6.13).
+ * A full course's protection against severe illness, as published. With no figure of its own it
+ * takes the larger of its infection figure (no extra protection for breakthroughs) and the
+ * unfinished course's sourced figure, because a full course includes the unfinished one (6.2).
  */
-function toVaccineRuntime(config: DiseaseConfig, v: Vaccine): VaccineRuntime {
+export function fullCourseSevere(v: Vaccine): number | undefined {
+	if (v.full.severe) return v.full.severe.value;
+	const partial = v.partial?.severe?.value;
+	return partial === undefined ? undefined : Math.max(v.full.infection.value, partial);
+}
+
+/**
+ * One vaccine for the engine. "Partly vaccinated" means an unfinished course of this vaccine; a
+ * version with none has nobody partly vaccinated (6.13).
+ */
+function toVaccineRuntime(v: Vaccine): VaccineRuntime {
 	const fullInfection = v.full.infection.value;
-	const course = v.partial
-		? v
-		: config.partialCourse
-			? config.vaccines?.find((e) => vaccineKey(e) === config.partialCourse)
-			: undefined;
-	const partial = course?.partial;
+	const partial = v.partial;
 	const partialInfection = partial?.infection?.value ?? 0;
 	return {
 		key: vaccineKey(v),
 		exists: true,
 		fullInfection,
-		fullSevere: breakthrough(fullInfection, v.full.severe?.value),
+		fullSevere: breakthrough(fullInfection, fullCourseSevere(v)),
 		hasPartialCourse: partial !== undefined,
 		partialInfection,
 		// No sourced figure means no severe protection, for either course (6.2).
@@ -91,7 +97,7 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		hospitalByBand: bands(config, config.hospitalisedByAge, config.hospitalisedShare.value),
 		waningMeanTicks: halfLifeTicks(config.waningDays.value),
 		afterInfectionSevere: after ? breakthrough(after.infection.value, after.severe.value) : 0,
-		vaccines: def ? [def, ...others].map((v) => toVaccineRuntime(config, v)) : [{ ...NO_VACCINE }],
+		vaccines: def ? [def, ...others].map(toVaccineRuntime) : [{ ...NO_VACCINE }],
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};

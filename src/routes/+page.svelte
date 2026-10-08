@@ -21,6 +21,8 @@
 		const disease = loadDisease(diseaseId);
 		return scenario.regions.some((r) => vaccineFor(disease, r.vaccine).hasPartialCourse);
 	});
+	/** A disease with no vaccine has nobody vaccinated, so the legend leaves vaccination out. */
+	const hasVaccine = $derived(loadDisease(diseaseId).vaccines[0].exists);
 	let seed = $state(1);
 	let speed: Speed = $state(1);
 	const sim = createSimulation(microcosm(0), { seed: 1, diseaseId: 'measles' });
@@ -235,7 +237,7 @@
 	<footer>
 		{#if telemetry}
 			<Charts {telemetry} history={histories} />
-			<Legend peoplePerDot={telemetry.peoplePerDot} {hasPartialCourse} />
+			<Legend peoplePerDot={telemetry.peoplePerDot} {hasVaccine} {hasPartialCourse} />
 		{/if}
 	</footer>
 </main>

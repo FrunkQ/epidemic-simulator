@@ -119,7 +119,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'32 of 39 studies (82%) reported detrimental adjusted odds/hazard ratio for caseload surge-mortality outcomes, reporting point estimates of up to four-fold increased risk of mortality. Markedly variable surge strain measures precluded meta-analysis.',
 		location: 'Abstract, Data Synthesis and Conclusions (52(7):1097-1112)',
-		why: 'The strongest evidence on hospital strain and death in COVID-19. It finds strain raises deaths in most studies, with effects up to four-fold, so a cap of 2.0 sits inside the range, but it pools no figure; the values come from the cohort studies it reviews.',
+		why: `The strongest evidence on hospital strain and death in COVID-19. It finds strain raises deaths in most studies, with effects up to four-fold, so a cap of ${fmt(STRAIN.cap, 1)} sits inside the range, but it pools no figure; the values come from the cohort studies it reviews.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
@@ -2322,7 +2322,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks. Table S2, week 40: ancestral, Alpha and Delta reinfection 78.6% (49.8-93.6), severe disease 90.2% (69.7-97.5); Omicron BA.1 reinfection 36.1% (24.4-51.3), severe disease 88.9% (84.7-90.9).',
 		location: 'Abstract (findings); appendix Table S2 (starts p 50; week-40 row p 62)',
-		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022). Reinfection and severe protection come from the same table and the same week (${STEIN_40_WEEKS.weeks}), so the protection against severe illness left for a reinfection is worked out as 1 - (1 - severe) / (1 - reinfection): ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.preOmicron.reinfection, STEIN_40_WEEKS.preOmicron.severe), 3)} before Omicron and ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.ba1.reinfection, STEIN_40_WEEKS.ba1.severe), 3)} for BA.1. The BA.1 pair is protection from mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.`,
+		why: `Meta-analysis: protection from a past infection stayed at ${fmt(STEIN_40_WEEKS.preOmicron.reinfection * 100, 1)}% at ${STEIN_40_WEEKS.weeks} weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022). Reinfection and severe protection come from the same table and the same week (${STEIN_40_WEEKS.weeks}), so the protection against severe illness left for a reinfection is worked out as 1 - (1 - severe) / (1 - reinfection): ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.preOmicron.reinfection, STEIN_40_WEEKS.preOmicron.severe), 3)} before Omicron and ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.ba1.reinfection, STEIN_40_WEEKS.ba1.severe), 3)} for BA.1. The BA.1 pair is protection from mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.`,
 		context:
 			'Studies from many countries; non-vaccinated comparisons or studies adjusted for vaccination; hybrid immunity excluded',
 		verified: {
@@ -2554,7 +2554,7 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No meta-analysis gives one-dose protection of the original vaccine against Omicron infection (Mohammed 2023 includes only completed courses).',
 		doi: '10.1056/nejmoa2203209',
-		usedFor: ['covid19omicron.partialEfficacy', 'covid19omicron.vaccines.covid-original.partial.infection'],
+		usedFor: ['covid19omicron.vaccines.covid-original.partial.infection'],
 		quote:
 			'Among partially vaccinated children, vaccine effectiveness was 13.6% (95% confidence interval [CI], 11.7 to 15.5) against all SARS-CoV-2 infections, 24.3% (95% CI, 19.5 to 28.9) against PCR-confirmed SARS-CoV-2 infection, and 42.3% (95% CI, 24.9 to 55.7) against Covid-19-related hospitalization',
 		location: 'Abstract, Results; definitions in Abstract, Methods',

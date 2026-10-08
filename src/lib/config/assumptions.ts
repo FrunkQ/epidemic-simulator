@@ -1,3 +1,5 @@
+import { DISEASES } from './diseases';
+import type { DiseaseConfig } from '../sim/types';
 import { EU_CURATIVE_OCCUPANCY_2023, EU_OCCUPANCY_MISSING, STRAIN } from './derived';
 
 const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -31,3 +33,27 @@ export const ASSUMPTIONS = {
 		'The England preset uses NHS England’s beds and how full they normally are, with UK ages. It is England’s NHS, not the whole UK, because no UK-wide figure for short-term hospital beds is published.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`
 } as const;
+
+/** Vaccines whose full course has no severe figure and borrows the unfinished course's (6.2). */
+export const FULL_COURSE_BORROWS_PARTIAL: string[] = Object.values(
+	DISEASES as Record<string, DiseaseConfig>
+).flatMap((d) =>
+	(d.vaccines ?? [])
+		.filter((v) => !v.full.severe && v.partial?.severe)
+		.map(
+			(v) =>
+				`${d.name}, ${v.label}: no study gives a full course’s protection against serious illness, so the sim uses the unfinished course’s figure, because a full course includes it.`
+		)
+);
+
+/** Vaccines whose unfinished course has no figure against catching the disease. */
+export const PARTIAL_NO_INFECTION_FIGURE: string[] = Object.values(
+	DISEASES as Record<string, DiseaseConfig>
+).flatMap((d) =>
+	(d.vaccines ?? [])
+		.filter((v) => v.partial && !v.partial.infection)
+		.map(
+			(v) =>
+				`${d.name}, ${v.label}: no study gives how well an unfinished course stops people catching it, so the sim gives an unfinished course no protection against catching it.`
+		)
+);

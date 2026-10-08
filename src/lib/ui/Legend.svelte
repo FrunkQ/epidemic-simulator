@@ -3,10 +3,12 @@
 
 	interface Props {
 		peoplePerDot: number;
+		/** A disease with no vaccine has nobody vaccinated. */
+		hasVaccine: boolean;
 		/** Diseases whose vaccine is one dose have no "partly vaccinated". */
 		hasPartialCourse: boolean;
 	}
-	let { peoplePerDot, hasPartialCourse }: Props = $props();
+	let { peoplePerDot, hasVaccine, hasPartialCourse }: Props = $props();
 
 	const allItems = [
 		{ colour: COLOURS.unprotected, label: 'Not protected' },
@@ -18,7 +20,11 @@
 		{ colour: COLOURS.deceased, label: 'Died' }
 	];
 	let items = $derived(
-		hasPartialCourse ? allItems : allItems.filter((item) => item.colour !== COLOURS.partial)
+		allItems.filter(
+			(item) =>
+				(hasVaccine || item.colour !== COLOURS.full) &&
+				(hasVaccine && hasPartialCourse ? true : item.colour !== COLOURS.partial)
+		)
 	);
 </script>
 

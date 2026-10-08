@@ -33,7 +33,7 @@ export const CONFIG: Record<string, object> = {
 	covidAgeIfr: { COVID19_IFR_PERCENT_BY_AGE, UK_2019_AGE_GROUPS, COVID19_SEVERE_PERCENT_BY_GROUP }
 };
 /** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb', 'partialCourse']);
+const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
 
 export function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;

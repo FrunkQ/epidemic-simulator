@@ -88,11 +88,15 @@
 		</div>
 	</header>
 	<p class="summary">
-		<i style:background={COLOURS.full}></i>{pct(region.vaccinatedFull)}
-		{#if partialEfficacy !== undefined}
-			fully · <i style:background={COLOURS.partial}></i>{pct(region.vaccinatedPartial)} partly
+		{#if !vaccine.exists}
+			No vaccine
+		{:else}
+			<i style:background={COLOURS.full}></i>{pct(region.vaccinatedFull)}
+			{#if partialEfficacy !== undefined}
+				fully · <i style:background={COLOURS.partial}></i>{pct(region.vaccinatedPartial)} partly
+			{/if}
+			vaccinated
 		{/if}
-		vaccinated
 	</p>
 	{#if panel === 'policy'}
 		<p class="note">Changes apply straight away, without restarting.</p>
@@ -157,7 +161,11 @@
 					value={region.vaccinatedPartial}
 					onchange={(e) => onvaccination(region.vaccinatedFull, Number(e.currentTarget.value))}
 				/>
-				<small>An unfinished course {protects(partialEfficacy)}.</small>
+				<small
+					>An unfinished course {protects(partialEfficacy)} from catching it. {#if vaccine.partialSevere > 0}Of
+						those it doesn't stop, it keeps about {Math.round(vaccine.partialSevere * 100)} in 100 out of serious
+						illness.{/if}</small
+				>
 			</label>
 		{/if}
 		<p class="unprotected">Not vaccinated: {pct(unprotected)}</p>

@@ -158,11 +158,6 @@ export interface DiseaseConfig {
 	/** Vaccines on offer; `fullEfficacy` and `partialEfficacy` equal the default's infection values. */
 	vaccines?: Vaccine[];
 	/**
-	 * Which vaccine entry (by vaccineKey) "partly vaccinated" means, when it isn't the default's
-	 * course; e.g. Omicron-era people part-way through a primary course got the original vaccine.
-	 */
-	partialCourse?: string;
-	/**
 	 * Protection from having had the disease (6.2): against reinfection and against severe illness,
 	 * from the same source at the same time since infection. A recovered dot whose immunity has
 	 * waned keeps the severe part for breakthrough reinfections. Left out where nothing is sourced.

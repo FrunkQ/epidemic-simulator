@@ -102,7 +102,7 @@ const OMICRON_HOSPITAL_BY_AGE = omicronBands(COVID19_HOSPITAL_BY_AGE, 'perez-guz
 
 /*
  * Vaccines. Each disease's `fullEfficacy` and `partialEfficacy` are its default vaccine's
- * infection values (the same objects), until step 3 moves the engine onto `vaccines`.
+ * infection values (the same objects), kept for the herd-immunity line; the engine reads `vaccines`.
  * Risk rates are per 100,000 doses; deaths use VaccineDeathRate (6.13). Worked-out numbers come
  * from derived.ts, which citations.ts also uses for its prose.
  */
@@ -491,7 +491,10 @@ export const DISEASES = {
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
 		},
 		afterInfection: {
-			infection: { value: STEIN_40_WEEKS.preOmicron.reinfection, sources: ['stein2023-covid-past-infection'] },
+			infection: {
+				value: STEIN_40_WEEKS.preOmicron.reinfection,
+				sources: ['stein2023-covid-past-infection']
+			},
 			severe: { value: STEIN_40_WEEKS.preOmicron.severe, sources: ['stein2023-covid-past-infection'] }
 		},
 		fullEfficacy: COVID19_2021.full.infection,
@@ -531,11 +534,8 @@ export const DISEASES = {
 			infection: { value: STEIN_40_WEEKS.ba1.reinfection, sources: ['stein2023-covid-past-infection'] },
 			severe: { value: STEIN_40_WEEKS.ba1.severe, sources: ['stein2023-covid-past-infection'] }
 		},
+		// The default (updated) vaccine has no partial course, so it has no partialEfficacy (6.13).
 		fullEfficacy: OMICRON_UPDATED.full.infection,
-		// The updated vaccine has no partial-course figure, so this stays the original vaccine's
-		// one-dose figure (Tan 2022) until step 3 moves the engine onto `vaccines`.
-		partialCourse: 'covid-original',
-		partialEfficacy: OMICRON_ORIGINAL.partial.infection,
 		hospitalisedShare: {
 			value: OMICRON_HOSPITAL_PER_INFECTION / (1 - OMICRON_ASYMPTOMATIC.value),
 			sources: ['ward-2024-covid-ihr-ifr', 'perez-guzman-2023-omicron']
