@@ -36,7 +36,7 @@
 	let open = $derived(panel !== null);
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
-	const people = (dots: number) => (dots * peoplePerDot).toLocaleString();
+	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
 	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
 	let partialEfficacy = $derived(disease.partialEfficacy?.value);
@@ -91,6 +91,12 @@
 				<small>{f.explain}</small>
 			</label>
 		{/each}
+		{#if t}
+			<p class="note">
+				Spare beds for outbreak patients: about <b>{people(t.capacity)}</b>. They start to matter when
+				hospital pressure arrives in a later version.
+			</p>
+		{/if}
 	{/if}
 	{#if panel === 'vaccination'}
 		<label>

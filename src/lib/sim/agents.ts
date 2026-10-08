@@ -27,8 +27,6 @@ export class Agents {
 	readonly route: Int16Array;
 	readonly routeS: Float32Array;
 	readonly routeDir: Int8Array;
-	/** Current segment of the route (ground routes). */
-	readonly routeSeg: Int16Array;
 	/** The plane an air traveller rides in, or -1. */
 	readonly planeOf: Int16Array;
 	readonly infectedTick: Int32Array;
@@ -55,7 +53,6 @@ export class Agents {
 		this.route = new Int16Array(capacity);
 		this.routeS = new Float32Array(capacity);
 		this.routeDir = new Int8Array(capacity);
-		this.routeSeg = new Int16Array(capacity);
 		this.planeOf = new Int16Array(capacity);
 		this.infectedTick = new Int32Array(capacity);
 		this.infectedBy = new Int32Array(capacity);
@@ -75,7 +72,6 @@ export class Agents {
 		this.route.fill(-1);
 		this.routeS.fill(0);
 		this.routeDir.fill(0);
-		this.routeSeg.fill(0);
 		this.planeOf.fill(-1);
 		this.infectedTick.fill(-1);
 		this.infectedBy.fill(-1);

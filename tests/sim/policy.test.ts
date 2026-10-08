@@ -54,3 +54,25 @@ describe('health policy, per population and live', () => {
 		expect(others).toBeGreaterThan(0);
 	});
 });
+
+describe('the scenario passed in', () => {
+	it('is never changed by a policy command, so the same scenario and seed reproduce the run', () => {
+		const scenario = microcosm(0);
+		const before = structuredClone(scenario);
+		const run = () => {
+			const sim = createSimulation(scenario, { seed: 4, diseaseId: 'measles' });
+			sim.send({ type: 'seed', region: 2, count: 5 });
+			sim.step(5 * TICKS_PER_DAY);
+			sim.send({
+				type: 'policy',
+				region: 1,
+				policy: withValue(scenario.regions[1].policy, 'travelFrequency', 0)
+			});
+			sim.step(40 * TICKS_PER_DAY);
+			return sim.snapshot();
+		};
+		const first = run();
+		expect(scenario).toEqual(before);
+		expect(run().regions.map((r) => r.counts)).toEqual(first.regions.map((r) => r.counts));
+	});
+});

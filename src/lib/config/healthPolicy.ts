@@ -48,7 +48,7 @@ export const LIVE_POLICY_FIELDS = [
 		max: 10,
 		step: 0.1,
 		format: (v: number) => v.toFixed(1),
-		explain: 'The EU average is about 5 beds for every 1,000 people; the UK has about 2.4.'
+		explain: `The EU average is about ${Math.round(BEHAVIOUR.hospitalBedsPerThousand.value)} beds for every 1,000 people.`
 	},
 	{
 		key: 'spareBedShare',

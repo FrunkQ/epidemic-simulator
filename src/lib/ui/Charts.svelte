@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { COLOURS } from '../sim/render';
 	import type { RegionHistory, Telemetry } from '../sim/types';
 	import LineChart from './charts/LineChart.svelte';
@@ -22,17 +23,20 @@
 	/** One dash pattern per city, so the lines differ without relying on colour. */
 	const DASHES = [undefined, '6 3', '2 3', '8 3 2 3'];
 
-	const people = (values: Int32Array) => Array.from(values, (v) => v * telemetry.peoplePerDot);
+	const people = (values: Int32Array, perDot: number) => Array.from(values, (v) => v * perDot);
 
-	const perRegion = $derived(
-		history.map((h, r) => ({
-			name: telemetry.regions[r]?.name ?? '',
-			id: telemetry.regions[r]?.id ?? r,
+	// Rebuilt only when a new day's history arrives, not on every 10 Hz snapshot: names, dots and
+	// people per dot only change on a restart, which also brings new history.
+	const perRegion = $derived.by(() => {
+		const t = untrack(() => telemetry);
+		return history.map((h, r) => ({
+			name: t.regions[r]?.name ?? '',
+			id: t.regions[r]?.id ?? r,
 			days: Array.from(h.days),
-			max: (telemetry.regions[r]?.dots ?? 1) * telemetry.peoplePerDot,
-			bands: BANDS.map((b) => ({ ...b, values: people(h.series[b.key]) })) as Band[]
-		}))
-	);
+			max: (t.regions[r]?.dots ?? 1) * t.peoplePerDot,
+			bands: BANDS.map((b) => ({ ...b, values: people(h.series[b.key], t.peoplePerDot) })) as Band[]
+		}));
+	});
 
 	const illLines = $derived(
 		perRegion.map((p, r): Line => ({

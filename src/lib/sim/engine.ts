@@ -159,7 +159,9 @@ export class Simulation {
 	setup(scenario: Scenario, diseaseId: DiseaseId = this.diseaseId, seed: number = this.seed): void {
 		if (scenario.mapSeed === null) this.world = null;
 		else if (this.world?.seed !== scenario.mapSeed) this.world = generateWorld(scenario.mapSeed);
-		this.scenario = scenario;
+		// The engine's own copy: live policy commands must never write into the caller's scenario,
+		// so the same scenario and seed always reproduce the same run.
+		this.scenario = structuredClone(scenario);
 		this.diseaseId = diseaseId;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;

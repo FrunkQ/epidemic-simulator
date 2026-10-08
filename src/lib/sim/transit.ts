@@ -239,7 +239,6 @@ export class Transit {
 		}
 		agents.region[i] = dest;
 		agents.route[i] = -1;
-		agents.routeSeg[i] = 0;
 		agents.planeOf[i] = -1;
 	}
 
@@ -256,7 +255,6 @@ export class Transit {
 		}
 		agents.region[i] = originOf(route, agents.routeDir[i]);
 		agents.route[i] = -1;
-		agents.routeSeg[i] = 0;
 		agents.planeOf[i] = -1;
 		agents.vx[i] = 0;
 		agents.vy[i] = 0;
