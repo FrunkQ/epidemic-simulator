@@ -189,6 +189,8 @@ export interface DiseaseCalibration {
 export interface VaccineRuntime {
 	/** vaccineKey of the entry, e.g. "covid-updated". */
 	key: string;
+	/** False for a disease with no vaccine: nobody spawns vaccinated, full or partial. */
+	exists: boolean;
 	/** Share of a full course for whom it works against infection (all or nothing). */
 	fullInfection: number;
 	/** Protection against severe illness for a fully vaccinated person it didn't stop (6.2). */
@@ -196,9 +198,8 @@ export interface VaccineRuntime {
 	/** False when there is no unfinished course: partly vaccinated dots spawn unprotected. */
 	hasPartialCourse: boolean;
 	partialInfection: number;
+	/** Severe protection for an unfinished course's breakthrough case; 0 when unsourced (6.2). */
 	partialSevere: number;
-	/** True where an unfinished course has no sourced severe figure: ill half as long, never severe. */
-	partialShortIll: boolean;
 	/** Mean ticks until a working vaccine stops working (waningDays / ln 2); 0 when it doesn't fade. */
 	waningMeanTicks: number;
 }
@@ -209,8 +210,6 @@ export interface DiseaseRuntime {
 	r0: number;
 	silentTicks: number;
 	illTicks: number;
-	/** The illness of an unfinished course with no severe figure (behaviour.partialIllFactor). */
-	shortIllTicks: number;
 	asymptomaticFraction: number;
 	/** All-ages deaths per symptomatic case: the fallback when age bands are switched off. */
 	mortality: number;
@@ -352,12 +351,12 @@ export interface RegionTelemetry {
 	capacity: number;
 	/** All hospital beds, in dots. */
 	beds: number;
-	/** Outbreak patients in a bed now, in dots. */
+	/** Expected outbreak patients in a bed now, in dots (fractional, 6.6); ill travellers count at their origin. */
 	patients: number;
 	/** (Beds normally occupied + outbreak patients) / all beds (6.6). 0 when hospitals are switched off. */
 	pressure: number;
 	pressureBand: PressureBand;
-	/** How much more likely a patient in a bed is to die than at this population's normal pressure. */
+	/** The strain multiplier on the odds of death for patients in a bed (1 = no strain, 6.6). */
 	strain: number;
 	lockedDown: boolean;
 	fatiguedShare: number;
@@ -396,7 +395,10 @@ export interface RegionHistory {
 	byAge: Record<AgeChannel, [Int32Array, Int32Array, Int32Array]>;
 }
 
-/** Daily channels per region, in dots; pressure is stored in thousandths (1000 = 100%). */
+/**
+ * Daily channels per region, in dots. inHospital (here and per age band) is an expected value in
+ * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%).
+ */
 export const HISTORY_CHANNELS = [
 	'silent',
 	'symptomatic',
@@ -409,7 +411,14 @@ export const HISTORY_CHANNELS = [
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 
 /** Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not). */
-export const AGE_CHANNELS = ['susceptible', 'infected', 'inHospital', 'recovered', 'deceased', 'vaccinated'] as const;
+export const AGE_CHANNELS = [
+	'susceptible',
+	'infected',
+	'inHospital',
+	'recovered',
+	'deceased',
+	'vaccinated'
+] as const;
 export type AgeChannel = (typeof AGE_CHANNELS)[number];
 
 /** Size of the drawing surface in screen pixels. The camera decides what part of the world it shows. */

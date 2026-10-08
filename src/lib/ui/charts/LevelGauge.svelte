@@ -4,12 +4,6 @@
 		at: number;
 		label: string;
 	}
-	interface Band {
-		/** Upper end of the band; the last band runs to the end of the gauge. */
-		below: number;
-		label: string;
-	}
-
 	interface Props {
 		/** Plain words saying what the gauge shows. */
 		title: string;
@@ -17,27 +11,25 @@
 		/** Right-hand end of the gauge. Values beyond it fill the gauge and say so. */
 		max: number;
 		thresholds: Threshold[];
-		/** Plain-word readings, lowest first, e.g. Coping / Under pressure / Overwhelmed. */
-		bands: Band[];
+		/** The plain-word reading, e.g. Coping / Under pressure / Overwhelmed, as the engine gives it. */
+		reading: string;
+		/** Set when the reading is a warning, so it gets a sign as well as words. */
+		warn?: boolean;
 		format: (v: number) => string;
-		/** Set on the band that is a warning, so it gets a sign as well as words. */
-		warnFrom?: number;
 		width?: number;
 	}
-	let { title, value, max, thresholds, bands, format, warnFrom, width = 200 }: Props = $props();
+	let { title, value, max, thresholds, reading, warn = false, format, width = 200 }: Props = $props();
 
 	const H = 12;
 	const xs = (v: number) => (Math.min(Math.max(v, 0), max) / max) * width;
-	const band = $derived(bands.find((b) => value < b.below) ?? bands[bands.length - 1]);
-	const warn = $derived(warnFrom !== undefined && value > warnFrom);
 </script>
 
 <figure>
 	<figcaption>
 		{title}: <b>{format(value)}</b>
-		<span class="reading" class:warn>{warn ? '⚠ ' : ''}{band.label}</span>
+		<span class="reading" class:warn>{warn ? '⚠ ' : ''}{reading}</span>
 	</figcaption>
-	<svg {width} height={H + 14} role="img" aria-label="{title}: {format(value)}, {band.label}">
+	<svg {width} height={H + 14} role="img" aria-label="{title}: {format(value)}, {reading}">
 		<rect class="track" x="0" y="0" {width} height={H} rx="4" />
 		<rect class="fill" x="0" y="0" width={Math.max(0, xs(value))} height={H} rx="4" />
 		{#each thresholds as t, k (t.label)}

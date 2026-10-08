@@ -264,8 +264,7 @@ export class Transit {
 	/** Living travellers currently on the way (for telemetry). */
 	travellers(agents: Agents): number {
 		let t = 0;
-		for (let i = 0; i < agents.activeCount; i++)
-			if (agents.route[i] >= 0 && agents.dead[i] === 0) t++;
+		for (let i = 0; i < agents.activeCount; i++) if (agents.route[i] >= 0 && agents.dead[i] === 0) t++;
 		return t;
 	}
 }

@@ -49,7 +49,7 @@ import {
 	fmt,
 	per100kFromPerMillion
 } from './derived';
-import { stackedProtection as stacked } from './vaccines';
+import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
 /**
  * Every source behind a number in config. The About page is generated from this list.
@@ -1875,12 +1875,11 @@ export const CITATIONS: Citation[] = [
 			'marburg.silentDays',
 			'marburg.illDays',
 			'marburg.fullEfficacy',
-			'marburg.partialEfficacy',
 			'marburg.about'
 		],
 		quote: 'The average MVD case fatality rate is around 50%.',
 		location: 'Key facts / Transmission / Treatment',
-		why: "mortality=0.50 taken directly, with the page's 'Case fatality rates have varied from 24% to 88% in past outbreaks.' as the range. silentDays=0 from 'People cannot transmit the disease before they have symptoms.' fullEfficacy and partialEfficacy are 0 because of 'Currently there are no vaccines or antiviral treatments approved for MVD.' The exceptional routes are the same as for Ebola and come from this page: 'Burial ceremonies that involve direct contact with the body of the deceased can also contribute to the transmission of Marburg virus.' and 'Healthcare workers have frequently been infected while treating patients with MVD.' The page's note that 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival' is why outbreaks remain deadliest where care is poor.",
+		why: "mortality=0.50 taken directly, with the page's 'Case fatality rates have varied from 24% to 88% in past outbreaks.' as the range. silentDays=0 from 'People cannot transmit the disease before they have symptoms.' fullEfficacy is 0, and nobody is vaccinated, because of 'Currently there are no vaccines or antiviral treatments approved for MVD.' The exceptional routes are the same as for Ebola and come from this page: 'Burial ceremonies that involve direct contact with the body of the deceased can also contribute to the transmission of Marburg virus.' and 'Healthcare workers have frequently been infected while treating patients with MVD.' The page's note that 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival' is why outbreaks remain deadliest where care is poor.",
 		context: "WHO's official fact sheet, dated 20 January 2025.",
 		verified: {
 			by: 'independent verification pass',
@@ -2323,7 +2322,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks. Table S2, week 40: ancestral, Alpha and Delta reinfection 78.6% (49.8-93.6), severe disease 90.2% (69.7-97.5); Omicron BA.1 reinfection 36.1% (24.4-51.3), severe disease 88.9% (84.7-90.9).',
 		location: 'Abstract (findings); appendix Table S2 (starts p 50; week-40 row p 62)',
-		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022). Reinfection and severe protection come from the same table and the same week (${STEIN_40_WEEKS.weeks}), so the protection against severe illness left for a reinfection is worked out as 1 - (1 - severe) / (1 - reinfection): ${fmt(1 - (1 - STEIN_40_WEEKS.preOmicron.severe) / (1 - STEIN_40_WEEKS.preOmicron.reinfection), 3)} before Omicron and ${fmt(1 - (1 - STEIN_40_WEEKS.ba1.severe) / (1 - STEIN_40_WEEKS.ba1.reinfection), 3)} for BA.1. The BA.1 pair is protection from mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.`,
+		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022). Reinfection and severe protection come from the same table and the same week (${STEIN_40_WEEKS.weeks}), so the protection against severe illness left for a reinfection is worked out as 1 - (1 - severe) / (1 - reinfection): ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.preOmicron.reinfection, STEIN_40_WEEKS.preOmicron.severe), 3)} before Omicron and ${fmt(breakthroughSevereProtection(STEIN_40_WEEKS.ba1.reinfection, STEIN_40_WEEKS.ba1.severe), 3)} for BA.1. The BA.1 pair is protection from mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.`,
 		context:
 			'Studies from many countries; non-vaccinated comparisons or studies adjusted for vaccination; hybrid immunity excluded',
 		verified: {
@@ -2637,11 +2636,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://archive.cdc.gov/www_cdc_gov/flu/pandemic-resources/1918-pandemic-h1n1.html',
-		usedFor: ['flu1918.fullEfficacy', 'flu1918.partialEfficacy'],
+		usedFor: ['flu1918.fullEfficacy'],
 		quote:
 			'With no vaccine to protect against influenza infection and no antibiotics to treat secondary bacterial infections that can be associated with influenza infections, control efforts worldwide were limited to non-pharmaceutical interventions.',
 		location: 'Main text',
-		why: 'No vaccine existed in 1918, so both efficacies are 0.',
+		why: 'No vaccine existed in 1918, so its efficacy is 0 and nobody is vaccinated.',
 		context: 'Worldwide, 1918-1919',
 		verified: {
 			by: 'independent verification pass',
@@ -2731,7 +2730,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'2025: World 24.40906; European Union 14.20743; United Kingdom 16.96477; Nigeria 40.51972; Japan 11.23840',
 		location: 'FRED series pages, latest observation (2025)',
-		why: 'Share aged 0-14: EU 14.21% (the general default population), UK 16.96% (the England preset), and Nigeria and Japan as the young and old populations of the age lesson.',
+		why: `Share aged 0-14: EU ${fmt(WORLD_BANK_AGES_2025.EU.under15, 2)}% (the general default population), UK ${fmt(WORLD_BANK_AGES_2025.UK.under15, 2)}% (the England preset), and Nigeria (${fmt(WORLD_BANK_AGES_2025.Nigeria.under15, 2)}%) and Japan (${fmt(WORLD_BANK_AGES_2025.Japan.under15, 2)}%) as the young and old populations of the age lesson.`,
 		context: 'European Union, United Kingdom, Nigeria and Japan, 2025',
 		verified: {
 			by: 'independent verification pass',
@@ -2755,7 +2754,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'2025: World 10.40243; European Union 22.44279; United Kingdom 19.70269; Nigeria 3.06954; Japan 29.99410',
 		location: 'FRED series pages, latest observation (2025)',
-		why: `Share aged 65+: EU 22.44%, UK 19.70%, Nigeria 3.07%, Japan 29.99%. The 15-64 share is worked out as the rest (EU ${fmt(100 - WORLD_BANK_AGES_2025.EU.under15 - WORLD_BANK_AGES_2025.EU.over64, 2)}%).`,
+		why: `Share aged 65+: EU ${fmt(WORLD_BANK_AGES_2025.EU.over64, 2)}%, UK ${fmt(WORLD_BANK_AGES_2025.UK.over64, 2)}%, Nigeria ${fmt(WORLD_BANK_AGES_2025.Nigeria.over64, 2)}%, Japan ${fmt(WORLD_BANK_AGES_2025.Japan.over64, 2)}%. The 15-64 share is worked out as the rest (EU ${fmt(100 - WORLD_BANK_AGES_2025.EU.under15 - WORLD_BANK_AGES_2025.EU.over64, 2)}%).`,
 		context: 'European Union, United Kingdom, Nigeria and Japan, 2025',
 		verified: {
 			by: 'independent verification pass',

@@ -40,7 +40,10 @@
 		}));
 	});
 
-	/** Hospital pressure per city, in percent, with the strain threshold and 100% marked (6.6). */
+	/**
+	 * Hospital pressure per city, in percent, with the strain threshold and 100% marked (6.6). The
+	 * axis grows with the data, so a badly overwhelmed city stays on the chart.
+	 */
 	const pressureLines = $derived(
 		history.map((h, r): Line => ({
 			key: String(perRegion[r]?.id ?? r),
@@ -51,7 +54,8 @@
 		}))
 	);
 	const threshold = Math.round(BEHAVIOUR.strainThreshold.value * 100);
-	const hospitalsOn = $derived(telemetry.regions.some((r) => r.beds > 0));
+	// Pressure is 0 only when hospitals are switched off or a city has no beds (6.6).
+	const hospitalsOn = $derived(telemetry.regions.some((r) => r.pressure > 0));
 
 	const illLines = $derived(
 		perRegion.map((p, r): Line => ({
@@ -83,7 +87,6 @@
 				days={perRegion[0].days}
 				lines={pressureLines}
 				yLabel="% of beds"
-				max={150}
 				references={[
 					{ label: `${threshold}%: strain starts`, value: threshold, labelStart: true },
 					{ label: '100%: full', value: 100 }

@@ -51,10 +51,12 @@ export class Agents {
 	readonly infectedBy: Int32Array;
 	/** Protection against severe illness if this dot is infected despite its vaccine (6.2), 0 to 1. */
 	readonly severe: Float32Array;
-	/** 1 when an infection would be the short illness of an unfinished course with no severe figure. */
-	readonly shortIll: Uint8Array;
-	/** 1 while this case holds a hospital bed. */
-	readonly inBed: Uint8Array;
+	/**
+	 * Hospital beds this case fills while it has symptoms, in dots: its band's share needing a bed,
+	 * cut by its severe protection (6.6). A dot stands for many people, so this is the expected
+	 * share of them in a bed, not a draw; 0 when not ill or when hospitals are switched off.
+	 */
+	readonly bedNeed: Float32Array;
 
 	constructor(capacity = MAX_AGENTS) {
 		this.capacity = capacity;
@@ -84,8 +86,7 @@ export class Agents {
 		this.infectedTick = new Int32Array(perSlot);
 		this.infectedBy = new Int32Array(perSlot);
 		this.severe = new Float32Array(perSlot);
-		this.shortIll = new Uint8Array(perSlot);
-		this.inBed = new Uint8Array(perSlot);
+		this.bedNeed = new Float32Array(perSlot);
 	}
 
 	/**
@@ -131,7 +132,6 @@ export class Agents {
 		this.infectedTick.fill(-1);
 		this.infectedBy.fill(-1);
 		this.severe.fill(0);
-		this.shortIll.fill(0);
-		this.inBed.fill(0);
+		this.bedNeed.fill(0);
 	}
 }

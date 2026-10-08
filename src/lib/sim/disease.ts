@@ -2,9 +2,9 @@ import { Agents } from './agents';
 import { TICKS_PER_DAY } from './constants';
 import { SpatialGrid } from './grid';
 import { Rng } from './rng';
-import { BEHAVIOUR } from '../config/behaviour';
 import { breakthroughSevereProtection, defaultVaccine, vaccineKey } from '../config/vaccines';
 import { perSymptomaticBands } from '../config/diseases';
+import { originOf } from './transit';
 import {
 	Protection,
 	State,
@@ -12,6 +12,7 @@ import {
 	type DiseaseCalibration,
 	type DiseaseConfig,
 	type DiseaseRuntime,
+	type Route,
 	type Vaccine,
 	type VaccineRuntime
 } from './types';
@@ -44,30 +45,28 @@ function toVaccineRuntime(config: DiseaseConfig, v: Vaccine): VaccineRuntime {
 	const partialInfection = partial?.infection?.value ?? 0;
 	return {
 		key: vaccineKey(v),
+		exists: true,
 		fullInfection,
 		fullSevere: breakthrough(fullInfection, v.full.severe?.value),
 		hasPartialCourse: partial !== undefined,
 		partialInfection,
-		// No sourced figure for an unfinished course: the existing default, never severe (6.2).
-		partialSevere: partial?.severe ? breakthrough(partialInfection, partial.severe.value) : 1,
-		partialShortIll: partial !== undefined && partial.severe === undefined,
+		// No sourced figure means no severe protection, for either course (6.2).
+		partialSevere: partial?.severe ? breakthrough(partialInfection, partial.severe.value) : 0,
 		waningMeanTicks: halfLifeTicks(v.waningDays.value)
 	};
 }
 
-/** A disease with no vaccine: being "vaccinated" against it protects nobody. */
-function noVaccine(config: DiseaseConfig): VaccineRuntime {
-	return {
-		key: 'none',
-		fullInfection: config.fullEfficacy.value,
-		fullSevere: 0,
-		hasPartialCourse: config.partialEfficacy !== undefined,
-		partialInfection: config.partialEfficacy?.value ?? 0,
-		partialSevere: 1,
-		partialShortIll: config.partialEfficacy !== undefined,
-		waningMeanTicks: 0
-	};
-}
+/** A disease with no vaccine: nobody is vaccinated against it (6.13). */
+const NO_VACCINE: VaccineRuntime = {
+	key: 'none',
+	exists: false,
+	fullInfection: 0,
+	fullSevere: 0,
+	hasPartialCourse: false,
+	partialInfection: 0,
+	partialSevere: 0,
+	waningMeanTicks: 0
+};
 
 function bands(config: DiseaseConfig, banded: DiseaseConfig['mortalityByAge'], allAges: number): Bands {
 	return banded ? perSymptomaticBands(banded, config.asymptomaticFraction) : [allAges, allAges, allAges];
@@ -85,7 +84,6 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		// Zero is allowed here: some diseases are not contagious before symptoms (see infect).
 		silentTicks: Math.max(0, Math.round(config.silentDays.value * TICKS_PER_DAY)),
 		illTicks: days(config.illDays.value),
-		shortIllTicks: days(config.illDays.value * BEHAVIOUR.partialIllFactor.value),
 		asymptomaticFraction: config.asymptomaticFraction.value,
 		mortality: config.mortality.value,
 		mortalityByBand: bands(config, config.mortalityByAge, config.mortality.value),
@@ -93,7 +91,7 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		hospitalByBand: bands(config, config.hospitalisedByAge, config.hospitalisedShare.value),
 		waningMeanTicks: halfLifeTicks(config.waningDays.value),
 		afterInfectionSevere: after ? breakthrough(after.infection.value, after.severe.value) : 0,
-		vaccines: def ? [def, ...others].map((v) => toVaccineRuntime(config, v)) : [noVaccine(config)],
+		vaccines: def ? [def, ...others].map((v) => toVaccineRuntime(config, v)) : [{ ...NO_VACCINE }],
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};
@@ -147,46 +145,77 @@ export function infect(
 	agents.asymptomatic[k] = asymptomatic ? 1 : 0;
 	// No silent phase (e.g. Ebola): symptoms start at once, so the dot is never mobile and contagious.
 	if (!asymptomatic && disease.silentTicks === 0) {
-		showSymptoms(agents, k, i, disease, rng, rules);
+		showSymptoms(agents, k, i, disease, rules);
 		return;
 	}
 	// A case that never shows symptoms stays orange for its whole contagious period.
-	agents.stateTicks[k] = asymptomatic ? disease.silentTicks + illTicksFor(agents, k, disease) : disease.silentTicks;
-}
-
-function illTicksFor(agents: Agents, k: number, disease: DiseaseRuntime): number {
-	return agents.shortIll[k] === 1 ? disease.shortIllTicks : disease.illTicks;
+	agents.stateTicks[k] = asymptomatic ? disease.silentTicks + disease.illTicks : disease.silentTicks;
 }
 
 /** The band's chances, cut by the dot's protection against severe illness. */
-function deathChance(agents: Agents, k: number, i: number, disease: DiseaseRuntime, rules: IllnessRules): number {
+function deathChance(
+	agents: Agents,
+	k: number,
+	i: number,
+	disease: DiseaseRuntime,
+	rules: IllnessRules
+): number {
 	const d = rules.ageBands ? disease.mortalityByBand[agents.ageBand[i]] : disease.mortality;
 	return d * (1 - agents.severe[k]);
 }
 
-function bedChance(agents: Agents, k: number, i: number, disease: DiseaseRuntime, rules: IllnessRules): number {
+function bedChance(
+	agents: Agents,
+	k: number,
+	i: number,
+	disease: DiseaseRuntime,
+	rules: IllnessRules
+): number {
 	const h = rules.ageBands ? disease.hospitalByBand[agents.ageBand[i]] : disease.hospitalisedShare;
 	return h * (1 - agents.severe[k]);
 }
 
-/** Symptoms start: the dot turns red, stops (unless that subsystem is off) and may need a bed. */
+/** Symptoms start: the dot turns red, stops (unless that subsystem is off) and fills its share of beds. */
 function showSymptoms(
 	agents: Agents,
 	k: number,
 	i: number,
 	disease: DiseaseRuntime,
-	rng: Rng,
 	rules: IllnessRules
 ): void {
 	agents.state[k] = State.SYMPTOMATIC;
-	agents.stateTicks[k] = illTicksFor(agents, k, disease);
+	agents.stateTicks[k] = disease.illTicks;
 	agents.ill[i] = 1;
 	if (rules.illStopsMovement) {
 		agents.vx[i] = 0;
 		agents.vy[i] = 0;
 	}
-	// The bed is drawn now so pressure counts the people actually in a bed (6.6).
-	agents.inBed[k] = rng.next() < bedChance(agents, k, i, disease, rules) ? 1 : 0;
+	// Expected value, not a draw: the dot's people fill h of a dot's worth of beds (6.6).
+	agents.bedNeed[k] = rules.hospital ? bedChance(agents, k, i, disease, rules) : 0;
+}
+
+/** The region whose hospitals a dot uses: its own, or on a trip, the trip's origin (6.8). */
+export function hospitalRegion(agents: Agents, routes: readonly Route[], i: number): number {
+	const r = agents.region[i];
+	if (r >= 0) return r;
+	const route = agents.route[i];
+	return route < 0 ? -1 : originOf(routes[route], agents.routeDir[i]);
+}
+
+/** s(p, m): strain multiplies the odds of dying, as the sources' odds ratios measure (6.6). */
+function strained(p: number, m: number): number {
+	return (m * p) / (1 - p + m * p);
+}
+
+/**
+ * Chance of dying at the end of illness (6.6): h·s(min(d,h)/h, m) + (1-h)·max(0,d-h)/(1-h).
+ * The first term is the share of the dot's people who had a bed, the second those who didn't
+ * (deaths outside hospital, which strain doesn't touch). With m = 1 it is exactly d.
+ */
+export function deathChanceAtEnd(d: number, h: number, m: number): number {
+	const outside = Math.max(0, d - h);
+	if (h <= 0) return outside;
+	return h * strained(Math.min(d, h) / h, m) + outside;
 }
 
 /**
@@ -260,8 +289,9 @@ export function transmit(
 
 /**
  * Disease clocks: silent turns red (or recovers, if it never shows symptoms), red ends in
- * recovery or death. `strain[region]` multiplies a bedded case's odds of dying (6.6); a dot on a
- * route is in no hospital and feels none. Waning is drawn at recovery when `waning` is on.
+ * recovery or death. `strain[region]` multiplies the odds of dying for the share of a dot's
+ * people in a bed (6.6); a dot on a trip feels its origin's strain (6.8). Waning is drawn at
+ * recovery when `waning` is on.
  */
 export function advanceIllness(
 	agents: Agents,
@@ -269,6 +299,7 @@ export function advanceIllness(
 	slot: number,
 	rng: Rng,
 	strain: Float32Array,
+	routes: readonly Route[],
 	hooks: DiseaseHooks,
 	rules: IllnessRules,
 	waning: boolean
@@ -284,26 +315,17 @@ export function advanceIllness(
 		if (--stateTicks[k] > 0) continue;
 		if (s === State.SILENT) {
 			if (agents.asymptomatic[k] === 1) recover(agents, k, i, disease, rng, waning);
-			else showSymptoms(agents, k, i, disease, rng, rules);
+			else showSymptoms(agents, k, i, disease, rules);
 			continue;
 		}
-		// End of the red phase: the two-draw rule of 6.6, with the joint chances it states.
-		const bedded = agents.inBed[k] === 1;
-		agents.inBed[k] = 0;
+		// End of the red phase: one death draw (6.6), with the strain of the dot's hospital region.
+		agents.bedNeed[k] = 0;
 		let p = 0;
 		if (rules.deaths) {
 			const d = deathChance(agents, k, i, disease, rules);
 			const h = bedChance(agents, k, i, disease, rules);
-			if (bedded) {
-				const r = agents.region[i];
-				const m = rules.hospital && r >= 0 ? strain[r] : 1;
-				// Strain multiplies the odds of dying, as the sources' odds ratios measure (6.6),
-				// which also keeps the chance below 1.
-				const base = Math.min(d, h) / h;
-				p = (m * base) / (1 - base + m * base);
-			} else if (h < 1) {
-				p = Math.max(0, d - h) / (1 - h);
-			}
+			const r = rules.hospital ? hospitalRegion(agents, routes, i) : -1;
+			p = deathChanceAtEnd(d, h, r >= 0 ? strain[r] : 1);
 		}
 		if (p > 0 && rng.next() < p) {
 			state[k] = State.DECEASED;
@@ -347,9 +369,16 @@ function refreshIll(agents: Agents, i: number): void {
 	agents.ill[i] = ill;
 }
 
-function recover(agents: Agents, k: number, i: number, disease: DiseaseRuntime, rng: Rng, waning: boolean): void {
+function recover(
+	agents: Agents,
+	k: number,
+	i: number,
+	disease: DiseaseRuntime,
+	rng: Rng,
+	waning: boolean
+): void {
 	agents.state[k] = State.RECOVERED;
-	agents.inBed[k] = 0;
+	agents.bedNeed[k] = 0;
 	agents.isolated[i] = 0;
 	// Having had it works like a vaccine course: keep the stronger protection, never combined (6.2).
 	if (disease.afterInfectionSevere > agents.severe[k]) agents.severe[k] = disease.afterInfectionSevere;
@@ -377,7 +406,6 @@ export function vaccinate(
 	const efficacy = full ? vaccine.fullInfection : partial ? vaccine.partialInfection : 0;
 	agents.vaccineWorks[k] = rng.next() < efficacy ? 1 : 0;
 	agents.severe[k] = full ? vaccine.fullSevere : partial ? vaccine.partialSevere : 0;
-	agents.shortIll[k] = partial && vaccine.partialShortIll ? 1 : 0;
 	agents.waneTicks[k] =
 		agents.vaccineWorks[k] === 1 && waning ? drawWaneTicks(vaccine.waningMeanTicks, rng) : -1;
 }

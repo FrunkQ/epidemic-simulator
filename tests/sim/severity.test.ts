@@ -2,11 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { loadDisease } from '../../src/lib/config';
 import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { POPULATION } from '../../src/lib/config/population';
-import { defaultPolicy, ENGLAND_POLICY } from '../../src/lib/config/healthPolicy';
-import { singleCity } from '../../src/lib/config/scenarios';
+import { defaultPolicy, ENGLAND_POLICY, withValue } from '../../src/lib/config/healthPolicy';
+import { microcosm, singleCity } from '../../src/lib/config/scenarios';
+import { DISEASES } from '../../src/lib/config/diseases';
+import { vaccineKey } from '../../src/lib/config/vaccines';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation, strainMultiplier } from '../../src/lib/sim/engine';
-import { Protection, State, type Bands, type DiseaseRuntime, type HealthPolicy, type Scenario } from '../../src/lib/sim/types';
+import {
+	Protection,
+	State,
+	type Bands,
+	type DiseaseConfig,
+	type DiseaseId,
+	type DiseaseRuntime,
+	type HealthPolicy,
+	type Scenario
+} from '../../src/lib/sim/types';
 
 /** Everyone aged 15-64, so one band's chances apply to every case. */
 const WORKING_AGE: Bands = [0, 1, 0];
@@ -40,7 +51,13 @@ function policy(beds: number, spare: number, ageMix: Bands = WORKING_AGE): Healt
 }
 
 /** Seed `cases` index cases into a 5,000-dot city and run until they are over; deaths per case. */
-function deathsPerCase(disease: DiseaseRuntime, p: HealthPolicy, seed: number, cases = 4000, scenario?: Scenario) {
+function deathsPerCase(
+	disease: DiseaseRuntime,
+	p: HealthPolicy,
+	seed: number,
+	cases = 4000,
+	scenario?: Scenario
+) {
 	const sc = scenario ?? singleCity({ population: 500_000, policy: p });
 	const sim = createSimulation(sc, { seed, diseaseId: 'flu', disease });
 	const seeded = sim.seedNow(0, cases).length;
@@ -65,7 +82,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		counts.forEach((c, b) => expect(Math.abs(c / a.activeCount - mix[b])).toBeLessThan(0.02));
 	});
 
-	// The two-draw rule gives exactly d deaths per case when there is no strain, whether the band
+	// The death rule gives exactly d deaths per case when there is no strain, whether the band
 	// has more deaths than beds or fewer (6.6).
 	for (const [d, h] of [
 		[0.3, 0.1],
@@ -78,7 +95,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 			expect(Math.abs(rate - d)).toBeLessThan(tol(d, n));
 		});
 
-		it(`raises deaths under strain, but never past every bedded case plus the no-bed deaths (d ${d}, h ${h})`, () => {
+		it(`raises deaths under strain, but never past every case with a bed plus the no-bed deaths (d ${d}, h ${h})`, () => {
 			// Almost no beds and none spare: pressure far above 110%, so strain sits at its cap.
 			const { rate, n } = deathsPerCase(counted(d, h), policy(0.5, 0), 2);
 			const m = BEHAVIOUR.strainMaxMultiplier.value;
@@ -113,23 +130,79 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(Math.abs(rate - d * 0.2)).toBeLessThan(tol(d * 0.2, n));
 	});
 
-	it('keeps the existing default for an unfinished course with no severe figure: shorter, never fatal', () => {
-		const base = counted(0.3, 0.5);
-		const vaccine = {
-			...base.vaccines[0],
-			hasPartialCourse: true,
-			partialInfection: 0,
-			partialSevere: 1,
-			partialShortIll: true
-		};
-		const disease = { ...base, vaccines: [vaccine] };
-		const sc = singleCity({ population: 500_000, policy: policy(1000, 1), vaccinatedPartial: 1 });
-		const sim = createSimulation(sc, { seed: 5, diseaseId: 'flu', disease });
+	it('gives an unfinished course no severe protection where none is sourced, so it is never better than a full one', () => {
+		for (const config of Object.values(DISEASES) as DiseaseConfig[]) {
+			const disease = loadDisease(config.id as DiseaseId);
+			for (const v of disease.vaccines) {
+				if (!v.hasPartialCourse || v.partialSevere <= v.fullSevere) continue;
+				// Only a sourced partial-course figure may beat the full course.
+				const entry = config.vaccines?.find((e) => vaccineKey(e) === v.key);
+				const named = config.vaccines?.find((e) => vaccineKey(e) === config.partialCourse);
+				expect((entry?.partial ?? named?.partial)?.severe, `${config.id} ${v.key}`).toBeDefined();
+			}
+		}
+	});
+
+	for (const id of ['marburg', 'flu1918'] as const) {
+		it(`vaccinates nobody against a disease with no vaccine, whatever the coverage (${id})`, () => {
+			const real = loadDisease(id);
+			expect(real.vaccines.every((v) => !v.exists && !v.hasPartialCourse)).toBe(true);
+			const disease = { ...real, beta: 0, asymptomaticFraction: 0 };
+			const sc = singleCity({
+				population: 500_000,
+				policy: policy(1000, 1),
+				vaccinatedFull: 0.5,
+				vaccinatedPartial: 0.3
+			});
+			const { rate, n, sim } = deathsPerCase(disease, policy(1000, 1), 8, 4000, sc);
+			const a = sim.agents;
+			for (let i = 0; i < a.activeCount; i++) expect(a.protection[i]).toBe(Protection.NONE);
+			const d = disease.mortalityByBand[1];
+			expect(Math.abs(rate - d)).toBeLessThan(tol(d, n));
+		});
+	}
+
+	it('moves pressure by h / beds for one more ill dot (expected-value beds, 6.6)', () => {
+		const h = 0.2;
+		const p = policy(3, 0.3);
+		const sim = createSimulation(singleCity({ population: 500_000, policy: p }), {
+			seed: 9,
+			diseaseId: 'flu',
+			disease: counted(0, h)
+		});
+		const before = sim.snapshot().regions[0];
+		sim.seedNow(0, 1);
+		sim.step(loadDisease('flu').silentTicks + 1);
+		const after = sim.snapshot().regions[0];
+		expect(after.counts.symptomatic).toBe(1);
+		expect(after.patients).toBeCloseTo(h, 6);
+		expect(after.pressure - before.pressure).toBeCloseTo(h / after.beds, 6);
+	});
+
+	it('counts every ill dot’s expected beds, travellers at their trip’s origin', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 3);
+		}
+		const sim = createSimulation(scenario, { seed: 10, diseaseId: 'covid19' });
+		const disease = loadDisease('covid19');
+		sim.send({ type: 'seed', region: 0, count: 50 });
 		const a = sim.agents;
-		const cases = sim.seedNow(0, 1000);
-		expect(cases.every((i) => a.protection[i] === Protection.PARTIAL && a.shortIll[i] === 1)).toBe(true);
-		sim.step(disease.silentTicks + disease.shortIllTicks + 2);
-		expect(cases.every((i) => a.state[i] === State.RECOVERED)).toBe(true);
+		let travellersIll = 0;
+		for (let day = 0; day < 40; day++) {
+			sim.step(TICKS_PER_DAY);
+			let expected = 0;
+			for (let i = 0; i < a.activeCount; i++) {
+				if (a.state[i] !== State.SYMPTOMATIC) continue;
+				expected += disease.hospitalByBand[a.ageBand[i]] * (1 - a.severe[i]);
+				if (a.region[i] < 0) travellersIll++;
+			}
+			const total = sim.snapshot().regions.reduce((t, r) => t + r.patients, 0);
+			expect(total).toBeCloseTo(expected, 4);
+		}
+		expect(travellersIll).toBeGreaterThan(0);
 	});
 
 	it('starts the general default Coping and the England (NHS) preset Under pressure', () => {
@@ -156,7 +229,11 @@ describe('waning, one step per dot (6.3)', () => {
 			waningMeanTicks: Math.round((halfLifeDays / Math.LN2) * TICKS_PER_DAY)
 		};
 		const sc = singleCity({ population: 500_000, vaccinatedFull: 1 });
-		const sim = createSimulation(sc, { seed: 6, diseaseId: 'flu', disease: { ...base, vaccines: [vaccine] } });
+		const sim = createSimulation(sc, {
+			seed: 6,
+			diseaseId: 'flu',
+			disease: { ...base, vaccines: [vaccine] }
+		});
 		const a = sim.agents;
 		sim.step(halfLifeDays * TICKS_PER_DAY);
 		let works = 0;

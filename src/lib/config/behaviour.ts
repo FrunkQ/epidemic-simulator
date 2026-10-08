@@ -30,11 +30,6 @@ export interface BehaviourConfig {
 	strainMaxMultiplier: Sourced;
 	/** How fast the multiplier rises per unit of pressure above the threshold. */
 	strainSlope: Sourced;
-	/**
-	 * How long an unfinished vaccine course's breakthrough illness lasts, as a share of the usual,
-	 * where the vaccine has no sourced protection against severe illness for it (6.2).
-	 */
-	partialIllFactor: Sourced;
 }
 
 
@@ -67,11 +62,5 @@ export const BEHAVIOUR: BehaviourConfig = {
 	strainSlope: {
 		value: STRAIN.slope,
 		sources: ['neupane2024-surge-sr', 'wilde2021-icu-occupancy', 'kadri2021-caseload-surge']
-	},
-	partialIllFactor: {
-		value: 0.5,
-		sources: [],
-		provisional:
-			'The step 1 rule that partly vaccinated people are ill half as long; no source gives the factor yet.'
 	}
 };

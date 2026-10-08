@@ -5,7 +5,7 @@
 	import { vaccineKey } from '../config/vaccines';
 	import { vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
-	import type { DiseaseConfig, DiseaseId, Region, RegionTelemetry } from '../sim/types';
+	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';
 	import LevelGauge from './charts/LevelGauge.svelte';
 
 	interface Props {
@@ -52,11 +52,14 @@
 	/** One-dose vaccines have no "partly vaccinated". */
 	let partialEfficacy = $derived(vaccine.hasPartialCourse ? vaccine.partialInfection : undefined);
 	const threshold = BEHAVIOUR.strainThreshold.value;
-	const PRESSURE_BANDS = [
-		{ below: threshold, label: 'Coping' },
-		{ below: 1 + 1e-9, label: 'Under pressure' },
-		{ below: Infinity, label: 'Overwhelmed' }
-	];
+	/** The engine's pressure band in plain words (6.6). */
+	const PRESSURE_LABEL: Record<PressureBand, string> = {
+		coping: 'Coping',
+		'under-pressure': 'Under pressure',
+		overwhelmed: 'Overwhelmed'
+	};
+	/** Pressure is 0 only with hospitals switched off (or no beds): then there is nothing to show. */
+	let hospitalsOn = $derived(t !== undefined && t.pressure > 0);
 	let unprotected = $derived(Math.max(0, 1 - region.vaccinatedFull - region.vaccinatedPartial));
 </script>
 
@@ -108,13 +111,15 @@
 				<small>{f.explain}</small>
 			</label>
 		{/each}
-		{#if t}
+		{#if t && hospitalsOn}
 			<p class="note">
 				Spare beds for outbreak patients: about <b>{people(t.capacity)}</b> of {people(t.beds)}.
 			</p>
 		{/if}
 	{/if}
-	{#if panel === 'vaccination'}
+	{#if panel === 'vaccination' && !vaccine.exists}
+		<p class="unprotected">No vaccine exists for this disease.</p>
+	{:else if panel === 'vaccination'}
 		{#if (disease.vaccines?.length ?? 0) > 1}
 			<label>
 				<span>Vaccine version</span>
@@ -157,7 +162,7 @@
 		{/if}
 		<p class="unprotected">Not vaccinated: {pct(unprotected)}</p>
 	{/if}
-	{#if t && t.beds > 0}
+	{#if t && hospitalsOn}
 		<LevelGauge
 			title="Hospitals"
 			value={t.pressure}
@@ -166,9 +171,9 @@
 				{ at: threshold, label: pctOf(threshold) },
 				{ at: 1, label: '100%' }
 			]}
-			bands={PRESSURE_BANDS}
+			reading={PRESSURE_LABEL[t.pressureBand]}
+			warn={t.pressureBand !== 'coping'}
 			format={pctOf}
-			warnFrom={threshold}
 			width={180}
 		/>
 	{/if}

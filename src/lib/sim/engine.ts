@@ -302,8 +302,9 @@ export class Simulation {
 				const age = rng.next();
 				a.ageBand[slot] = age < young ? 0 : age < 1 - old ? 1 : 2;
 				const v = rng.next();
-				a.protection[slot] =
-					v < reg.vaccinatedFull
+				a.protection[slot] = !vaccine.exists
+					? Protection.NONE
+					: v < reg.vaccinatedFull
 						? Protection.FULL
 						: vaccine.hasPartialCourse && v < reg.vaccinatedFull + reg.vaccinatedPartial
 							? Protection.PARTIAL
@@ -358,7 +359,17 @@ export class Simulation {
 			this.rules
 		);
 		// 6. Disease clocks, deaths and hospital load (strain from the last count).
-		advanceIllness(a, this.disease, 0, this.rng, this.strain, this.hooks, this.rules, sub.waning);
+		advanceIllness(
+			a,
+			this.disease,
+			0,
+			this.rng,
+			this.strain,
+			this.routeList,
+			this.hooks,
+			this.rules,
+			sub.waning
+		);
 		// 7. Waning immunity.
 		if (sub.waning) wane(a, 0);
 		// 8. Telemetry counters, then pressure for the next tick.

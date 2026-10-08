@@ -743,7 +743,6 @@ export const DISEASES = {
 		mortality: { value: 0.5, sources: ['who-marburg-factsheet'] },
 		waningDays: { value: null, sources: ['natesan-2016-filovirus-antibody-persistence'] },
 		fullEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
-		partialEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
 		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] }
 	},
 	flu1918: {
@@ -777,7 +776,6 @@ export const DISEASES = {
 		mortality: { value: 0.017, sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass'] },
 		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },
 		fullEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
-		partialEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
 		// Lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.
 		hospitalisedShare: {
 			value: 0.017,

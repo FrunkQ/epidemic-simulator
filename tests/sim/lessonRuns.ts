@@ -6,11 +6,11 @@ import type { Bands, DiseaseId, HealthPolicy, Region } from '../../src/lib/sim/t
 import { anyInfectious } from './helpers';
 
 /*
- * Shared runs for the lesson tests (10). Lessons set inputs only, never engine internals, and
+ * Shared runs for the lesson tests (10), about 20 seeds each. Lessons set inputs only, never engine internals, and
  * assert on the share of seeds. Each lesson has its own file so vitest runs them in parallel.
  */
 
-export const SEEDS = 10;
+export const SEEDS = 20;
 
 /** Each lesson runs 10 to 20 outbreaks; CI runners are slower than a laptop, so allow more than the default. */
 export const LESSON_TIMEOUT = 600_000;

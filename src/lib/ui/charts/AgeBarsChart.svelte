@@ -16,9 +16,7 @@
 	let { title, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
 
 	const total = $derived(values[0] + values[1] + values[2]);
-	const shown = $derived(
-		asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice()
-	);
+	const shown = $derived(asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice());
 	const top = $derived(asShares ? 100 : niceMax(Math.max(1, ...shown)));
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
 	const plotH = $derived(height - MARGIN.top - MARGIN.bottom);
