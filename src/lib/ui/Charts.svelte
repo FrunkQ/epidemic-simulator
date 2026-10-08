@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { COLOURS } from '../sim/render';
-	import type { Telemetry } from '../sim/types';
+	import type { RegionHistory, Telemetry } from '../sim/types';
 
 	interface Props {
 		telemetry: Telemetry;
+		/** Daily history per region, refreshed by the page when telemetry.historyVersion changes. */
+		history: RegionHistory[];
 	}
-	let { telemetry }: Props = $props();
+	let { telemetry, history }: Props = $props();
 
 	const SERIES = [
 		{ key: 'infected', label: 'Infected now', colour: COLOURS.symptomatic },
@@ -22,18 +24,23 @@
 	let hover: { region: number; index: number } | null = $state(null);
 
 	function seriesOf(region: number): { days: number[]; values: Record<Key, number[]>; max: number } {
-		const h = telemetry.history[region];
-		const infected = h.series.silent.map((v, i) => v + h.series.symptomatic[i]);
-		const values = { infected, recovered: h.series.recovered, deceased: h.series.deceased };
+		const h = history[region];
+		const symptomatic = h.series.symptomatic;
+		const infected = Array.from(h.series.silent, (v, i) => v + symptomatic[i]);
+		const values = {
+			infected,
+			recovered: Array.from(h.series.recovered),
+			deceased: Array.from(h.series.deceased)
+		};
 		const dots = telemetry.regions[region].dots;
-		return { days: h.days, values, max: Math.max(1, dots) };
+		return { days: Array.from(h.days), values, max: Math.max(1, dots) };
 	}
 
 	$effect(() => {
 		const dpr = window.devicePixelRatio || 1;
-		telemetry.history.forEach((_, r) => {
+		history.forEach((_, r) => {
 			const c = canvases[r];
-			if (!c) return;
+			if (!c || !history[r]) return;
 			c.width = W * dpr;
 			c.height = H * dpr;
 			const ctx = c.getContext('2d')!;

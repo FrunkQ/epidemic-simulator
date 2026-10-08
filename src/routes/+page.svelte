@@ -4,7 +4,7 @@
 	import { START_MAPS } from '../lib/config/startMaps.generated';
 	import { createSimulation } from '../lib/sim/engine';
 	import { generateWorld } from '../lib/sim/geography';
-	import type { DiseaseId, Scenario, Speed, Telemetry } from '../lib/sim/types';
+	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -13,6 +13,8 @@
 
 	let mapIndex = $state(0);
 	let diseaseId: DiseaseId = $state('measles');
+	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
+	const hasPartialCourse = $derived(DISEASES[diseaseId].partialEfficacy !== undefined);
 	let scenario: Scenario = $state(microcosm(0));
 	let seed = $state(1);
 	let speed: Speed = $state(1);
@@ -23,6 +25,16 @@
 		world
 	});
 	let telemetry: Telemetry | null = $state.raw(null);
+	let histories: RegionHistory[] = $state.raw([]);
+	let historyVersion = -1;
+
+	/** Store a snapshot, and re-read the daily history only when a new day was sampled. */
+	function setTelemetry(t: Telemetry) {
+		telemetry = t;
+		if (t.historyVersion === historyVersion) return;
+		historyVersion = t.historyVersion;
+		histories = t.regions.map((_, r) => sim.history(r));
+	}
 	let size = $state({ width: 0, height: 0 });
 	/** Bumped whenever the camera moves, so cards follow their cities. */
 	let viewVersion = $state(0);
@@ -48,7 +60,8 @@
 
 	function restart() {
 		sim.setup($state.snapshot(scenario), diseaseId, seed, world);
-		telemetry = sim.snapshot();
+		historyVersion = -1;
+		setTelemetry(sim.snapshot());
 	}
 
 	function setVaccination(region: number, full: number, partial: number) {
@@ -145,7 +158,7 @@
 	<div class="stage">
 		<SimCanvas
 			{sim}
-			ontelemetry={(t) => (telemetry = t)}
+			ontelemetry={setTelemetry}
 			onresize={(w, h) => {
 				size = { width: w, height: h };
 				frame();
@@ -206,11 +219,8 @@
 
 	<footer>
 		{#if telemetry}
-			<Charts {telemetry} />
-			<Legend
-				peoplePerDot={telemetry.peoplePerDot}
-				hasPartialCourse={DISEASES[diseaseId].partialEfficacy !== undefined}
-			/>
+			<Charts {telemetry} history={histories} />
+			<Legend peoplePerDot={telemetry.peoplePerDot} {hasPartialCourse} />
 		{/if}
 	</footer>
 </main>

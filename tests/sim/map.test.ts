@@ -4,7 +4,6 @@ import { START_MAPS } from '../../src/lib/config/startMaps.generated';
 import { MAX_FERRY_GAP } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import { findMicrocosm, generateWorld, landShareOfDisc } from '../../src/lib/sim/geography';
-import { loadDisease } from '../../src/lib/config';
 
 describe('lesson 8: map generation', () => {
 	it('gives an identical map for the same seed', () => {
@@ -34,7 +33,7 @@ describe('lesson 9: every curated start map holds the microcosm', () => {
 				expect(landShareOfDisc(world, s.x, s.y, MICROCOSM_CITY_RADIUS)).toBeGreaterThan(0.85);
 
 			const index = START_MAPS.indexOf(map);
-			const sim = createSimulation(microcosm(index), { seed: 1, disease: loadDisease('measles'), world });
+			const sim = createSimulation(microcosm(index), { seed: 1, diseaseId: 'measles', world });
 			const kinds = sim.routes.map((r) => `${r.kind}:${r.from}-${r.to}`);
 			expect(kinds).toContain('ferry:0-1');
 			expect(kinds).toContain('road:1-2');

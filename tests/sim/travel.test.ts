@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { loadDisease } from '../../src/lib/config';
 import { microcosm } from '../../src/lib/config/scenarios';
 import { START_MAPS } from '../../src/lib/config/startMaps.generated';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
@@ -19,7 +18,7 @@ function arrivals(seed: number) {
 		r.vaccinatedPartial = 0;
 	}
 	scenario.travelScale = 3;
-	const sim = createSimulation(scenario, { seed, disease: loadDisease('measles'), world });
+	const sim = createSimulation(scenario, { seed, diseaseId: 'measles', world });
 	sim.send({ type: 'seed', region: 1, count: 20 });
 	const a = sim.agents;
 	const leftSilent = new Map<number, string>();
@@ -66,7 +65,7 @@ describe('lesson 2: fast travel beats burnout, slow travel does not', () => {
 describe('travel keeps populations level', () => {
 	it('moves people both ways without draining any city', () => {
 		const world = generateWorld(START_MAPS[0].seed);
-		const sim = createSimulation(microcosm(0), { seed: 9, disease: loadDisease('flu'), world });
+		const sim = createSimulation(microcosm(0), { seed: 9, diseaseId: 'flu', world });
 		const before = sim.snapshot().regions.map((r) => r.dots);
 		sim.step(60 * TICKS_PER_DAY);
 		const snap = sim.snapshot();
