@@ -11,7 +11,17 @@ import {
 	TICKS_PER_DAY
 } from './constants';
 import { loadDisease } from '../config';
-import { advanceIllness, infect, transmit, type DiseaseHooks } from './disease';
+import { BEHAVIOUR } from '../config/behaviour';
+import {
+	advanceIllness,
+	infect,
+	transmit,
+	vaccinate,
+	vaccineFor,
+	wane,
+	type DiseaseHooks,
+	type IllnessRules
+} from './disease';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
 import { generateWorld, type World } from './geography';
@@ -32,10 +42,36 @@ import {
 	type Route,
 	type Scenario,
 	type SimEvent,
+	type PressureBand,
 	type Speed,
+	type Subsystems,
 	type Telemetry,
 	type Viewport
 } from './types';
+
+/** Every subsystem on: the full model (6.14). */
+export const ALL_SUBSYSTEMS: Subsystems = {
+	deaths: true,
+	hospital: true,
+	ageBands: true,
+	silentSpread: true,
+	illStopsMovement: true,
+	travel: true,
+	waning: true,
+	interventions: true
+};
+
+/** The agreed strain curve (6.6): how much a bedded patient's chance of dying rises with pressure. */
+export function strainMultiplier(pressure: number): number {
+	const over = Math.max(0, pressure - BEHAVIOUR.strainThreshold.value);
+	return Math.min(BEHAVIOUR.strainMaxMultiplier.value, 1 + BEHAVIOUR.strainSlope.value * over);
+}
+
+/** The gauge's plain band: Coping below the strain threshold, Overwhelmed above 100% (6.6). */
+export function pressureBand(pressure: number): PressureBand {
+	if (pressure > 1) return 'overwhelmed';
+	return pressure >= BEHAVIOUR.strainThreshold.value ? 'under-pressure' : 'coping';
+}
 
 /** Events kept for the UI. */
 const MAX_EVENTS = 100;
@@ -84,10 +120,17 @@ export class Simulation {
 	private counters!: TelemetryCounters;
 	private radii!: Float32Array;
 	private regionDots: number[] = [];
+	/** All hospital beds per region, in dots. */
+	private beds: number[] = [];
 	/** Spare hospital beds per region, in dots. */
 	private bedCapacity: number[] = [];
 	private peoplePerDot = DEFAULT_PEOPLE_PER_DOT;
-	private mortalityMultiplier!: Float32Array;
+	/** Hospital pressure per region (6.6), and the death multiplier it gives a bedded patient. */
+	private pressure!: Float32Array;
+	private strain!: Float32Array;
+	private overloadSeen!: Uint8Array;
+	private subsystems: Subsystems = ALL_SUBSYSTEMS;
+	private rules!: IllnessRules;
 	private readonly renderer: Renderer;
 	private readonly queue: Command[] = [];
 	private events: SimEvent[] = [];
@@ -165,6 +208,15 @@ export class Simulation {
 		this.diseaseId = diseaseId;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
+		this.agents.diseaseCount = 1;
+		const sub = { ...ALL_SUBSYSTEMS, ...scenario.subsystems };
+		this.subsystems = sub;
+		this.rules = {
+			deaths: sub.deaths,
+			hospital: sub.hospital,
+			ageBands: sub.ageBands,
+			illStopsMovement: sub.illStopsMovement
+		};
 		this.seed = seed;
 		this.rng = new Rng(seed);
 		this.tick = 0;
@@ -172,24 +224,53 @@ export class Simulation {
 		this.events = [];
 		const regions = scenario.regions;
 		this.counters = new TelemetryCounters(regions.length);
-		this.mortalityMultiplier = new Float32Array(regions.length).fill(1);
+		this.pressure = new Float32Array(regions.length);
+		this.strain = new Float32Array(regions.length).fill(1);
+		this.overloadSeen = new Uint8Array(regions.length);
 		this.firstCaseSeen = new Uint8Array(regions.length);
 		this.radii = new Float32Array(regions.length);
 
 		const { dots, peoplePerDot } = allocateDots(regions, this.agents.capacity);
 		this.regionDots = dots;
 		this.peoplePerDot = peoplePerDot;
-		this.bedCapacity = regions.map((reg, r) => bedsInDots(dots[r], reg.policy));
+		this.beds = regions.map((reg, r) => allBedsInDots(dots[r], reg.policy));
+		this.bedCapacity = regions.map((reg, r) => this.beds[r] * reg.policy.spareBedShare.value);
 		this.spawn();
 		this.routeList = this.world ? generateRoutes(this.world, regions, this.radii) : [];
 		this.transit = new Transit(this.agents.capacity, regions.length);
+		this.transit.illStops = sub.illStopsMovement;
 		this.grid = new SpatialGrid(
 			regions.map((reg, r) => [reg.cx, reg.cy, this.radii[r]]),
 			disease.transmissionRadius,
 			this.agents.capacity
 		);
 		this.counters.recount(this.agents, this.routeList);
-		this.counters.sample(0);
+		this.updatePressure();
+		this.counters.sample(0, this.pressure);
+	}
+
+	/**
+	 * Pressure = (beds normally occupied + outbreak patients) / all beds, and the strain it puts on
+	 * patients (6.6). With hospitals switched off there is no pressure and no strain.
+	 */
+	private updatePressure(): void {
+		const regions = this.scenario.regions;
+		for (let r = 0; r < regions.length; r++) {
+			const beds = this.beds[r];
+			if (!this.subsystems.hospital || beds <= 0) {
+				this.pressure[r] = 0;
+				this.strain[r] = 1;
+				continue;
+			}
+			const normal = 1 - regions[r].policy.spareBedShare.value;
+			const p = normal + this.counters.patients[r] / beds;
+			this.pressure[r] = p;
+			this.strain[r] = strainMultiplier(p);
+			if (p > 1 && this.overloadSeen[r] === 0) {
+				this.overloadSeen[r] = 1;
+				this.pushEvent({ kind: 'overloaded', region: r, day: this.day });
+			}
+		}
 	}
 
 	private spawn(): void {
@@ -197,7 +278,10 @@ export class Simulation {
 		const rng = this.rng;
 		a.reset();
 		let slot = 0;
+		const waning = this.subsystems.waning;
 		this.scenario.regions.forEach((reg, r) => {
+			const vaccine = vaccineFor(this.disease, reg.vaccine);
+			const [young, , old] = reg.policy.ageMix.value;
 			const fatigueMean = reg.policy.lockdownFatigueMeanDays.value * TICKS_PER_DAY;
 			const fatigueSd = reg.policy.lockdownFatigueSdDays.value * TICKS_PER_DAY;
 			const density = Math.min(MAX_DENSITY, Math.max(MIN_DENSITY, reg.density));
@@ -215,21 +299,17 @@ export class Simulation {
 				a.vx[slot] = Math.cos(h) * speed;
 				a.vy[slot] = Math.sin(h) * speed;
 				a.state[slot] = State.SUSCEPTIBLE;
+				const age = rng.next();
+				a.ageBand[slot] = age < young ? 0 : age < 1 - old ? 1 : 2;
 				const v = rng.next();
-				a.protection[slot] =
-					v < reg.vaccinatedFull
+				a.protection[slot] = !vaccine.exists
+					? Protection.NONE
+					: v < reg.vaccinatedFull
 						? Protection.FULL
-						: this.disease.hasPartialCourse && v < reg.vaccinatedFull + reg.vaccinatedPartial
+						: vaccine.hasPartialCourse && v < reg.vaccinatedFull + reg.vaccinatedPartial
 							? Protection.PARTIAL
 							: Protection.NONE;
-				const p = a.protection[slot];
-				const efficacy =
-					p === Protection.FULL
-						? this.disease.fullEfficacy
-						: p === Protection.PARTIAL
-							? this.disease.partialEfficacy
-							: 0;
-				a.vaccineWorks[slot] = rng.next() < efficacy ? 1 : 0;
+				vaccinate(a, 0, slot, vaccine, rng, waning);
 				a.essential[slot] = rng.next() < ESSENTIAL_SHARE ? 1 : 0;
 				a.fatigueTicks[slot] = Math.max(TICKS_PER_DAY, Math.round(fatigueMean + rng.normal() * fatigueSd));
 				a.region[slot] = r;
@@ -257,21 +337,45 @@ export class Simulation {
 		this.tick++;
 		// 1. Commands.
 		if (this.queue.length > 0) this.applyCommands();
+		const sub = this.subsystems;
 		// 2. Departures.
-		this.transit.depart(a, this.routeList, this.scenario.regions, this.tick, this.rng);
+		if (sub.travel) this.transit.depart(a, this.routeList, this.scenario.regions, this.tick, this.rng);
 		// 3. Movement, in a region and in transit.
-		moveInRegions(a, this.scenario.regions, this.radii, this.tick, this.rng);
+		moveInRegions(a, this.scenario.regions, this.radii, this.tick, this.rng, sub.illStopsMovement);
 		this.transit.move(a, this.routeList, this.scenario.regions, this.radii, this.rng);
 		// 4. Spatial grid.
 		this.grid.rebuild(a);
 		// 5. Transmission.
-		transmit(a, this.grid, this.disease, this.tick, this.rng, this.hooks, this.secondaryOnly);
-		// 6. Disease clocks.
-		advanceIllness(a, this.disease, this.rng, this.mortalityMultiplier, this.hooks);
-		// 7. Waning immunity: arrives with step 3 of the build.
-		// 8. Telemetry counters.
+		transmit(
+			a,
+			this.grid,
+			this.disease,
+			0,
+			this.tick,
+			this.rng,
+			this.hooks,
+			this.secondaryOnly,
+			sub.silentSpread,
+			this.rules
+		);
+		// 6. Disease clocks, deaths and hospital load (strain from the last count).
+		advanceIllness(
+			a,
+			this.disease,
+			0,
+			this.rng,
+			this.strain,
+			this.routeList,
+			this.hooks,
+			this.rules,
+			sub.waning
+		);
+		// 7. Waning immunity.
+		if (sub.waning) wane(a, 0);
+		// 8. Telemetry counters, then pressure for the next tick.
 		this.counters.recount(a, this.routeList);
-		if (this.tick % TICKS_PER_DAY === 0) this.counters.sample(this.day);
+		this.updatePressure();
+		if (this.tick % TICKS_PER_DAY === 0) this.counters.sample(this.day, this.pressure);
 	}
 
 	private applyCommands(): void {
@@ -291,7 +395,8 @@ export class Simulation {
 		const reg = this.scenario.regions[region];
 		if (!reg) return;
 		reg.policy = policy;
-		this.bedCapacity[region] = bedsInDots(this.regionDots[region], policy);
+		this.beds[region] = allBedsInDots(this.regionDots[region], policy);
+		this.bedCapacity[region] = this.beds[region] * policy.spareBedShare.value;
 	}
 
 	/** Infect `count` random unprotected dots in a region (index cases). */
@@ -312,7 +417,7 @@ export class Simulation {
 			const i = from[pick];
 			from[pick] = from[from.length - 1];
 			from.pop();
-			infect(a, i, -1, this.tick, this.disease, this.rng);
+			infect(a, 0, i, -1, this.tick, this.disease, this.rng, this.rules);
 			// Index cases may spread from the very next tick.
 			a.infectedTick[i] = this.tick - 1;
 			this.hooks.onInfected(i, -1);
@@ -350,8 +455,14 @@ export class Simulation {
 			name: reg.name,
 			dots: this.regionDots[r],
 			counts: c.regionCounts(r),
-			overloaded: false,
+			deathsByAge: c.deathsByAge(r),
+			overloaded: this.pressure[r] > 1,
 			capacity: this.bedCapacity[r],
+			beds: this.beds[r],
+			patients: c.patients[r],
+			pressure: this.pressure[r],
+			pressureBand: pressureBand(this.pressure[r]),
+			strain: this.strain[r],
 			lockedDown: false,
 			fatiguedShare: 0,
 			testCooldown: 0
@@ -374,11 +485,12 @@ export class Simulation {
 }
 
 /**
- * Spare hospital beds an outbreak could use, in dots (the same unit as the counts), so a small
- * population still gets a fraction of a bed rather than none. The UI multiplies by peoplePerDot.
+ * All hospital beds, in dots (the same unit as the counts), so a small population still gets a
+ * fraction of a bed rather than none. Spare beds are this x spareBedShare. The UI multiplies by
+ * peoplePerDot to show people.
  */
-function bedsInDots(dots: number, policy: HealthPolicy): number {
-	return (dots * policy.hospitalBedsPerThousand.value * policy.spareBedShare.value) / 1000;
+function allBedsInDots(dots: number, policy: HealthPolicy): number {
+	return (dots * policy.hospitalBedsPerThousand.value) / 1000;
 }
 
 export function createSimulation(scenario: Scenario, options: SimulationOptions): Simulation {

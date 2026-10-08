@@ -158,10 +158,11 @@ export interface DiseaseConfig {
 	/** Vaccines on offer; `fullEfficacy` and `partialEfficacy` equal the default's infection values. */
 	vaccines?: Vaccine[];
 	/**
-	 * Which vaccine entry (by vaccineKey) "partly vaccinated" means, when it isn't the default's
-	 * course; e.g. Omicron-era people part-way through a primary course got the original vaccine.
+	 * Protection from having had the disease (6.2): against reinfection and against severe illness,
+	 * from the same source at the same time since infection. A recovered dot whose immunity has
+	 * waned keeps the severe part for breakthrough reinfections. Left out where nothing is sourced.
 	 */
-	partialCourse?: string;
+	afterInfection?: { infection: Sourced; severe: Sourced };
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -179,6 +180,27 @@ export interface DiseaseCalibration {
 	indexCases: number;
 }
 
+/** One vaccine as the engine uses it: protection as plain shares, waning in ticks. */
+export interface VaccineRuntime {
+	/** vaccineKey of the entry, e.g. "covid-updated". */
+	key: string;
+	/** False for a disease with no vaccine: nobody spawns vaccinated, full or partial. */
+	exists: boolean;
+	/** Share of a full course for whom it works against infection (all or nothing). */
+	fullInfection: number;
+	/** Protection against severe illness for a fully vaccinated person it didn't stop (6.2). */
+	fullSevere: number;
+	/** False when there is no unfinished course: partly vaccinated dots spawn unprotected. */
+	hasPartialCourse: boolean;
+	partialInfection: number;
+	/** False where an unfinished course has no figure against infection, so it is assumed to give none. */
+	partialInfectionSourced: boolean;
+	/** Severe protection for an unfinished course's breakthrough case; 0 when unsourced (6.2). */
+	partialSevere: number;
+	/** Mean ticks until a working vaccine stops working (waningDays / ln 2); 0 when it doesn't fade. */
+	waningMeanTicks: number;
+}
+
 /** Disease settings converted to ticks, used by the engine. */
 export interface DiseaseRuntime {
 	id: string;
@@ -186,16 +208,20 @@ export interface DiseaseRuntime {
 	silentTicks: number;
 	illTicks: number;
 	asymptomaticFraction: number;
+	/** All-ages deaths per symptomatic case: the fallback when age bands are switched off. */
 	mortality: number;
-	/** Mean ticks until protection drops a level (waningDays / ln 2); 0 when it never fades. */
-	waningMeanTicks: number;
-	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
-	fullEfficacy: number;
-	/** 0 when the disease has no unfinished course. */
-	partialEfficacy: number;
-	/** False when the default vaccine has no unfinished course: partly vaccinated dots spawn unprotected. */
-	hasPartialCourse: boolean;
+	/** Deaths per symptomatic case in each age band (the all-ages figure where none is sourced). */
+	mortalityByBand: Bands;
+	/** All-ages share of symptomatic cases needing a bed. */
 	hospitalisedShare: number;
+	/** Share of symptomatic cases needing a bed, by age band. */
+	hospitalByBand: Bands;
+	/** Mean ticks until infection-acquired immunity fades (waningDays / ln 2); 0 when it never fades. */
+	waningMeanTicks: number;
+	/** Protection against severe illness in a reinfection, once immunity has waned (0 when unsourced). */
+	afterInfectionSevere: number;
+	/** The vaccines on offer, default first. A disease with no vaccine has one that never works. */
+	vaccines: VaccineRuntime[];
 	beta: number;
 	transmissionRadius: number;
 }
@@ -215,6 +241,11 @@ export interface Region {
 	vaccinatedFull: number;
 	/** Share partly vaccinated, 0 to 1. */
 	vaccinatedPartial: number;
+	/**
+	 * The vaccine given here (a vaccineKey, e.g. "covid-original"); the disease's default when unset
+	 * or not offered for the disease. Changing it restarts the run, because vaccineWorks is re-rolled.
+	 */
+	vaccine?: string;
 	/** Healthcare and behaviour settings (4.2); beds and travel change live via a 'policy' command. */
 	policy: HealthPolicy;
 	hub?: { x: number; y: number };
@@ -250,6 +281,31 @@ export interface Scenario {
 	 */
 	mapSeed: number | null;
 	regions: Region[];
+	/** Switch subsystems off, one at a time, for guided mode (6.14). Everything is on when unset. */
+	subsystems?: Partial<Subsystems>;
+}
+
+/**
+ * The mechanics guided mode can switch on one at a time (6.14). The tick order honours each one;
+ * a lesson only sets these, never engine internals.
+ */
+export interface Subsystems {
+	/** People can die. Off: everyone recovers. */
+	deaths: boolean;
+	/** Hospital beds and pressure; strain raises deaths. Off: no beds, no strain. */
+	hospital: boolean;
+	/** Death and hospital chances by age band. Off: the all-ages figures for everyone. */
+	ageBands: boolean;
+	/** People spread it before they have symptoms. Off: only people with symptoms spread it. */
+	silentSpread: boolean;
+	/** People with symptoms stop moving and don't travel. Off: they carry on as normal. */
+	illStopsMovement: boolean;
+	/** Trips between populations. */
+	travel: boolean;
+	/** Vaccine protection and immunity after illness fade. */
+	waning: boolean;
+	/** Lockdown, testing, flights and borders respond to commands (step 3b). */
+	interventions: boolean;
 }
 
 export type Speed = 0 | 0.5 | 1 | 2 | 4;
@@ -277,14 +333,28 @@ export interface Counts {
 	everInfected: number;
 }
 
+export type PressureBand = 'coping' | 'under-pressure' | 'overwhelmed';
+
 export interface RegionTelemetry {
 	id: number;
 	name: string;
 	dots: number;
 	counts: Counts;
+	/** Deaths so far by age band (0-14, 15-64, 65+). */
+	deathsByAge: Bands;
+	/** Outbreak patients need more beds than are spare (pressure over 100%). */
 	overloaded: boolean;
 	/** Spare hospital beds, in dots. Multiply by peoplePerDot to show people. */
 	capacity: number;
+	/** All hospital beds, in dots. */
+	beds: number;
+	/** Expected outbreak patients in a bed now, in dots (fractional, 6.6); ill travellers count at their origin. */
+	patients: number;
+	/** (Beds normally occupied + outbreak patients) / all beds (6.6). 0 when hospitals are switched off. */
+	pressure: number;
+	pressureBand: PressureBand;
+	/** The strain multiplier on the odds of death for patients in a bed (1 = no strain, 6.6). */
+	strain: number;
 	lockedDown: boolean;
 	fatiguedShare: number;
 	testCooldown: number;
@@ -312,14 +382,41 @@ export interface Telemetry {
 	events: SimEvent[];
 }
 
-/** One region's daily history, oldest first. Channels follow HISTORY_CHANNELS. */
+/**
+ * One region's daily history, oldest first. Channels follow HISTORY_CHANNELS; `byAge` has one
+ * series per age band for each of AGE_CHANNELS.
+ */
 export interface RegionHistory {
 	days: Int32Array;
 	series: Record<HistoryChannel, Int32Array>;
+	byAge: Record<AgeChannel, [Int32Array, Int32Array, Int32Array]>;
 }
 
-export const HISTORY_CHANNELS = ['silent', 'symptomatic', 'recovered', 'deceased', 'susceptible'] as const;
+/**
+ * Daily channels per region, in dots. inHospital (here and per age band) is an expected value in
+ * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%).
+ */
+export const HISTORY_CHANNELS = [
+	'silent',
+	'symptomatic',
+	'recovered',
+	'deceased',
+	'susceptible',
+	'inHospital',
+	'pressure'
+] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
+
+/** Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not). */
+export const AGE_CHANNELS = [
+	'susceptible',
+	'infected',
+	'inHospital',
+	'recovered',
+	'deceased',
+	'vaccinated'
+] as const;
+export type AgeChannel = (typeof AGE_CHANNELS)[number];
 
 /** Size of the drawing surface in screen pixels. The camera decides what part of the world it shows. */
 export interface Viewport {

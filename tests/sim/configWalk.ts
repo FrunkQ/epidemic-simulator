@@ -5,7 +5,7 @@ import {
 	UK_2019_AGE_GROUPS
 } from '../../src/lib/config/covidAgeIfr';
 import { DISEASES } from '../../src/lib/config/diseases';
-import { DEFAULT_POLICY } from '../../src/lib/config/healthPolicy';
+import { DEFAULT_POLICY, ENGLAND_POLICY } from '../../src/lib/config/healthPolicy';
 import { POPULATION } from '../../src/lib/config/population';
 import { MICROCOSM_COVERAGE } from '../../src/lib/config/scenarios';
 import { vaccineKey } from '../../src/lib/config/vaccines';
@@ -28,11 +28,12 @@ export const CONFIG: Record<string, object> = {
 	behaviour: BEHAVIOUR,
 	population: POPULATION,
 	healthPolicy: DEFAULT_POLICY,
+	englandPolicy: ENGLAND_POLICY,
 	scenarios: MICROCOSM_COVERAGE,
 	covidAgeIfr: { COVID19_IFR_PERCENT_BY_AGE, UK_2019_AGE_GROUPS, COVID19_SEVERE_PERCENT_BY_GROUP }
 };
 /** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb', 'partialCourse']);
+const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
 
 export function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;
@@ -73,11 +74,17 @@ export function walk(): {
 		for (const [k, v] of Object.entries(obj)) {
 			const key = `${prefix}.${k}`;
 			if (PLAIN.has(k)) continue;
-			if (k === 'vaccines' && Array.isArray(v)) {
+			if (k === 'afterInfection' && v && typeof v === 'object') {
+				for (const [nk, nv] of Object.entries(v))
+					if (isSourced(nv)) {
+						seen.add(nv);
+						sourced.push({ key: `${key}.${nk}`, value: nv });
+					} else bare.push(`${key}.${nk}`);
+			} else if (k === 'vaccines' && Array.isArray(v)) {
 				for (const vaccine of v as Vaccine[]) walkVaccine(`${key}.${vaccineKey(vaccine)}`, '', vaccine);
 			} else if (isSourced(v)) {
 				// The default policy reuses behaviour and population numbers by reference: walk them once.
-				if (prefix === 'healthPolicy' && seen.has(v)) continue;
+				if ((prefix === 'healthPolicy' || prefix === 'englandPolicy') && seen.has(v)) continue;
 				seen.add(v);
 				sourced.push({ key, value: v });
 				// Nested sourced reasons, e.g. a band's outsideHospitalReason.

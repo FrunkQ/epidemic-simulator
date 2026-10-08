@@ -2,6 +2,8 @@
 	import { untrack } from 'svelte';
 	import { COLOURS } from '../sim/render';
 	import type { RegionHistory, Telemetry } from '../sim/types';
+	import { BEHAVIOUR } from '../config/behaviour';
+	import AgeBarsChart from './charts/AgeBarsChart.svelte';
 	import LineChart from './charts/LineChart.svelte';
 	import StackedAreaChart from './charts/StackedAreaChart.svelte';
 	import type { Band, Line } from './charts/scale';
@@ -38,6 +40,23 @@
 		}));
 	});
 
+	/**
+	 * Hospital pressure per city, in percent, with the strain threshold and 100% marked (6.6). The
+	 * axis grows with the data, so a badly overwhelmed city stays on the chart.
+	 */
+	const pressureLines = $derived(
+		history.map((h, r): Line => ({
+			key: String(perRegion[r]?.id ?? r),
+			label: perRegion[r]?.name ?? '',
+			colour: '#c7d4e2',
+			dash: DASHES[r % DASHES.length],
+			values: Array.from(h.series.pressure, (v) => v / 10)
+		}))
+	);
+	const threshold = Math.round(BEHAVIOUR.strainThreshold.value * 100);
+	// Pressure is 0 only when hospitals are switched off or a city has no beds (6.6).
+	const hospitalsOn = $derived(telemetry.regions.some((r) => r.pressure > 0));
+
 	const illLines = $derived(
 		perRegion.map((p, r): Line => ({
 			key: String(p.id),
@@ -62,6 +81,31 @@
 		{#if perRegion.length > 1}
 			<LineChart title="Ill right now, in each city" days={perRegion[0].days} lines={illLines} />
 		{/if}
+		{#if hospitalsOn && perRegion.length > 0}
+			<LineChart
+				title="Hospital beds in use, in each city"
+				days={perRegion[0].days}
+				lines={pressureLines}
+				yLabel="% of beds"
+				references={[
+					{ label: `${threshold}%: strain starts`, value: threshold, labelStart: true },
+					{ label: '100%: full', value: 100 }
+				]}
+			/>
+		{/if}
+		{#each telemetry.regions as r (r.id)}
+			{#if r.counts.deceased > 0}
+				<AgeBarsChart
+					title="{r.name}: who died, by age"
+					values={[
+						r.deathsByAge[0] * telemetry.peoplePerDot,
+						r.deathsByAge[1] * telemetry.peoplePerDot,
+						r.deathsByAge[2] * telemetry.peoplePerDot
+					]}
+					asShares
+				/>
+			{/if}
+		{/each}
 	</div>
 </div>
 

@@ -69,10 +69,8 @@ describe('vaccines', () => {
 		for (const d of WITH_VACCINES) {
 			const v = defaultVaccine(d.vaccines)!;
 			expect(d.fullEfficacy.value, d.id).toBe(v.full.infection.value);
-			// "Partly vaccinated" means the default's course unless the disease names another entry.
-			const course = d.partialCourse ? find(d, d.partialCourse) : v;
-			if (course.partial?.infection)
-				expect(d.partialEfficacy?.value, d.id).toBe(course.partial.infection.value);
+			// "Partly vaccinated" means an unfinished course of the default vaccine (6.13).
+			if (v.partial?.infection) expect(d.partialEfficacy?.value, d.id).toBe(v.partial.infection.value);
 			else
 				expect(d.partialEfficacy, `${d.id} has no unfinished course, so no partialEfficacy`).toBeUndefined();
 		}

@@ -1,5 +1,4 @@
 import { Agents } from './agents';
-import { State } from './types';
 
 /**
  * One uniform grid per population, covering its disc's bounding box (dots in different
@@ -71,7 +70,7 @@ export class SpatialGrid {
 		cellStart.fill(0);
 		for (let i = 0; i < n; i++) {
 			const r = agents.region[i];
-			if (r < 0 || agents.state[i] === State.DECEASED) {
+			if (r < 0 || agents.dead[i] === 1) {
 				cellOf[i] = -1;
 				continue;
 			}

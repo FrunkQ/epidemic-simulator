@@ -3,7 +3,7 @@ import { BEHAVIOUR } from '../config/behaviour';
 import { TICKS_PER_DAY } from './constants';
 import { pointAt } from './routes';
 import { Rng } from './rng';
-import { State, type Region, type Route } from './types';
+import type { Region, Route } from './types';
 
 /** Planes in the air at once, at most (a pool size, not a travel number). */
 export const MAX_PLANES = 128;
@@ -15,6 +15,8 @@ const scratch = { x: 0, y: 0 };
  * travellers ride hidden inside a plane. The disease clock keeps running on the way.
  */
 export class Transit {
+	/** People with symptoms don't board and stop on the way (the illStopsMovement subsystem). */
+	illStops = true;
 	readonly planeRoute = new Int16Array(MAX_PLANES).fill(-1);
 	readonly planeDir = new Int8Array(MAX_PLANES);
 	readonly planeS = new Float32Array(MAX_PLANES);
@@ -135,8 +137,8 @@ export class Transit {
 			const k = start + rng.int(count);
 			const i = this.regionItems[k];
 			if (agents.region[i] !== region) continue; // already left this tick
-			const s = agents.state[i];
-			if (s === State.SYMPTOMATIC || s === State.DECEASED || agents.isolated[i] === 1) continue;
+			if (agents.dead[i] === 1 || agents.isolated[i] === 1) continue;
+			if (this.illStops && agents.ill[i] === 1) continue;
 			return i;
 		}
 		return -1;
@@ -166,14 +168,13 @@ export class Transit {
 			const r = agents.route[i];
 			if (r < 0) continue;
 			const route = routes[r];
-			const s = agents.state[i];
-			if (s === State.DECEASED) {
+			if (agents.dead[i] === 1) {
 				this.diedOnTheWay(agents, i, route);
 				continue;
 			}
 			if (route.kind === 'air') continue;
 			// Ill or isolated travellers stop where they are; their clock keeps running.
-			if (s === State.SYMPTOMATIC || s === State.DECEASED || agents.isolated[i] === 1) continue;
+			if (agents.isolated[i] === 1 || (this.illStops && agents.ill[i] === 1)) continue;
 			const speed = route.length / (route.travelDays * TICKS_PER_DAY);
 			const dir = agents.routeDir[i];
 			const next = agents.routeS[i] + dir * speed;
@@ -233,7 +234,7 @@ export class Transit {
 		agents.x[i] = reg.cx + (ex / d) * inside;
 		agents.y[i] = reg.cy + (ey / d) * inside;
 		const h = rng.next() * Math.PI * 2;
-		if (agents.state[i] !== State.SYMPTOMATIC && agents.state[i] !== State.DECEASED) {
+		if (agents.dead[i] === 0 && !(this.illStops && agents.ill[i] === 1)) {
 			agents.vx[i] = Math.cos(h) * agents.speed[i];
 			agents.vy[i] = Math.sin(h) * agents.speed[i];
 		}
@@ -263,8 +264,7 @@ export class Transit {
 	/** Living travellers currently on the way (for telemetry). */
 	travellers(agents: Agents): number {
 		let t = 0;
-		for (let i = 0; i < agents.activeCount; i++)
-			if (agents.route[i] >= 0 && agents.state[i] !== State.DECEASED) t++;
+		for (let i = 0; i < agents.activeCount; i++) if (agents.route[i] >= 0 && agents.dead[i] === 0) t++;
 		return t;
 	}
 }

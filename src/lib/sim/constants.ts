@@ -7,6 +7,8 @@ export const MAX_TICKS_PER_FRAME = 8;
 
 /** Fixed size of the dot pool. */
 export const MAX_AGENTS = 6000;
+/** Most diseases circulating at once (6.12); illness arrays have one block per disease. */
+export const MAX_DISEASES = 2;
 /** Smallest number of dots any population gets, however many people it has. */
 export const MIN_DOTS_PER_REGION = 30;
 /** People each dot stands for, before it is raised to fit MAX_AGENTS. */
@@ -28,9 +30,6 @@ export const BASE_SPEED = 1.2;
 export const WANDER_EVERY = 8;
 /** Largest turn per wander step, in radians. */
 export const WANDER_TURN = 0.6;
-
-/** Partly vaccinated dots are ill for this fraction of the usual time. */
-export const PARTIAL_ILL_FACTOR = 0.5;
 
 /** Days of history kept for charts (ring buffer). */
 export const HISTORY_DAYS = 730;

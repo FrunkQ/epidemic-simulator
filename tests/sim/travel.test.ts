@@ -5,7 +5,8 @@ import { withValue } from '../../src/lib/config/healthPolicy';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import { TRAVEL_DAYS } from '../../src/lib/sim/routes';
-import { State } from '../../src/lib/sim/types';
+import { State, type Bands } from '../../src/lib/sim/types';
+import { loadDisease } from '../../src/lib/config';
 
 /**
  * Follow every traveller who sets off while silently infected and record whether they are
@@ -84,7 +85,11 @@ describe('every dot is counted once, travellers included', () => {
 			r.vaccinatedPartial = 0;
 			r.policy = withValue(r.policy, 'travelFrequency', 3);
 		}
-		const sim = createSimulation(scenario, { seed: 7, diseaseId: 'pertussis' });
+		// Whooping cough's long illness, with deaths made common (an accounting test, not a lesson),
+		// so some people are sure to die on the way whatever the seed.
+		const pertussis = loadDisease('pertussis');
+		const disease = { ...pertussis, mortalityByBand: [0.3, 0.3, 0.3] as Bands, mortality: 0.3 };
+		const sim = createSimulation(scenario, { seed: 7, diseaseId: 'pertussis', disease });
 		sim.send({ type: 'seed', region: 1, count: 20 });
 		const a = sim.agents;
 		let diedOnRoute = 0;
@@ -93,7 +98,7 @@ describe('every dot is counted once, travellers included', () => {
 			for (let t = 0; t < TICKS_PER_DAY; t++) {
 				sim.step(1);
 				for (let i = 0; i < a.activeCount; i++)
-					if (a.route[i] >= 0 && a.state[i] === State.DECEASED && !counted[i]) {
+					if (a.route[i] >= 0 && a.dead[i] === 1 && !counted[i]) {
 						counted[i] = 1;
 						diedOnRoute++;
 					}

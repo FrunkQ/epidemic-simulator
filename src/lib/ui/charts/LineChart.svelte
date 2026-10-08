@@ -77,8 +77,11 @@
 		<text x={MARGIN.left + plotW / 2} y={height - 8} text-anchor="middle">Day</text>
 		{#each references as r (r.label)}
 			<line class="reference" x1={MARGIN.left} y1={ys(r.value)} x2={MARGIN.left + plotW} y2={ys(r.value)} />
-			<text class="reference-label" x={MARGIN.left + plotW} y={ys(r.value) - 3} text-anchor="end"
-				>{r.label}</text
+			<text
+				class="reference-label"
+				x={r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW}
+				y={r.labelStart ? ys(r.value) + 10 : ys(r.value) - 3}
+				text-anchor={r.labelStart ? 'start' : 'end'}>{r.label}</text
 			>
 		{/each}
 		{#each lines as l (l.key)}

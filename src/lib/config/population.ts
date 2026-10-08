@@ -1,8 +1,14 @@
 import type { Banded, Bands, Sourced } from '../sim/types';
+import { ageMixOf } from './derived';
 
 export interface PopulationConfig {
 	/** Share of people in each age band (0-14, 15-64, 65+); the general default is the EU. */
 	ageMix: Sourced<Bands>;
+	/** The UK's ages, for the England (NHS) preset. */
+	ukAgeMix: Sourced<Bands>;
+	/** A young and an old country (Nigeria about 3% aged 65+, Japan about 30%), for the age lesson. */
+	youngAgeMix: Sourced<Bands>;
+	oldAgeMix: Sourced<Bands>;
 	/** Everyday deaths from all causes, per person per year, by band (EU-27). */
 	backgroundDeathRate: Banded;
 	/** The same for the UK, kept for the step 4 country preset. */
@@ -10,10 +16,10 @@ export interface PopulationConfig {
 }
 
 export const POPULATION: PopulationConfig = {
-	ageMix: {
-		value: [0.1421, 0.6335, 0.2244],
-		sources: ['worldbank-pop-0014', 'worldbank-pop-65up']
-	},
+	ageMix: { value: ageMixOf('EU'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
+	ukAgeMix: { value: ageMixOf('UK'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
+	youngAgeMix: { value: ageMixOf('Nigeria'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
+	oldAgeMix: { value: ageMixOf('Japan'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
 	// EU-27 2023: 19,177 / 699,423 / 4,137,597 deaths over 66,433,028 / 285,755,090 / 95,507,232 people.
 	backgroundDeathRate: {
 		value: [0.000289, 0.00245, 0.0433],

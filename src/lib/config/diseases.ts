@@ -25,6 +25,7 @@ import {
 	OPV_SHEDDING_OR,
 	RANJEVA_HALF_LIFE_YEARS,
 	SMALLPOX_VACCINE_HALF_LIFE,
+	STEIN_40_WEEKS,
 	WENDELBOE_HALF_LIFE,
 	YOUNG,
 	BOLORMAA,
@@ -89,10 +90,19 @@ const OMICRON_IFR: Sourced = {
 };
 /** The 2020 virus's hospital share per infection, scaled the same way (an assumption). */
 const OMICRON_HOSPITAL_PER_INFECTION = COVID19_IHR.value * OMICRON_SEVERITY_RATIO;
+/** The 2020 bands, scaled by the same ratio in every band (6.11: a stated assumption). */
+const omicronBands = (b: Banded, extra: string): Banded => ({
+	...b,
+	value: b.value.map((v) => v * OMICRON_SEVERITY_RATIO) as Bands,
+	overall: b.overall * OMICRON_SEVERITY_RATIO,
+	sources: [...b.sources, extra]
+});
+const OMICRON_DEATHS_BY_AGE = omicronBands(COVID19_DEATHS_BY_AGE, 'perez-guzman-2023-omicron');
+const OMICRON_HOSPITAL_BY_AGE = omicronBands(COVID19_HOSPITAL_BY_AGE, 'perez-guzman-2023-omicron');
 
 /*
  * Vaccines. Each disease's `fullEfficacy` and `partialEfficacy` are its default vaccine's
- * infection values (the same objects), until step 3 moves the engine onto `vaccines`.
+ * infection values (the same objects), kept for the herd-immunity line; the engine reads `vaccines`.
  * Risk rates are per 100,000 doses; deaths use VaccineDeathRate (6.13). Worked-out numbers come
  * from derived.ts, which citations.ts also uses for its prose.
  */
@@ -480,6 +490,13 @@ export const DISEASES = {
 			value: COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH,
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
 		},
+		afterInfection: {
+			infection: {
+				value: STEIN_40_WEEKS.preOmicron.reinfection,
+				sources: ['stein2023-covid-past-infection']
+			},
+			severe: { value: STEIN_40_WEEKS.preOmicron.severe, sources: ['stein2023-covid-past-infection'] }
+		},
 		fullEfficacy: COVID19_2021.full.infection,
 		partialEfficacy: COVID19_2021.partial.infection,
 		hospitalisedShare: {
@@ -512,15 +529,19 @@ export const DISEASES = {
 			sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
 		},
 		waningDays: { value: BOBROVITZ.halfLife, sources: ['bobrovitz-2023-omicron-reinfection'] },
+		// Mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.
+		afterInfection: {
+			infection: { value: STEIN_40_WEEKS.ba1.reinfection, sources: ['stein2023-covid-past-infection'] },
+			severe: { value: STEIN_40_WEEKS.ba1.severe, sources: ['stein2023-covid-past-infection'] }
+		},
+		// The default (updated) vaccine has no partial course, so it has no partialEfficacy (6.13).
 		fullEfficacy: OMICRON_UPDATED.full.infection,
-		// The updated vaccine has no partial-course figure, so this stays the original vaccine's
-		// one-dose figure (Tan 2022) until step 3 moves the engine onto `vaccines`.
-		partialCourse: 'covid-original',
-		partialEfficacy: OMICRON_ORIGINAL.partial.infection,
 		hospitalisedShare: {
 			value: OMICRON_HOSPITAL_PER_INFECTION / (1 - OMICRON_ASYMPTOMATIC.value),
 			sources: ['ward-2024-covid-ihr-ifr', 'perez-guzman-2023-omicron']
 		},
+		mortalityByAge: OMICRON_DEATHS_BY_AGE,
+		hospitalisedByAge: OMICRON_HOSPITAL_BY_AGE,
 		vaccines: [OMICRON_ORIGINAL, OMICRON_UPDATED]
 	},
 	chickenpox: {
@@ -722,7 +743,6 @@ export const DISEASES = {
 		mortality: { value: 0.5, sources: ['who-marburg-factsheet'] },
 		waningDays: { value: null, sources: ['natesan-2016-filovirus-antibody-persistence'] },
 		fullEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
-		partialEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
 		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] }
 	},
 	flu1918: {
@@ -756,7 +776,6 @@ export const DISEASES = {
 		mortality: { value: 0.017, sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass'] },
 		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },
 		fullEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
-		partialEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
 		// Lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.
 		hospitalisedShare: {
 			value: 0.017,

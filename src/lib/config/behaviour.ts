@@ -1,4 +1,5 @@
 import type { Sourced } from '../sim/types';
+import { EU_CURATIVE_BEDS_PER_1000, EU_CURATIVE_OCCUPANCY, STRAIN } from './derived';
 
 /**
  * How people and health systems respond. COVID-19 era research backs the behaviour mechanics
@@ -9,9 +10,9 @@ export interface BehaviourConfig {
 	lockdownFatigueMeanDays: Sourced;
 	/** Spread of that point between people, in days. */
 	lockdownFatigueSdDays: Sourced;
-	/** Default hospital beds per 1,000 people for a new population. */
+	/** Default hospital beds for short-term (curative) care per 1,000 people for a new population. */
 	hospitalBedsPerThousand: Sourced;
-	/** Share of those beds normally free, so only spare beds count as capacity. */
+	/** Share of those beds normally free (1 - normal occupancy), so only spare beds count as capacity. */
 	spareBedShare: Sourced;
 	/** Road trips per day each way on one road, at the default travel frequency. */
 	roadTripsPerDay: Sourced;
@@ -23,6 +24,12 @@ export interface BehaviourConfig {
 	flightsPerDay: Sourced;
 	/** Seats on one plane; a busier flight sends extra planes rather than leaving people behind. */
 	planeSeats: Sourced;
+	/** Hospital pressure (share of beds in use) above which patients start to do worse (6.6). */
+	strainThreshold: Sourced;
+	/** The most that strain multiplies a hospital patient's chance of dying. */
+	strainMaxMultiplier: Sourced;
+	/** How fast the multiplier rises per unit of pressure above the threshold. */
+	strainSlope: Sourced;
 }
 
 /** Why the travel numbers are placeholders: they are sized for the sim, not taken from data. */
@@ -35,11 +42,24 @@ export const BEHAVIOUR: BehaviourConfig = {
 		sources: ['joshi2021-lockdown-mobility']
 	},
 	lockdownFatigueSdDays: { value: 20, sources: ['petherick2021-pandemic-fatigue'] },
-	hospitalBedsPerThousand: { value: 5.07, sources: ['eurostat-beds-2024'] },
-	spareBedShare: { value: 0.1, sources: ['nhs-england-kh03-bed-occupancy-2024'] },
+	hospitalBedsPerThousand: { value: EU_CURATIVE_BEDS_PER_1000, sources: ['eurostat-curative-beds-2023'] },
+	spareBedShare: { value: 1 - EU_CURATIVE_OCCUPANCY, sources: ['eurostat-curative-occupancy-2023'] },
 	roadTripsPerDay: { value: 2, sources: [], provisional: TRAVEL_PLACEHOLDER },
 	ferryTripsPerDay: { value: 1.5, sources: [], provisional: TRAVEL_PLACEHOLDER },
 	airTripsPerDay: { value: 6, sources: [], provisional: TRAVEL_PLACEHOLDER },
 	flightsPerDay: { value: 3, sources: [], provisional: TRAVEL_PLACEHOLDER },
-	planeSeats: { value: 8, sources: [], provisional: TRAVEL_PLACEHOLDER }
+	planeSeats: { value: 8, sources: [], provisional: TRAVEL_PLACEHOLDER },
+	strainThreshold: {
+		value: STRAIN.threshold,
+		sources: ['neupane2024-surge-sr', 'wilde2021-icu-occupancy', 'bravata2021-va-icu-strain']
+	},
+	strainMaxMultiplier: {
+		value: STRAIN.cap,
+		sources: ['neupane2024-surge-sr', 'kadri2021-caseload-surge', 'bravata2021-va-icu-strain']
+	},
+	// Worked out from the threshold and the cap (derived.ts).
+	strainSlope: {
+		value: STRAIN.slope,
+		sources: ['neupane2024-surge-sr', 'wilde2021-icu-occupancy', 'kadri2021-caseload-surge']
+	}
 };

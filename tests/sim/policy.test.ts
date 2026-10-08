@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { withValue } from '../../src/lib/config/healthPolicy';
 import { microcosm } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
@@ -24,13 +25,16 @@ describe('health policy, per population and live', () => {
 		const b = before.snapshot();
 		const a = after.snapshot();
 		expect(a.day).toBe(60);
-		expect(a.regions[0].capacity).toBeCloseTo((b.regions[0].capacity * (2.4 * 0.05)) / (5.07 * 0.1), 9);
+		const d = BEHAVIOUR;
+		const ratio = (2.4 * 0.05) / (d.hospitalBedsPerThousand.value * d.spareBedShare.value);
+		expect(a.regions[0].capacity).toBeCloseTo(b.regions[0].capacity * ratio, 9);
+		expect(a.regions[0].beds).toBeCloseTo((b.regions[0].beds * 2.4) / d.hospitalBedsPerThousand.value, 9);
 		for (const r of [1, 2]) {
 			expect(a.regions[r].capacity).toBe(b.regions[r].capacity);
 			expect(after.regions[r].policy).toEqual(before.regions[r].policy);
 		}
-		// Beds don't change the epidemic until hospital load arrives in step 3.
-		expect(a.regions.map((r) => r.counts)).toEqual(b.regions.map((r) => r.counts));
+		// Fewer, fuller beds put that population's hospitals under more pressure straight away.
+		expect(a.regions[0].pressure).toBeGreaterThan(b.regions[0].pressure);
 	});
 
 	it('runs a route at the lower of its two ends, the same both ways', () => {
