@@ -170,7 +170,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'compared with nonsurging (<50th surge index percentile) hospital-months, aORs in the 50th to 75th, 75th to 90th, 90th to 95th, 95th to 99th, and greater than 99th percentiles were 1.11 (95% CI, 1.01 to 1.23), 1.24 (CI, 1.12 to 1.38), 1.42 (CI, 1.27 to 1.60), 1.59 (CI, 1.41 to 1.80), and 2.00 (CI, 1.69 to 2.38), respectively.',
 		location: 'Abstract, Results (174(9):1240-1251)',
-		why: `The largest multi-hospital study: in the most extreme surge months the odds of death were about ${STRAIN.kadriOddsRatio} times those of normal months, so the cap is ${STRAIN.cap}. The steady rise across the surge bands supports a ramp rather than a step. Its outcome is death in hospital or discharge to hospice.`,
+		why: `The largest multi-hospital study: in the most extreme surge months the odds of death were about ${STRAIN.kadriOddsRatio} times those of normal months, so the cap is ${fmt(STRAIN.cap, 1)}. The steady rise across the surge bands supports a ramp rather than a step. Its outcome is death in hospital or discharge to hospice.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
@@ -196,7 +196,7 @@ export const CITATIONS: Citation[] = [
 			'1.67 (95% CI, 1.08-2.60) when COVID-19 ICU load was greater than 75% to 100%, and 2.35 (95% CI, 1.25-4.39) when COVID-19 ICU load was 100% or more (P = .049)',
 		location:
 			'Results, ICU load paragraph; Table 3 (reference load 25% or less). JAMA Netw Open 4(1):e2034266',
-		why: `Load is measured against the fixed pre-pandemic ICU beds, like the model's pressure. At 100% or more the hazard of death was ${STRAIN.bravataHazardRatio} times that at low load, in line with a cap of ${STRAIN.cap}; lower bands were not clearly raised, in line with no extra risk below a high threshold. Hazard ratios are treated as odds ratios here.`,
+		why: `Load is measured against the fixed pre-pandemic ICU beds, like the model's pressure. At 100% or more the hazard of death was ${STRAIN.bravataHazardRatio} times that at low load, in line with a cap of ${fmt(STRAIN.cap, 1)}; lower bands were not clearly raised, in line with no extra risk below a high threshold. Hazard ratios are treated as odds ratios here.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',

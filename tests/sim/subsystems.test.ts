@@ -49,7 +49,10 @@ describe('subsystem switches (6.14)', () => {
 	});
 
 	it('travel off: nobody leaves their population', () => {
-		const sim = createSimulation({ ...microcosm(0), subsystems: { travel: false } }, { seed: 4, diseaseId: 'flu' });
+		const sim = createSimulation(
+			{ ...microcosm(0), subsystems: { travel: false } },
+			{ seed: 4, diseaseId: 'flu' }
+		);
 		for (let d = 0; d < 20; d++) {
 			sim.step(TICKS_PER_DAY);
 			expect(sim.snapshot().travelling).toBe(0);

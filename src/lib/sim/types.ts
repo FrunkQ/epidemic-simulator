@@ -193,6 +193,8 @@ export interface VaccineRuntime {
 	/** False when there is no unfinished course: partly vaccinated dots spawn unprotected. */
 	hasPartialCourse: boolean;
 	partialInfection: number;
+	/** False where an unfinished course has no figure against infection, so it is assumed to give none. */
+	partialInfectionSourced: boolean;
 	/** Severe protection for an unfinished course's breakthrough case; 0 when unsourced (6.2). */
 	partialSevere: number;
 	/** Mean ticks until a working vaccine stops working (waningDays / ln 2); 0 when it doesn't fade. */

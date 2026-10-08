@@ -1,6 +1,7 @@
 import { DISEASES } from './diseases';
+import { fullCourseSevere } from '../sim/disease';
 import type { DiseaseConfig } from '../sim/types';
-import { EU_CURATIVE_OCCUPANCY_2023, EU_OCCUPANCY_MISSING, STRAIN } from './derived';
+import { EU_CURATIVE_OCCUPANCY_2023, EU_OCCUPANCY_MISSING, fmt, STRAIN } from './derived';
 
 const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 /** "A, B and C" */
@@ -25,7 +26,7 @@ export const ASSUMPTIONS = {
 		'Someone protected both by a vaccine and by having had the disease keeps the stronger of the two. The model doesn’t combine them, because combined (“hybrid”) figures aren’t sourced here.',
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
-	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${STRAIN.cap} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
+	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
 	careHomes:
 		'Some older people died of COVID without going into hospital, in care homes or at home. The model counts them as needing a bed, so it slightly overstates hospital pressure for the oldest group.',
 	strainSlope: `No study measures how fast the risk rises between ${Math.round(STRAIN.threshold * 100)}% and ${Math.round(STRAIN.capAt * 100)}%; the model draws a straight line between the sourced starting point and the sourced cap.`,
@@ -39,7 +40,7 @@ export const FULL_COURSE_BORROWS_PARTIAL: string[] = Object.values(
 	DISEASES as Record<string, DiseaseConfig>
 ).flatMap((d) =>
 	(d.vaccines ?? [])
-		.filter((v) => !v.full.severe && v.partial?.severe)
+		.filter((v) => !v.full.severe && fullCourseSevere(v) !== undefined)
 		.map(
 			(v) =>
 				`${d.name}, ${v.label}: no study gives a full course’s protection against serious illness, so the sim uses the unfinished course’s figure, because a full course includes it.`

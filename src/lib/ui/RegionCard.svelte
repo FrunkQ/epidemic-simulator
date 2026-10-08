@@ -3,7 +3,7 @@
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
-	import { vaccineFor } from '../sim/disease';
+	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';
 	import LevelGauge from './charts/LevelGauge.svelte';
@@ -60,7 +60,9 @@
 	};
 	/** Pressure is 0 only with hospitals switched off (or no beds): then there is nothing to show. */
 	let hospitalsOn = $derived(t !== undefined && t.pressure > 0);
-	let unprotected = $derived(Math.max(0, 1 - region.vaccinatedFull - region.vaccinatedPartial));
+	let unprotected = $derived(unvaccinatedShare(region.vaccinatedFull, region.vaccinatedPartial, vaccine));
+	let fullOverall = $derived(overallSevere(vaccine.fullInfection, vaccine.fullSevere));
+	let partialOverall = $derived(overallSevere(vaccine.partialInfection, vaccine.partialSevere));
 </script>
 
 <section
@@ -146,8 +148,8 @@
 				onchange={(e) => onvaccination(Number(e.currentTarget.value), region.vaccinatedPartial)}
 			/>
 			<small
-				>The vaccine {protects(vaccine.fullInfection)} from catching it. {#if vaccine.fullSevere > 0}Of those
-					it doesn't stop, it keeps about {Math.round(vaccine.fullSevere * 100)} in 100 out of serious illness.{/if}</small
+				>The vaccine {protects(vaccine.fullInfection)} from catching it. {#if fullOverall > vaccine.fullInfection}Overall,
+					it keeps about {Math.round(fullOverall * 100)} in 100 out of serious illness, compared with someone unvaccinated.{/if}</small
 			>
 		</label>
 		{#if partialEfficacy !== undefined}
@@ -162,9 +164,12 @@
 					onchange={(e) => onvaccination(region.vaccinatedFull, Number(e.currentTarget.value))}
 				/>
 				<small
-					>An unfinished course {protects(partialEfficacy)} from catching it. {#if vaccine.partialSevere > 0}Of
-						those it doesn't stop, it keeps about {Math.round(vaccine.partialSevere * 100)} in 100 out of serious
-						illness.{/if}</small
+					>{#if vaccine.partialInfectionSourced}An unfinished course {protects(partialEfficacy)} from catching it.{:else}There
+						is no figure for how well an unfinished course stops people catching it, so the sim assumes none.{/if}
+					{#if partialOverall > vaccine.partialInfection}Overall, it keeps about {Math.round(
+							partialOverall * 100
+						)}
+						in 100 out of serious illness, compared with someone unvaccinated.{/if}</small
 				>
 			</label>
 		{/if}

@@ -56,6 +56,7 @@ function toVaccineRuntime(v: Vaccine): VaccineRuntime {
 		fullSevere: breakthrough(fullInfection, fullCourseSevere(v)),
 		hasPartialCourse: partial !== undefined,
 		partialInfection,
+		partialInfectionSourced: partial?.infection !== undefined,
 		// No sourced figure means no severe protection, for either course (6.2).
 		partialSevere: partial?.severe ? breakthrough(partialInfection, partial.severe.value) : 0,
 		waningMeanTicks: halfLifeTicks(v.waningDays.value)
@@ -70,6 +71,7 @@ const NO_VACCINE: VaccineRuntime = {
 	fullSevere: 0,
 	hasPartialCourse: false,
 	partialInfection: 0,
+	partialInfectionSourced: false,
 	partialSevere: 0,
 	waningMeanTicks: 0
 };
@@ -101,6 +103,23 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};
+}
+
+/**
+ * Overall protection against serious illness compared with someone unvaccinated: either kept from
+ * catching it, or caught it and protected against serious illness (6.2).
+ */
+export function overallSevere(infection: number, breakthrough: number): number {
+	return 1 - (1 - infection) * (1 - breakthrough);
+}
+
+/**
+ * Share of a population spawned with no vaccine: everyone without a full course, and also those
+ * set as partly vaccinated when the chosen version has no unfinished course (6.13).
+ */
+export function unvaccinatedShare(full: number, partial: number, vaccine: VaccineRuntime): number {
+	if (!vaccine.exists) return 1;
+	return Math.max(0, 1 - full - (vaccine.hasPartialCourse ? partial : 0));
 }
 
 /** The vaccine a population is given: its pick when the disease offers it, else the default. */
