@@ -83,6 +83,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
   - `config/countryProfiles.generated.json`, written by `scripts/fetch-data.ts`: per-country beds per 1,000, bed occupancy (giving `spareBedShare`), vaccination coverage per disease and density, each with source, indicator code and year.
   - `config/behaviourPresets.ts`, hand-sourced: fields no bulk dataset gives per country (lockdown compliance, fatigue days, testing reach) in `{ value, sources }` form with `citations.ts` entries. Countries without their own figure fall back to a sourced general default, and the card says "general estimate".
   - `config/healthPolicy.ts`: the `HealthPolicy` type, `presetFor(country)` (merges the two files), `similarTo(policy)` and the general default. Steps 2 and 3 use the general default.
+- Vaccination campaign (8 Oct, Alex chose it for 3b; 6.16): `campaignPerThousandPerDay` (slider 0 to 20 per 1,000 per day in steps of 0.5, default 0 = off; the top end is about the fastest sustained national rate, 1 to 2% of people a day, from Our World in Data's vaccination database, Mathieu 2021, Nature Human Behaviour, provisional until verified; explainer built from the sourced value: "The fastest countries managed about N in every 1,000 people a day") and `campaignOrder` ("Most at risk first", the default, or "Everyone at random"). Both apply live. The share of people who will ever take a vaccine, `willingShare`, is a BEHAVIOUR default (provisional until sourced, e.g. UK adult COVID-19 first-dose uptake).
 - Step 2's card ships only the sliders the engine already reads, live and per population: travel frequency, beds per 1,000 and spare-bed share (capacity is recounted at once). Compliance, fatigue and testing sliders arrive in step 3b with their engine hooks, so no slider is inert. There is no global travel slider.
 - Route rule (8 Oct): a route runs at its base trip rate x the lower of its two end populations' travel frequency, the same rate both ways, so cutting travel in one population cuts all its routes and populations stay level.
 - Live vs restart: sliders that don't change who exists or who is vaccinated (beds, spare share, compliance, fatigue, testing, travel) apply live during a run, sent as a queued `{ type: 'policy', region, policy }` command. Population, density, age mix and vaccination changes restart from day 0 (rule 1.8 stands).
@@ -96,6 +97,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 5. Transmission.
 6. Disease clocks and transitions (including deaths and hospital load).
 7. Waning immunity.
+7b. At a day boundary only: the vaccination campaign (6.16), regions in fixed order.
 8. Update telemetry counters. (Publishing to the UI is time-based, from the loop, about 10 Hz.)
 
 ## 6. Mechanics
@@ -231,6 +233,17 @@ Alex: people think about their own area and don't grasp the bigger picture, so i
 - Shareable runs: the engine is seeded and deterministic, so a link encoding the seed and the player's decisions replays the run exactly. No backend, no leaderboard (static Cloudflare Pages).
 - A real 2020 policy timeline may be shown only labelled "a 2020-style timeline in this model", never as a claim about what happened.
 
+### 6.16 Vaccination campaign (per population; step 3b; Alex chose it on 8 Oct)
+- Why: without it the sim vaccinates once at the start and never again, while real programmes vaccinate during an outbreak and every season. The V2 challenge needs it too.
+- Controls are in 4.2. Willingness is drawn once per dot at setup with the seeded RNG, at `willingShare`.
+- Once per simulated day (tick order 7b), each region keeps a fractional accumulator: acc += rate x population / 1,000 / peoplePerDot; it vaccinates floor(acc) dots and subtracts that from acc. Deterministic at any people per dot.
+- Eligible: alive, willing, not symptomatic (an ill person isn't vaccinated), and either never dosed or last dosed at least `boosterIntervalDays` ago. `boosterIntervalDays` is per vaccine, from its programme (e.g. COVID-19's minimum booster gap, flu yearly), provisional if unsourced; no interval means never re-dosed. Silent and recovered dots are eligible, as in real programmes; a dose doesn't change a current infection. The campaign stops when nobody willing and eligible is left.
+- Order: band by band in `campaignOrder`. "Most at risk first" ranks the age bands by the current disease's death rate per infection, computed from the disease data, so nothing is hard-coded and it works for any disease (1918 flu puts working age first, itself a lesson). Within a band, uniformly at random with the seeded RNG. A once-a-day O(N) scan is fine; nothing is allocated per tick or per day (preallocated buffers).
+- A campaign dose is a completed course of the population's chosen vaccine version: it redraws `vaccineWorks` from that version's infection effectiveness and resets the waning clock. Protection starts after `onsetDays` per vaccine (provisional if unsourced); until then the dot is unprotected. Breakthrough severe protection follows 6.2. The About page says a campaign dose is modelled as a whole course given at once.
+- Doses given are recorded per day, per region, per age band and per vaccine. Step 5's per-100k harm figures (6.13) are computed from these real dose counts, so vaccine harm scales with the campaign.
+- UI: the card shows "Vaccinated so far" as a LineChart (one line per region; per band in the region panel), so moving the slider visibly does something. Doses per day go into the daily history.
+- Out of scope (V2 or later): dose supply limits, cost, and a choice of second-dose timing.
+
 ## 7. Engine API (all that Svelte sees)
 ```ts
 const sim = createSimulation(scenario, { seed, diseaseId });
@@ -252,7 +265,8 @@ type Command =
   | { type: 'seed'; region: number; count: number }
   | { type: 'policy'; region: number; policy: HealthPolicy };   // live: travel and beds
 ```
-Telemetry: `{ day, regions: [{ id, counts per colour, deaths per age band, overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], inTransit (counts per colour of living travellers), totals (regions + inTransit), latest (this day's history sample per region), historyVersion, events (last 100 only) }`. From step 3a, each daily history sample also carries, per region, counts per age band (susceptible, infected, in hospital, recovered, dead, vaccinated) and hospital occupancy against capacity, one sample per simulated day; this is what the age-curve charts read. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
+From step 3b the `policy` command also carries the campaign fields (4.2, 6.16).
+Telemetry: `{ day, regions: [{ id, counts per colour, deaths per age band, doses given (from 3b), overloaded, capacity, lockedDown, fatiguedShare, testCooldown }], inTransit (counts per colour of living travellers), totals (regions + inTransit), latest (this day's history sample per region), historyVersion, events (last 100 only) }`. From step 3a, each daily history sample also carries, per region, counts per age band (susceptible, infected, in hospital, recovered, dead, vaccinated) and hospital occupancy against capacity, one sample per simulated day; this is what the age-curve charts read. Snapshots stay small and fixed-size; they never copy the full history. Charts call `sim.history(regionId)`, which returns the typed ring buffers (read-only) only when `historyVersion` has changed. The UI keeps the snapshot in `$state.raw` and replaces it whole on each publish.
 
 ## 8. Rendering
 - Dots: small squares or circles batched by colour (one fill per colour per frame).
@@ -295,10 +309,12 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
   12. COVID-19 with the UK preset and no interventions overloads hospitals.
   13. COVID-19 with the UK preset: an early lockdown lowers the hospital overload peak.
   14. COVID-19, everything the same except age mix: an older population (about 29% aged 65+) has more deaths per infection than a younger one (about 3%) in at least 80% of seeds.
-  15. Omicron-era COVID-19, same coverage: over one season (the first 180 days) the updated vaccine gives fewer infections and fewer deaths than the original vaccine in at least 80% of seeds. One season is what the narration claims; over a year, with a single round of vaccination and no revaccination, waning can bring a later wave among the people a smaller first wave left uninfected.
+  15. Omicron-era COVID-19, same coverage: over one season (the first 180 days) the updated vaccine gives fewer infections and fewer deaths than the original vaccine in at least 80% of seeds. One season is what the narration claims.
   16. Age-band check (config test): for each disease with band rates, the band rates weighted by the source's reference population reproduce the published overall rate within its uncertainty.
   17. 1918 flu vs seasonal flu: the 15-64 band has a higher death rate per infection under 1918 flu in at least 80% of seeds. With UK ages, on deaths pooled across the seeds, the working-age (15-64) share of deaths under 1918 flu is at least 3 times the share under seasonal flu, since that share is what the panel shows. The share is pooled because seasonal flu kills only a handful of dots per run, too few for a per-seed share.
   18. Flu and COVID-19 together with a UK-like preset reach a higher peak hospital pressure than either alone, in at least 80% of seeds. For "close to reality", compare the shape qualitatively with a sourced UK winter (e.g. 2022/23 hospital occupancy); no curve fitting.
+  19. COVID-19 at the same campaign dose rate: "most at risk first" gives fewer deaths than "everyone at random" in at least 80% of seeds (6.16).
+  20. Starting a campaign on day 0 of the outbreak gives fewer deaths than starting it on day 60, in at least 80% of seeds (6.16).
 - Config test: a vaccine death rate that isn't the 'rate' kind never reaches a numeric total (`vaccineCausedDeaths` keeps its kind for any dose count); HarmComparison shows that kind's plain line instead.
 - Test time budget: the full suite must stay under 5 minutes in CI. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
 - If a lesson test fails, fix the model or the calibration. Never loosen a threshold without updating this file and telling Alex.
@@ -309,7 +325,7 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
 2. Map and travel: procedural map, curated start seeds, camera, the 3-city microcosm, route generation, transit, region cards (including the Health policy card with its live travel, beds and spare-bed sliders, 4.2), legend, the line and stacked-area charts (8).
 3. Interventions and modifiers, in two PRs (8 Oct, so each diff stays reviewable):
    - 3a. Who gets seriously ill: the illness arrays slot-aware (6.12) from the start to avoid a second refactor, with only slot 0 used; the `ageBand` array and per-band death and hospital rules (6.6's combined draw); hospital capacity and pressure with the strain curve (6.6); waning; the engine on the `vaccines` list, with the severe-protection rule and the Vaccine version picker; the subsystem switches and `infectedBy` (6.14); daily history by age band; the bars-by-age chart and the level gauge (8); lesson tests 5, 6, 12, 14, 15 and 17.
-   - 3b. Your tools: lockdown with compliance and fatigue, hubs, flights, borders and mass testing, with their engine hooks, Health policy sliders and controls; lesson tests 2, 3, 4, 10 (moved from 1b, since it needs travel and illness timing) and 13, and 6.6's check that lockdown keeps pressure under the line for part of the run.
+   - 3b. Your tools: lockdown with compliance and fatigue, hubs, flights, borders and mass testing, with their engine hooks, Health policy sliders and controls; the vaccination campaign (6.16, Alex 8 Oct); lesson tests 2, 3, 4, 10 (moved from 1b, since it needs travel and illness timing), 13, 19 and 20, and 6.6's check that lockdown keeps pressure under the line for part of the run.
 4. Experimental mode: zoom out, add, remove and resize populations (city or rural, size, density), suggested sites and Auto-fill, route regeneration, real-world numbers (fetch-data script, country picker, CSV import, country health presets including age mix, and "Similar to"); lesson test 7.
 3c. Two diseases at once (6.12): per-slot arrays in use, shared pressure, shapes and legend; lesson test 18.
 5. Impact panel (including `HarmComparison` with vaccine harm, disease harm, the counterfactual worker and baseline deaths, 6.13; vaccine risk rates by age band with their own test), About page with full citations, polish, deploy.
