@@ -20,6 +20,110 @@ export function fmt(n: number, digits = 0): string {
 	return n.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
+// --- Age mix (World Bank, 2025) ---
+
+/** World Bank SP.POP.0014.TO.ZS and SP.POP.65UP.TO.ZS, 2025, in percent (via FRED). */
+export const WORLD_BANK_AGES_2025 = {
+	EU: { under15: 14.20743, over64: 22.44279 },
+	UK: { under15: 16.96477, over64: 19.70269 },
+	Nigeria: { under15: 40.51972, over64: 3.06954 },
+	Japan: { under15: 11.2384, over64: 29.9941 }
+} as const;
+
+/** Shares aged 0-14, 15-64 and 65+; the middle band is the rest. */
+export function ageMixOf(place: keyof typeof WORLD_BANK_AGES_2025): [number, number, number] {
+	const { under15, over64 } = WORLD_BANK_AGES_2025[place];
+	return [under15 / 100, (100 - under15 - over64) / 100, over64 / 100];
+}
+
+// --- Hospitals (6.6, 4.2) ---
+
+/** Eurostat hlth_rs_bds1: EU-27 curative care beds (HBEDT_CUR, somatic), per 100,000, 2023. */
+export const EU_CURATIVE_BEDS_PER_100K = 330.93;
+export const EU_CURATIVE_BEDS_PER_1000 = EU_CURATIVE_BEDS_PER_100K / 100;
+
+/**
+ * Eurostat hlth_co_bedoc 2023 (curative care bed occupancy, %) and tps00001 (people on 1 January
+ * 2023) for the 22 EU countries with a 2023 value. Eurostat publishes no EU figure, so the default
+ * is the population-weighted mean of these.
+ */
+export const EU_CURATIVE_OCCUPANCY_2023 = {
+	AT: [69.18, 9104772],
+	BE: [62.53, 11742796],
+	BG: [57.2, 6447710],
+	CY: [60.4, 949084],
+	CZ: [62.47, 10827529],
+	DE: [72.0, 83118501],
+	EE: [70.8, 1365884],
+	EL: [51.74, 10401868],
+	ES: [72.54, 48085361],
+	FR: [74.27, 68436003],
+	HR: [64.32, 3850894],
+	HU: [57.59, 9599744],
+	IE: [86.96, 5271395],
+	IT: [75.5, 58997201],
+	LT: [62.85, 2857279],
+	LU: [78.28, 660809],
+	LV: [69.2, 1895239],
+	MT: [70.63, 542051],
+	PL: [68.8, 36753736],
+	PT: [83.89, 10929704],
+	SI: [62.31, 2116972],
+	SK: [61.2, 5428792]
+} as const satisfies Record<string, readonly [number, number]>;
+/** EU-27 people on 1 January 2023 (tps00001), to say what share the 22 countries cover. */
+export const EU27_POPULATION_2023 = 447805685;
+/** EU countries with no 2023 occupancy value. */
+export const EU_OCCUPANCY_MISSING = ['DK', 'FI', 'NL', 'RO', 'SE'] as const;
+const occupancyRows = Object.values(EU_CURATIVE_OCCUPANCY_2023);
+export const EU_OCCUPANCY_COVERED_PEOPLE = occupancyRows.reduce((a, [, n]) => a + n, 0);
+/** Population-weighted mean curative occupancy, as a share (0.711). */
+export const EU_CURATIVE_OCCUPANCY =
+	occupancyRows.reduce((a, [pct, n]) => a + pct * n, 0) / EU_OCCUPANCY_COVERED_PEOPLE / 100;
+export const EU_CURATIVE_OCCUPANCY_UNWEIGHTED = mean(...occupancyRows.map(([pct]) => pct)) / 100;
+
+/**
+ * The strain curve (6.6): no extra deaths up to Wilde 2021's 85% occupancy, odds of death rising to
+ * Kadri 2021's and Bravata 2021's doubling, reached at 110% pressure. The slope is worked out from
+ * those three points; no study gives one.
+ */
+export const STRAIN = {
+	threshold: 0.85,
+	cap: 2.0,
+	capAt: 1.1,
+	/** Wilde 2021: odds of death above 85% occupancy against 45-85%. */
+	wildeOddsRatio: 1.23,
+	/** Kadri 2021: >99th surge percentile; Bravata 2021: ICU load at 100% or more. */
+	kadriOddsRatio: 2.0,
+	bravataHazardRatio: 2.35,
+	get slope() {
+		return (this.cap - 1) / (this.capAt - this.threshold);
+	},
+	/** The curve's average multiplier over 85-100% pressure, to compare with Wilde's 1.23. */
+	get meanOver85To100() {
+		const top = Math.min(1, this.capAt);
+		return 1 + (this.slope * (top - this.threshold)) / 2;
+	}
+};
+
+/** NHS England KH03 Q2 2023/24: general and acute beds open overnight, and their occupancy. */
+export const KH03_Q2_2023 = { beds: 102922, occupancyPct: 89.7 };
+/** ONS: England's population, mid-2023. */
+export const ENGLAND_POPULATION_MID_2023 = 57690300;
+export const ENGLAND_ACUTE_BEDS_PER_1000 = (KH03_Q2_2023.beds / ENGLAND_POPULATION_MID_2023) * 1000;
+
+// --- Protection after infection (6.2) ---
+
+/**
+ * Stein 2023 (COVID-19 Forecasting Team), appendix Table S2, 40 weeks after infection: protection
+ * against reinfection and against severe disease, from the same table and time point.
+ */
+export const STEIN_40_WEEKS = {
+	weeks: 40,
+	preOmicron: { reinfection: 0.786, severe: 0.902 },
+	ba1: { reinfection: 0.361, severe: 0.889 }
+};
+
 // --- COVID-19 vaccines ---
 
 /** Liu 2021: two doses, 85% against infection. Feikin 2022: 21.0 points lower from month 1 to month 6. */

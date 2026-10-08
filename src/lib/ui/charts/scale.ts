@@ -45,4 +45,6 @@ export interface Line {
 export interface Reference {
 	label: string;
 	value: number;
+	/** Put the label at the left end of the line (so two close lines don't collide). */
+	labelStart?: boolean;
 }

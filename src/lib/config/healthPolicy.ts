@@ -1,6 +1,7 @@
 import { ESSENTIAL_SHARE } from '../sim/constants';
 import type { Bands, Sourced } from '../sim/types';
 import { BEHAVIOUR } from './behaviour';
+import { ENGLAND_ACUTE_BEDS_PER_1000, KH03_Q2_2023 } from './derived';
 import { POPULATION } from './population';
 
 /**
@@ -48,7 +49,7 @@ export const LIVE_POLICY_FIELDS = [
 		max: 10,
 		step: 0.1,
 		format: (v: number) => v.toFixed(1),
-		explain: `The EU average is about ${Math.round(BEHAVIOUR.hospitalBedsPerThousand.value)} beds for every 1,000 people.`
+		explain: `Hospital beds for short-term care. The EU average is about ${BEHAVIOUR.hospitalBedsPerThousand.value.toFixed(1)} for every 1,000 people.`
 	},
 	{
 		key: 'spareBedShare',
@@ -57,8 +58,7 @@ export const LIVE_POLICY_FIELDS = [
 		max: 0.5,
 		step: 0.01,
 		format: (v: number) => `${Math.round(v * 100)}%`,
-		explain:
-			'Most beds are already in use for other illnesses. Only the free ones can take outbreak patients.'
+		explain: `Most beds are already in use for other illnesses; across the EU about ${Math.round(BEHAVIOUR.spareBedShare.value * 100)}% are free. Only the free ones can take outbreak patients.`
 	}
 ] as const satisfies readonly {
 	key: keyof HealthPolicy;
@@ -92,6 +92,24 @@ export const DEFAULT_POLICY: HealthPolicy = {
 		provisional: 'A relative setting: 1 means the default trip rates, which are not yet sourced.'
 	}
 };
+
+/**
+ * England's NHS hospitals (the "England (NHS) figures" preset, 4.2): general and acute beds and
+ * their occupancy, with UK ages. Eurostat has no UK curative beds, so it is England's NHS, not the
+ * UK. Behaviour fields stay the general default.
+ */
+export const ENGLAND_POLICY: HealthPolicy = {
+	...DEFAULT_POLICY,
+	ageMix: POPULATION.ukAgeMix,
+	hospitalBedsPerThousand: {
+		value: ENGLAND_ACUTE_BEDS_PER_1000,
+		sources: ['nhs-england-kh03-q2-2023-24', 'ons-england-pop-mid2023']
+	},
+	spareBedShare: { value: 1 - KH03_Q2_2023.occupancyPct / 100, sources: ['nhs-england-kh03-q2-2023-24'] }
+};
+
+/** The label the England preset shows wherever it appears (4.2). */
+export const ENGLAND_POLICY_LABEL = 'England (NHS) figures';
 
 /** A fresh copy of the general default, safe to change. */
 export function defaultPolicy(): HealthPolicy {

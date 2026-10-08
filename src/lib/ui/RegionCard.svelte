@@ -1,7 +1,12 @@
 <script lang="ts">
+	import { loadDisease } from '../config';
+	import { BEHAVIOUR } from '../config/behaviour';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
+	import { vaccineKey } from '../config/vaccines';
+	import { vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
-	import type { DiseaseConfig, Region, RegionTelemetry } from '../sim/types';
+	import type { DiseaseConfig, DiseaseId, Region, RegionTelemetry } from '../sim/types';
+	import LevelGauge from './charts/LevelGauge.svelte';
 
 	interface Props {
 		region: Region;
@@ -14,6 +19,8 @@
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
 		onvaccination: (full: number, partial: number) => void;
+		/** A different vaccine version was picked (restarts the run). */
+		onvaccine: (key: string) => void;
 		/** A health policy slider moved; applies live, without a restart. */
 		onpolicy: (key: LivePolicyKey, value: number) => void;
 		onseed: () => void;
@@ -28,6 +35,7 @@
 		y,
 		docked = false,
 		onvaccination,
+		onvaccine,
 		onpolicy,
 		onseed
 	}: Props = $props();
@@ -38,8 +46,17 @@
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
 	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
-	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
-	let partialEfficacy = $derived(disease.partialEfficacy?.value);
+	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
+	/** The vaccine given here, as the engine uses it (the same helper, so the card can't disagree). */
+	let vaccine = $derived(vaccineFor(loadDisease(disease.id as DiseaseId), region.vaccine));
+	/** One-dose vaccines have no "partly vaccinated". */
+	let partialEfficacy = $derived(vaccine.hasPartialCourse ? vaccine.partialInfection : undefined);
+	const threshold = BEHAVIOUR.strainThreshold.value;
+	const PRESSURE_BANDS = [
+		{ below: threshold, label: 'Coping' },
+		{ below: 1 + 1e-9, label: 'Under pressure' },
+		{ below: Infinity, label: 'Overwhelmed' }
+	];
 	let unprotected = $derived(Math.max(0, 1 - region.vaccinatedFull - region.vaccinatedPartial));
 </script>
 
@@ -93,12 +110,22 @@
 		{/each}
 		{#if t}
 			<p class="note">
-				Spare beds for outbreak patients: about <b>{people(t.capacity)}</b>. They start to matter when
-				hospital pressure arrives in a later version.
+				Spare beds for outbreak patients: about <b>{people(t.capacity)}</b> of {people(t.beds)}.
 			</p>
 		{/if}
 	{/if}
 	{#if panel === 'vaccination'}
+		{#if (disease.vaccines?.length ?? 0) > 1}
+			<label>
+				<span>Vaccine version</span>
+				<select value={vaccine.key} onchange={(e) => onvaccine(e.currentTarget.value)}>
+					{#each disease.vaccines ?? [] as v (vaccineKey(v))}
+						<option value={vaccineKey(v)}>{v.label}</option>
+					{/each}
+				</select>
+				<small>Changing it restarts the run.</small>
+			</label>
+		{/if}
 		<label>
 			<span>Fully vaccinated <b>{pct(region.vaccinatedFull)}</b></span>
 			<input
@@ -109,7 +136,10 @@
 				value={region.vaccinatedFull}
 				onchange={(e) => onvaccination(Number(e.currentTarget.value), region.vaccinatedPartial)}
 			/>
-			<small>The vaccine {protects(disease.fullEfficacy.value)}.</small>
+			<small
+				>The vaccine {protects(vaccine.fullInfection)} from catching it. {#if vaccine.fullSevere > 0}Of those
+					it doesn't stop, it keeps about {Math.round(vaccine.fullSevere * 100)} in 100 out of serious illness.{/if}</small
+			>
 		</label>
 		{#if partialEfficacy !== undefined}
 			<label>
@@ -126,6 +156,21 @@
 			</label>
 		{/if}
 		<p class="unprotected">Not vaccinated: {pct(unprotected)}</p>
+	{/if}
+	{#if t && t.beds > 0}
+		<LevelGauge
+			title="Hospitals"
+			value={t.pressure}
+			max={1.2}
+			thresholds={[
+				{ at: threshold, label: pctOf(threshold) },
+				{ at: 1, label: '100%' }
+			]}
+			bands={PRESSURE_BANDS}
+			format={pctOf}
+			warnFrom={threshold}
+			width={180}
+		/>
 	{/if}
 	{#if t}
 		<p class="counts">
@@ -193,7 +238,8 @@
 		display: flex;
 		justify-content: space-between;
 	}
-	input {
+	input,
+	select {
 		width: 100%;
 		margin: 2px 0 0;
 	}

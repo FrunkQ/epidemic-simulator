@@ -29,8 +29,22 @@ import {
 	RANJEVA_HALF_LIFE_YEARS,
 	SMALLPOX_VACCINE_HALF_LIFE,
 	SMALLPOX_VACCINE_YEARS,
+	STEIN_40_WEEKS,
+	STRAIN,
+	EU_CURATIVE_BEDS_PER_100K,
+	EU_CURATIVE_BEDS_PER_1000,
+	EU_CURATIVE_OCCUPANCY,
+	EU_CURATIVE_OCCUPANCY_UNWEIGHTED,
+	EU_OCCUPANCY_COVERED_PEOPLE,
+	EU_OCCUPANCY_MISSING,
+	EU27_POPULATION_2023,
+	EU_CURATIVE_OCCUPANCY_2023,
+	ENGLAND_ACUTE_BEDS_PER_1000,
+	ENGLAND_POPULATION_MID_2023,
+	KH03_Q2_2023,
 	WENDELBOE_HALF_LIFE,
 	WENDELBOE_YEARS,
+	WORLD_BANK_AGES_2025,
 	YOUNG,
 	fmt,
 	per100kFromPerMillion
@@ -87,10 +101,201 @@ export const OFFICIAL_PUBLISHERS = [
 	'Eurostat',
 	'NHS England',
 	'World Bank',
-	'UN'
+	'UN',
+	'ONS'
 ] as const;
 
 export const CITATIONS: Citation[] = [
+	{
+		id: 'neupane2024-surge-sr',
+		authors:
+			'Neupane M, De Jonge N, Angelo S, Sarzynski SH, Sun J, Rochwerg BN, Hick JL, Mitchell SH, Warner SR, Mancera AG, Cooper D, Kadri SS',
+		title: 'Measures and Impact of Caseload Surge During the COVID-19 Pandemic: A Systematic Review',
+		journal: 'Critical Care Medicine',
+		year: 2024,
+		evidence: 'systematic-review',
+		doi: '10.1097/CCM.0000000000006263',
+		usedFor: ['behaviour.strainThreshold', 'behaviour.strainMaxMultiplier', 'behaviour.strainSlope'],
+		quote:
+			'32 of 39 studies (82%) reported detrimental adjusted odds/hazard ratio for caseload surge-mortality outcomes, reporting point estimates of up to four-fold increased risk of mortality. Markedly variable surge strain measures precluded meta-analysis.',
+		location: 'Abstract, Data Synthesis and Conclusions (52(7):1097-1112)',
+		why: 'The strongest evidence on hospital strain and death in COVID-19. It finds strain raises deaths in most studies, with effects up to four-fold, so a cap of 2.0 sits inside the range, but it pools no figure; the values come from the cohort studies it reviews.',
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Abstract: 32 of 39 studies (82%) detrimental; variable surge measures precluded meta-analysis; 52(7):1097-1112; 12 authors; not retracted.'
+		}
+	},
+	{
+		id: 'wilde2021-icu-occupancy',
+		authors:
+			'Wilde H, Mellan T, Hawryluk I, Dennis JM, Denaxas S, Pagel C, Duncan A, Bhatt S, Flaxman S, Mateen BA, Vollmer SJ',
+		title:
+			'The association between mechanical ventilator compatible bed occupancy and mortality risk in intensive care patients with COVID-19: a national retrospective cohort study',
+		journal: 'BMC Medicine',
+		year: 2021,
+		evidence: 'study',
+		noReviewReason:
+			'Two systematic reviews (Neupane 2024 for COVID-19, Eriksson 2017 before it) find higher deaths under hospital strain in most studies, but both say the strain measures differ too much to pool, so neither gives a figure. The numbers come from the largest cohort studies.',
+		doi: '10.1186/s12916-021-02096-0',
+		usedFor: ['behaviour.strainThreshold', 'behaviour.strainSlope'],
+		quote:
+			'Adjusting for patient-level factors, mortality was higher for admissions during periods of high occupancy (> 85% occupancy versus the baseline of 45 to 85%) [OR 1.23 (95% posterior credible interval (PCI): 1.08 to 1.39)].',
+		location:
+			'Abstract, Results (BMC Med 19:213); the Results section gives the same OR with 95% PCI 1.05-1.43',
+		why: `National cohort with an occupancy cut-off: no extra deaths up to ${fmt(STRAIN.threshold * 100)}% occupancy, odds of death x${STRAIN.wildeOddsRatio} above it, so the strain threshold is ${STRAIN.threshold}. The slope is worked out: rising from 1 at ${fmt(STRAIN.threshold * 100)}% to the cap of ${STRAIN.cap} at ${fmt(STRAIN.capAt * 100)}% gives ${fmt(STRAIN.slope)} per unit of pressure, an average multiplier of ${fmt(STRAIN.meanOver85To100, 2)} across ${fmt(STRAIN.threshold * 100)}-100%, close to Wilde's ${STRAIN.wildeOddsRatio}. The multiplier is applied to the odds of death, as an odds ratio measures.`,
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'PMC8404408 full text: abstract OR 1.23 (95% PCI 1.08-1.39) >85% vs 45-85%; Results text gives 1.05-1.43; 11 authors confirmed; not retracted.'
+		}
+	},
+	{
+		id: 'kadri2021-caseload-surge',
+		authors:
+			'Kadri SS, Sun J, Lawandi A, Strich JR, Busch LM, Keller M, Babiker A, Yek C, Malik S, Krack J, Dekker JP, Spaulding AB, Ricotta E, Powers JH 3rd, Rhee C, Klompas M, Athale J, Boehmer TK, Gundlapalli AV, Bentley W, Datta SD, Danner RL, Demirkale CY, Warner S',
+		title:
+			'Association Between Caseload Surge and COVID-19 Survival in 558 U.S. Hospitals, March to August 2020',
+		journal: 'Annals of Internal Medicine',
+		year: 2021,
+		evidence: 'study',
+		noReviewReason:
+			'Two systematic reviews (Neupane 2024 for COVID-19, Eriksson 2017 before it) find higher deaths under hospital strain in most studies, but both say the strain measures differ too much to pool, so neither gives a figure. The numbers come from the largest cohort studies.',
+		doi: '10.7326/M21-1213',
+		usedFor: ['behaviour.strainMaxMultiplier', 'behaviour.strainSlope'],
+		quote:
+			'compared with nonsurging (<50th surge index percentile) hospital-months, aORs in the 50th to 75th, 75th to 90th, 90th to 95th, 95th to 99th, and greater than 99th percentiles were 1.11 (95% CI, 1.01 to 1.23), 1.24 (CI, 1.12 to 1.38), 1.42 (CI, 1.27 to 1.60), 1.59 (CI, 1.41 to 1.80), and 2.00 (CI, 1.69 to 2.38), respectively.',
+		location: 'Abstract, Results (174(9):1240-1251)',
+		why: `The largest multi-hospital study: in the most extreme surge months the odds of death were about ${STRAIN.kadriOddsRatio} times those of normal months, so the cap is ${STRAIN.cap}. The steady rise across the surge bands supports a ramp rather than a step. Its outcome is death in hospital or discharge to hospice.`,
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Abstract and Results: aOR 2.00 (95% CI 1.69-2.38) >99th vs <50th surge-index percentile; 174(9):1240-51; not retracted.'
+		}
+	},
+	{
+		id: 'bravata2021-va-icu-strain',
+		authors:
+			'Bravata DM, Perkins AJ, Myers LJ, Arling G, Zhang Y, Zillich AJ, Reese L, Dysangco A, Agarwal R, Myers J, Austin C, Sexson A, Leonard SJ, Dev S, Keyhani S',
+		title:
+			'Association of Intensive Care Unit Patient Load and Demand With Mortality Rates in US Department of Veterans Affairs Hospitals During the COVID-19 Pandemic',
+		journal: 'JAMA Network Open',
+		year: 2021,
+		evidence: 'study',
+		noReviewReason:
+			'Two systematic reviews (Neupane 2024 for COVID-19, Eriksson 2017 before it) find higher deaths under hospital strain in most studies, but both say the strain measures differ too much to pool, so neither gives a figure. The numbers come from the largest cohort studies.',
+		doi: '10.1001/jamanetworkopen.2020.34266',
+		usedFor: ['behaviour.strainThreshold', 'behaviour.strainMaxMultiplier'],
+		quote:
+			'1.67 (95% CI, 1.08-2.60) when COVID-19 ICU load was greater than 75% to 100%, and 2.35 (95% CI, 1.25-4.39) when COVID-19 ICU load was 100% or more (P = .049)',
+		location:
+			'Results, ICU load paragraph; Table 3 (reference load 25% or less). JAMA Netw Open 4(1):e2034266',
+		why: `Load is measured against the fixed pre-pandemic ICU beds, like the model's pressure. At 100% or more the hazard of death was ${STRAIN.bravataHazardRatio} times that at low load, in line with a cap of ${STRAIN.cap}; lower bands were not clearly raised, in line with no extra risk below a high threshold. Hazard ratios are treated as odds ratios here.`,
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'PMC7816100 Results/Table 3: aHR load >75-100% 1.67 (1.08-2.60), >=100% 2.35 (1.25-4.39), demand >75-100% 1.94 (1.46-2.59); no correction found. doi.org redirect rate-limited; DOI confirmed from the PMC record.'
+		}
+	},
+	{
+		id: 'eurostat-curative-beds-2023',
+		authors: 'Eurostat',
+		title: 'Hospital beds by function and type of care (hlth_rs_bds1)',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/hlth_rs_bds1?format=JSON&lang=EN&geo=EU27_2020&facility=HBEDT_CUR&unit=P_HTHAB',
+		usedFor: ['behaviour.hospitalBedsPerThousand'],
+		quote: 'EU27_2020, HBEDT_CUR (Curative care beds in hospitals (HP.1)), SOM, P_HTHAB: 2023 330.93',
+		location: 'hlth_rs_bds1, geo EU27_2020, facility HBEDT_CUR, hlthcare SOM, unit P_HTHAB, 2023',
+		why: `Official EU-27 figure for curative (short-term) care beds, the same bed type as the occupancy figure: ${EU_CURATIVE_BEDS_PER_100K} per 100,000 is ${fmt(EU_CURATIVE_BEDS_PER_1000, 2)} per 1,000. Outbreak patients use these beds, and the strain threshold is an acute-occupancy figure.`,
+		context: 'EU-27, 2023. Curative care beds, somatic care only (no long-term or psychiatric beds).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'hlth_rs_bds1 EU27_2020 HBEDT_CUR SOM P_HTHAB 2023 = 330.93 (TSV and JSON agree).'
+		}
+	},
+	{
+		id: 'eurostat-curative-occupancy-2023',
+		authors: 'Eurostat',
+		title:
+			'Inpatient curative care bed occupancy rate by type of care (hlth_co_bedoc); Population on 1 January (tps00001)',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/hlth_co_bedoc?format=JSON&lang=EN&hlthcare=TOTAL&time=2023',
+		usedFor: ['behaviour.spareBedShare'],
+		quote:
+			'hlthcare=TOTAL, unit=PC, 2023: AT 69.18, BE 62.53, BG 57.20, CY 60.40, CZ 62.47, DE 72.00, EE 70.80, EL 51.74, ES 72.54, FR 74.27, HR 64.32, HU 57.59, IE 86.96, IT 75.50, LT 62.85, LU 78.28, LV 69.20, MT 70.63, PL 68.80, PT 83.89, SI 62.31, SK 61.20; population 1 Jan 2023 (tps00001): AT 9104772, BE 11742796, BG 6447710, CY 949084, CZ 10827529, DE 83118501, EE 1365884, EL 10401868, ES 48085361, FR 68436003, HR 3850894, HU 9599744, IE 5271395, IT 58997201, LT 2857279, LU 660809, LV 1895239, MT 542051, PL 36753736, PT 10929704, SI 2116972, SK 5428792',
+		location:
+			'hlth_co_bedoc, 2023, 22 EU countries; tps00001 at https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tps00001?format=JSON&lang=EN&time=2023',
+		why: `Worked out: Eurostat publishes no EU figure for this indicator, so the default is the population-weighted mean of the ${Object.keys(EU_CURATIVE_OCCUPANCY_2023).length} countries with a 2023 value, ${fmt(EU_CURATIVE_OCCUPANCY * 100, 2)}% (unweighted ${fmt(EU_CURATIVE_OCCUPANCY_UNWEIGHTED * 100, 2)}%), leaving ${fmt((1 - EU_CURATIVE_OCCUPANCY) * 100, 1)}% of beds free. ${EU_OCCUPANCY_MISSING.join(', ')} have no 2023 value; the countries used hold ${fmt((EU_OCCUPANCY_COVERED_PEOPLE / EU27_POPULATION_2023) * 100, 1)}% of EU people.`,
+		context:
+			'EU-27, 2023, curative care beds. Flags: BG, LU, PL break in series; CY, FR, LV definition differs; MT, SI estimated; LV population break in series.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'hlth_co_bedoc 2023 TOTAL PC: 22 EU values, no EU aggregate; tps00001 2023 populations; weighted mean 71.0884%, unweighted 67.9391% (TSV and JSON agree).'
+		}
+	},
+	{
+		id: 'nhs-england-kh03-q2-2023-24',
+		authors: 'NHS England',
+		title:
+			'Bed Availability and Occupancy - Quarter ending 30th September 2023 (KH03 Statistical Press Notice)',
+		journal: 'NHS England Official Statistics',
+		year: 2023,
+		evidence: 'official',
+		publisher: 'NHS England',
+		url: 'https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2023/11/KH03-Q2-2023-24-Statistical-Press-Notice-FINAL.pdf',
+		usedFor: ['englandPolicy.hospitalBedsPerThousand', 'englandPolicy.spareBedShare'],
+		quote:
+			'The average daily number of general and acute beds open overnight was 102,922 in Quarter 2 2023/24 compared with 103,818 in Quarter 1 2023/24 and 102,305 in Quarter 2 2022/23. The average occupancy rate for general and acute beds open overnight was 89.7% in Quarter 2 2023/24 compared with 90.6% in Quarter 1 2023/24 and 90.1% in Quarter 2 2022/23.',
+		location: 'Main findings (published 23 Nov 2023)',
+		why: `Worked out: ${fmt(KH03_Q2_2023.beds)} general and acute beds over England's ${fmt(ENGLAND_POPULATION_MID_2023)} people is ${fmt(ENGLAND_ACUTE_BEDS_PER_1000, 2)} per 1,000; ${KH03_Q2_2023.occupancyPct}% occupied leaves ${fmt(100 - KH03_Q2_2023.occupancyPct, 1)}% free. Eurostat has no UK curative beds, so this is England's NHS, not the UK.`,
+		context:
+			'England only (not the UK), NHS beds only, general and acute (no maternity or mental illness beds), July to September 2023.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'KH03 Q2 2023/24 press notice: G&A beds open overnight 102,922; occupancy 89.7%.'
+		}
+	},
+	{
+		id: 'ons-england-pop-mid2023',
+		authors: 'Office for National Statistics',
+		title: 'Population estimates for the UK, England, Wales, Scotland and Northern Ireland: mid-2023',
+		journal: 'ONS Statistical Bulletin',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'ONS',
+		url: 'https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/bulletins/annualmidyearpopulationestimates/mid2023',
+		usedFor: ['englandPolicy.hospitalBedsPerThousand'],
+		quote: 'Table 1, Population 2023, England: 57,690,300',
+		location: 'Table 1 (released 8 Oct 2024)',
+		why: 'The population the KH03 England bed count is divided by, for the same year.',
+		context: 'England, mid-2023, rounded to the nearest 100.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'ONS mid-2023 bulletin Table 1: England 57,690,300.'
+		}
+	},
 	{
 		id: 'guerra2017-measles-r0',
 		authors: 'Guerra FM, Bolotin S, Lim G, Heffernan J, Deeks SL, Li Y, Crowcroft NS',
@@ -1134,23 +1339,6 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
-		id: 'eurostat-beds-2024',
-		authors: 'Eurostat',
-		title: 'Healthcare resource statistics - beds',
-		journal: 'Eurostat Statistics Explained',
-		year: 2026,
-		evidence: 'official',
-		publisher: 'Eurostat',
-		url: 'https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Healthcare_resource_statistics_-_beds',
-		usedFor: ['behaviour.hospitalBedsPerThousand'],
-		quote:
-			'there were, on average, 507 hospital beds per 100 000 inhabitants in 2024 across the whole of the EU',
-		location: "Section 'Hospital beds'",
-		why: 'Official statistic; 507 per 100,000 is 5.07 per 1,000. Countries range from 1.87 (Sweden) to 7.59 (Germany).',
-		context: 'EU-27, 2024. Counts all hospital beds, not only acute ones.',
-		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
-	},
-	{
 		id: 'cdc-measles-symptoms',
 		authors: 'CDC',
 		title: 'Measles Symptoms and Complications',
@@ -1199,24 +1387,6 @@ export const CITATIONS: Citation[] = [
 		location: 'Main text',
 		why: 'Range check: about 1.3% to 1.4% of illnesses are hospitalised across seasons, so 1.2% is in line.',
 		context: 'US, 2010-11 to 2024-25 seasons.',
-		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
-	},
-	{
-		id: 'nhs-england-kh03-bed-occupancy-2024',
-		authors: 'NHS England',
-		title: 'Bed Availability and Occupancy (KH03), Quarter 3 2023/24: Statistical Press Notice',
-		journal: 'NHS England Official Statistics',
-		year: 2024,
-		evidence: 'official',
-		publisher: 'NHS England',
-		url: 'https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2024/02/KH03-Q3-2023-24-Statistical-Press-Notice-FINAL.pdf',
-		usedFor: ['behaviour.spareBedShare'],
-		quote:
-			'The average occupancy rate for general and acute beds open overnight was 91.6% in Quarter 3 2023/24 compared with 89.7% in Quarter 2 2023/24 and 92.0% in Quarter 3 2022/23.',
-		location: "'Occupancy Rates' section, main findings",
-		why: 'Worked out: 1 minus the non-winter occupancy of 89.7% leaves about 10% of beds free, which is the share an outbreak could use. The winter figure (91.6%) leaves about 8%, so 10% is the generous end.',
-		context:
-			'NHS England, general and acute beds only. No EU-wide occupancy figure could be opened, so this stands in for one; bed numbers themselves come from the EU average.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
 	{
@@ -2143,17 +2313,24 @@ export const CITATIONS: Citation[] = [
 		year: 2023,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s0140-6736(22)02465-5',
-		usedFor: ['covid19.waningDays'],
+		usedFor: [
+			'covid19.waningDays',
+			'covid19.afterInfection.infection',
+			'covid19.afterInfection.severe',
+			'covid19omicron.afterInfection.infection',
+			'covid19omicron.afterInfection.severe'
+		],
 		quote:
-			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks.',
-		location: 'Abstract (findings)',
-		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022).`,
-		context: 'Studies from many countries, pre-Omicron variants',
+			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks. Table S2, week 40: ancestral, Alpha and Delta reinfection 78.6% (49.8-93.6), severe disease 90.2% (69.7-97.5); Omicron BA.1 reinfection 36.1% (24.4-51.3), severe disease 88.9% (84.7-90.9).',
+		location: 'Abstract (findings); appendix Table S2 (starts p 50; week-40 row p 62)',
+		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022). Reinfection and severe protection come from the same table and the same week (${STEIN_40_WEEKS.weeks}), so the protection against severe illness left for a reinfection is worked out as 1 - (1 - severe) / (1 - reinfection): ${fmt(1 - (1 - STEIN_40_WEEKS.preOmicron.severe) / (1 - STEIN_40_WEEKS.preOmicron.reinfection), 3)} before Omicron and ${fmt(1 - (1 - STEIN_40_WEEKS.ba1.severe) / (1 - STEIN_40_WEEKS.ba1.reinfection), 3)} for BA.1. The BA.1 pair is protection from mostly pre-Omicron infections against BA.1 reinfection, not Omicron against Omicron.`,
+		context:
+			'Studies from many countries; non-vaccinated comparisons or studies adjusted for vaccination; hybrid immunity excluded',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: 'Quote rechecked in Consensus abstract; doi.org resolved (302); no retraction found by web search.'
+			note: 'Appendix Table S2 week 40 (p 62): reinfection 78.6% / 36.1% (BA.1), severe 90.2% / 88.9%; Methods vaccination wording confirmed; not retracted.'
 		}
 	},
 	{
@@ -2256,7 +2433,9 @@ export const CITATIONS: Citation[] = [
 			'covid19omicron.r0',
 			'covid19omicron.infectionFatalityRate',
 			'covid19omicron.hospitalisedShare',
-			'covid19omicron.mortality'
+			'covid19omicron.mortality',
+			'covid19omicron.mortalityByAge',
+			'covid19omicron.hospitalisedByAge'
 		],
 		quote:
 			'Omicron (BA.1) had the highest basic reproduction number at 8.4 (95% credible interval (CrI) 7.8-9.1).',
@@ -2548,12 +2727,12 @@ export const CITATIONS: Citation[] = [
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.0014.TO.ZS',
 		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP0014TOZSWLD',
-		usedFor: ['population.ageMix'],
+		usedFor: ['population.ageMix', 'population.ukAgeMix', 'population.youngAgeMix', 'population.oldAgeMix'],
 		quote:
 			'2025: World 24.40906; European Union 14.20743; United Kingdom 16.96477; Nigeria 40.51972; Japan 11.23840',
 		location: 'FRED series pages, latest observation (2025)',
-		why: 'EU share aged 0-14: 14.21% (the general default population; UK 16.96% is kept for the step 4 preset).',
-		context: 'European Union, 2025',
+		why: 'Share aged 0-14: EU 14.21% (the general default population), UK 16.96% (the England preset), and Nigeria and Japan as the young and old populations of the age lesson.',
+		context: 'European Union, United Kingdom, Nigeria and Japan, 2025',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -2572,12 +2751,12 @@ export const CITATIONS: Citation[] = [
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.TO.ZS',
 		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP65UPTOZSWLD',
-		usedFor: ['population.ageMix'],
+		usedFor: ['population.ageMix', 'population.ukAgeMix', 'population.youngAgeMix', 'population.oldAgeMix'],
 		quote:
 			'2025: World 10.40243; European Union 22.44279; United Kingdom 19.70269; Nigeria 3.06954; Japan 29.99410',
 		location: 'FRED series pages, latest observation (2025)',
-		why: 'EU share aged 65+: 22.44%. The 15-64 share is the rest: 100 - 14.21 - 22.44 = 63.35% (worked out).',
-		context: 'European Union, 2025',
+		why: `Share aged 65+: EU 22.44%, UK 19.70%, Nigeria 3.07%, Japan 29.99%. The 15-64 share is worked out as the rest (EU ${fmt(100 - WORLD_BANK_AGES_2025.EU.under15 - WORLD_BANK_AGES_2025.EU.over64, 2)}%).`,
+		context: 'European Union, United Kingdom, Nigeria and Japan, 2025',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -2644,7 +2823,9 @@ export const CITATIONS: Citation[] = [
 			'population.ukBackgroundDeathRate',
 			'covid19.mortalityByAge',
 			'covid19.hospitalisedByAge',
-			'covidAgeIfr.UK_2019_AGE_GROUPS'
+			'covidAgeIfr.UK_2019_AGE_GROUPS',
+			'covid19omicron.mortalityByAge',
+			'covid19omicron.hospitalisedByAge'
 		],
 		quote:
 			'2019: Total 66,647,112; Less than 5 years 3,885,007; From 5 to 9 years 4,146,546; From 10 to 14 years 3,908,395; From 15 to 19 years 3,661,722; From 20 to 24 years 4,170,514; From 25 to 29 years 4,527,006; From 30 to 34 years 4,485,180; From 35 to 39 years 4,387,779; From 40 to 44 years 4,008,205; From 45 to 49 years 4,457,239; From 50 to 54 years 4,668,822; From 55 to 59 years 4,351,807; From 60 to 64 years 3,716,512; From 65 to 69 years 3,384,532; From 70 to 74 years 3,286,389; From 75 to 79 years 2,281,501; From 80 to 84 years 1,695,137; 85 years or over 1,624,819',
@@ -2832,7 +3013,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1016/S0140-6736(21)02867-1',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8871594/',
-		usedFor: ['covid19.mortalityByAge', 'covidAgeIfr.COVID19_IFR_PERCENT_BY_AGE'],
+		usedFor: [
+			'covid19.mortalityByAge',
+			'covidAgeIfr.COVID19_IFR_PERCENT_BY_AGE',
+			'covid19omicron.mortalityByAge'
+		],
 		quote:
 			'Age-specific IFR estimates form a J shape, with the lowest IFR occurring at age 7 years (0·0023%, 95% uncertainty interval [UI] 0·0015–0·0039) and increasing exponentially through ages 30 years (0·0573%, 0·0418–0·0870), 60 years (1·0035%, 0·7002–1·5727), and 90 years (20·3292%, 14·6888–28·9754).',
 		location:
@@ -2857,7 +3042,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1186/s12879-022-07262-0',
 		url: 'https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-022-07262-0',
-		usedFor: ['covid19.hospitalisedByAge', 'covidAgeIfr.COVID19_SEVERE_PERCENT_BY_GROUP'],
+		usedFor: [
+			'covid19.hospitalisedByAge',
+			'covidAgeIfr.COVID19_SEVERE_PERCENT_BY_GROUP',
+			'covid19omicron.hospitalisedByAge'
+		],
 		quote:
 			'Examples of this are the rate of severe infections (Infection-severe rate, ISR), which we define as infections resulting in hospitalization or out-of-hospital death',
 		location:

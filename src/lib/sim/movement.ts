@@ -1,7 +1,7 @@
 import { Agents } from './agents';
 import { WANDER_EVERY, WANDER_TURN } from './constants';
 import { Rng } from './rng';
-import { State, type Region } from './types';
+import type { Region } from './types';
 
 /** Radius from population (in dots) and density (dots per square world unit). */
 export function regionRadius(dots: number, density: number): number {
@@ -10,22 +10,22 @@ export function regionRadius(dots: number, density: number): number {
 
 /**
  * Wandering inside each population's disc. Dots turn a little now and then and bounce off
- * the edge. Red, isolated and dead dots stay put.
+ * the edge. Red (with any disease), isolated and dead dots stay put.
  */
 export function moveInRegions(
 	agents: Agents,
 	regions: Region[],
 	radii: Float32Array,
 	tick: number,
-	rng: Rng
+	rng: Rng,
+	illStopsMovement: boolean
 ): void {
-	const { x, y, vx, vy, state, region, isolated } = agents;
+	const { x, y, vx, vy, ill, dead, region, isolated } = agents;
 	const n = agents.activeCount;
 	for (let i = 0; i < n; i++) {
 		const r = region[i];
 		if (r < 0) continue;
-		const s = state[i];
-		if (s === State.SYMPTOMATIC || s === State.DECEASED || isolated[i] === 1) continue;
+		if (dead[i] === 1 || isolated[i] === 1 || (illStopsMovement && ill[i] === 1)) continue;
 
 		let dx = vx[i];
 		let dy = vy[i];

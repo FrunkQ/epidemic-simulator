@@ -14,13 +14,13 @@ describe('waning', () => {
 		const n = 20000;
 		const limit = config.waningDays.value! * TICKS_PER_DAY;
 		let waned = 0;
-		for (let i = 0; i < n; i++) if (drawWaneTicks(disease, rng) <= limit) waned++;
+		for (let i = 0; i < n; i++) if (drawWaneTicks(disease.waningMeanTicks, rng) <= limit) waned++;
 		expect(waned / n).toBeGreaterThan(0.49);
 		expect(waned / n).toBeLessThan(0.51);
 	});
 
 	it('never wanes when research says protection lasts', () => {
 		const disease = toRuntime(DISEASES.flu1918, CALIBRATION.flu1918);
-		expect(drawWaneTicks(disease, new Rng(1))).toBe(-1);
+		expect(drawWaneTicks(disease.waningMeanTicks, new Rng(1))).toBe(-1);
 	});
 });

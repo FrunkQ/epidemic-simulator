@@ -260,7 +260,7 @@ function buildLandPath(world: World): Path2D {
 }
 
 function colourOf(agents: Agents, i: number): number {
-	const s = agents.state[i];
+	const s = agents.displayState(i);
 	if (s === State.DECEASED) return COLOUR_INDEX.deceased;
 	if (s === State.SYMPTOMATIC || agents.isolated[i] === 1) return COLOUR_INDEX.symptomatic;
 	if (s === State.SILENT) return COLOUR_INDEX.silent;

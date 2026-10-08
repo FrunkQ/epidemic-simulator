@@ -3,6 +3,8 @@
 	import { withValue, type LivePolicyKey } from '../lib/config/healthPolicy';
 	import { microcosm } from '../lib/config/scenarios';
 	import { START_MAPS } from '../lib/config/startMaps.generated';
+	import { loadDisease } from '../lib/config';
+	import { vaccineFor } from '../lib/sim/disease';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
 	import Charts from '../lib/ui/Charts.svelte';
@@ -13,9 +15,12 @@
 
 	let mapIndex = $state(0);
 	let diseaseId: DiseaseId = $state('measles');
-	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
-	const hasPartialCourse = $derived(DISEASES[diseaseId].partialEfficacy !== undefined);
 	let scenario: Scenario = $state(microcosm(0));
+	/** One-dose vaccines have no "partly vaccinated"; the legend shows it if any population has one. */
+	const hasPartialCourse = $derived.by(() => {
+		const disease = loadDisease(diseaseId);
+		return scenario.regions.some((r) => vaccineFor(disease, r.vaccine).hasPartialCourse);
+	});
 	let seed = $state(1);
 	let speed: Speed = $state(1);
 	const sim = createSimulation(microcosm(0), { seed: 1, diseaseId: 'measles' });
@@ -68,6 +73,11 @@
 		restart();
 	}
 
+	function setVaccine(region: number, key: string) {
+		scenario.regions[region].vaccine = key;
+		restart();
+	}
+
 	/** A live policy change: kept for the next restart, and sent to the running sim as a command. */
 	function setPolicy(region: number, key: LivePolicyKey, value: number) {
 		const r = scenario.regions[region];
@@ -82,6 +92,7 @@
 		scenario.regions.forEach((r, i) => {
 			r.vaccinatedFull = kept[i].vaccinatedFull;
 			r.vaccinatedPartial = kept[i].vaccinatedPartial;
+			r.vaccine = kept[i].vaccine;
 			r.policy = kept[i].policy;
 		});
 		restart();
@@ -176,6 +187,7 @@
 					x={pos.x}
 					y={pos.y}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
+					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 				/>
@@ -212,6 +224,7 @@
 					y={0}
 					docked
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
+					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 				/>
