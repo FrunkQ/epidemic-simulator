@@ -6,8 +6,10 @@ import {
 	State,
 	type Counts,
 	type HistoryChannel,
-	type RegionHistory
+	type RegionHistory,
+	type Route
 } from './types';
+import { originOf } from './transit';
 
 /** Counter slots per region, in a flat Int32Array. */
 const C_UNPROTECTED = 0;
@@ -21,9 +23,13 @@ const C_EVER = 7;
 const C_SLOTS = 8;
 const CHANNELS = HISTORY_CHANNELS.length;
 
-/** Running counters per region, and a ring buffer with one sample per region per day. */
+/**
+ * Running counters per region plus one in-transit bucket (index regionCount), and a ring buffer
+ * with one sample per region per day.
+ */
 export class TelemetryCounters {
 	readonly regionCount: number;
+	/** (regionCount + 1) x C_SLOTS: each region, then the in-transit bucket. */
 	readonly counts: Int32Array;
 	readonly ever: Int32Array;
 	private readonly history: Int32Array;
@@ -33,22 +39,29 @@ export class TelemetryCounters {
 
 	constructor(regionCount: number) {
 		this.regionCount = regionCount;
-		this.counts = new Int32Array(regionCount * C_SLOTS);
+		this.counts = new Int32Array((regionCount + 1) * C_SLOTS);
 		this.ever = new Int32Array(regionCount);
 		this.history = new Int32Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
 	}
 
-	/** Recount everyone by display colour. Travellers count towards no region. */
-	recount(agents: Agents): void {
+	/**
+	 * Recount everyone by display colour. Living travellers go in the in-transit bucket; someone
+	 * who died on the way counts in the trip's origin, so every dot is counted exactly once.
+	 */
+	recount(agents: Agents, routes: readonly Route[]): void {
 		const { counts } = this;
 		counts.fill(0);
 		const n = agents.activeCount;
 		for (let i = 0; i < n; i++) {
-			const r = agents.region[i];
-			if (r < 0) continue;
-			const base = r * C_SLOTS;
 			const s = agents.state[i];
+			let r = agents.region[i];
+			if (r < 0) {
+				const route = agents.route[i];
+				if (route < 0) continue;
+				r = s === State.DECEASED ? originOf(routes[route], agents.routeDir[i]) : this.regionCount;
+			}
+			const base = r * C_SLOTS;
 			if (s === State.SUSCEPTIBLE) {
 				const p = agents.protection[i];
 				counts[
@@ -85,6 +98,7 @@ export class TelemetryCounters {
 		this.version++;
 	}
 
+	/** Counts for region r; r = regionCount gives the in-transit bucket. */
 	regionCounts(r: number): Counts {
 		const c = this.counts;
 		const b = r * C_SLOTS;

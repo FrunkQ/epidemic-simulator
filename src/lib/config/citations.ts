@@ -2640,7 +2640,12 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'Eurostat',
 		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjangroup?format=JSON&geo=UK&sex=T&time=2019&lang=EN',
-		usedFor: ['population.ukBackgroundDeathRate', 'covid19.mortalityByAge', 'covid19.hospitalisedByAge'],
+		usedFor: [
+			'population.ukBackgroundDeathRate',
+			'covid19.mortalityByAge',
+			'covid19.hospitalisedByAge',
+			'covidAgeIfr.UK_2019_AGE_GROUPS'
+		],
 		quote:
 			'2019: Total 66,647,112; Less than 5 years 3,885,007; From 5 to 9 years 4,146,546; From 10 to 14 years 3,908,395; From 15 to 19 years 3,661,722; From 20 to 24 years 4,170,514; From 25 to 29 years 4,527,006; From 30 to 34 years 4,485,180; From 35 to 39 years 4,387,779; From 40 to 44 years 4,008,205; From 45 to 49 years 4,457,239; From 50 to 54 years 4,668,822; From 55 to 59 years 4,351,807; From 60 to 64 years 3,716,512; From 65 to 69 years 3,384,532; From 70 to 74 years 3,286,389; From 75 to 79 years 2,281,501; From 80 to 84 years 1,695,137; 85 years or over 1,624,819',
 		location:
@@ -2827,7 +2832,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1016/S0140-6736(21)02867-1',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8871594/',
-		usedFor: ['covid19.mortalityByAge'],
+		usedFor: ['covid19.mortalityByAge', 'covidAgeIfr.COVID19_IFR_PERCENT_BY_AGE'],
 		quote:
 			'Age-specific IFR estimates form a J shape, with the lowest IFR occurring at age 7 years (0·0023%, 95% uncertainty interval [UI] 0·0015–0·0039) and increasing exponentially through ages 30 years (0·0573%, 0·0418–0·0870), 60 years (1·0035%, 0·7002–1·5727), and 90 years (20·3292%, 14·6888–28·9754).',
 		location:
@@ -2852,7 +2857,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'meta-analysis',
 		doi: '10.1186/s12879-022-07262-0',
 		url: 'https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-022-07262-0',
-		usedFor: ['covid19.hospitalisedByAge'],
+		usedFor: ['covid19.hospitalisedByAge', 'covidAgeIfr.COVID19_SEVERE_PERCENT_BY_GROUP'],
 		quote:
 			'Examples of this are the rate of severe infections (Infection-severe rate, ISR), which we define as infections resulting in hospitalization or out-of-hospital death',
 		location:
