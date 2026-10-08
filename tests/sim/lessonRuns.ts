@@ -12,6 +12,9 @@ import { anyInfectious } from './helpers';
 
 export const SEEDS = 10;
 
+/** Each lesson runs 10 to 20 outbreaks; CI runners are slower than a laptop, so allow more than the default. */
+export const LESSON_TIMEOUT = 600_000;
+
 export function withAges(policy: HealthPolicy, ages: Bands): HealthPolicy {
 	return { ...policy, ageMix: { value: ages, sources: [] } };
 }
