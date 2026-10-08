@@ -8,6 +8,8 @@
 
 	// Step 1 test bench: three cities with no travel yet, to watch the engine run.
 	let diseaseId: DiseaseId = $state('measles');
+	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
+	const hasPartialCourse = $derived(DISEASES[diseaseId].partialEfficacy !== undefined);
 	let scenario: Scenario = $state(threeCities());
 	let seed = $state(1);
 	const sim = createSimulation(threeCities(), { seed: 1, diseaseId: 'measles' });
@@ -112,17 +114,19 @@
 							onchange={(e) => setVaccination(i, 'vaccinatedFull', Number(e.currentTarget.value))}
 						/>
 					</label>
-					<label>
-						Partly vaccinated: {pct(region.vaccinatedPartial)}
-						<input
-							type="range"
-							min="0"
-							max="1"
-							step="0.01"
-							value={region.vaccinatedPartial}
-							onchange={(e) => setVaccination(i, 'vaccinatedPartial', Number(e.currentTarget.value))}
-						/>
-					</label>
+					{#if hasPartialCourse}
+						<label>
+							Partly vaccinated: {pct(region.vaccinatedPartial)}
+							<input
+								type="range"
+								min="0"
+								max="1"
+								step="0.01"
+								value={region.vaccinatedPartial}
+								onchange={(e) => setVaccination(i, 'vaccinatedPartial', Number(e.currentTarget.value))}
+							/>
+						</label>
+					{/if}
 					<button onclick={() => sim.send({ type: 'seed', region: i, count: 1 })}
 						>Bring in one infected person</button
 					>
@@ -143,7 +147,7 @@
 		{#if telemetry}Each dot is about {telemetry.peoplePerDot} people.{/if}
 		<span style:color={COLOURS.unprotected}>● not protected</span>
 		<span style:color={COLOURS.full}>● fully vaccinated</span>
-		<span style:color={COLOURS.partial}>● partly vaccinated</span>
+		{#if hasPartialCourse}<span style:color={COLOURS.partial}>● partly vaccinated</span>{/if}
 		<span style:color={COLOURS.silent}>● infected, no symptoms yet</span>
 		<span style:color={COLOURS.symptomatic}>● ill</span>
 		<span style:color={COLOURS.recovered}>● recovered</span>

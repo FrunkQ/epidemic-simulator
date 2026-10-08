@@ -17,7 +17,8 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		mortality: config.mortality.value,
 		waningMeanTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value / Math.LN2),
 		fullEfficacy: config.fullEfficacy.value,
-		partialEfficacy: config.partialEfficacy.value,
+		partialEfficacy: config.partialEfficacy?.value ?? 0,
+		hasPartialCourse: config.partialEfficacy !== undefined,
 		hospitalisedShare: config.hospitalisedShare.value,
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius

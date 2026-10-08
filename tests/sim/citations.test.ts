@@ -1,41 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
 import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
-import { POPULATION } from '../../src/lib/config/population';
-import type { DiseaseConfig, DiseaseId, Sourced } from '../../src/lib/sim/types';
-
-/** Every research-backed config object, keyed by the prefix citations use in usedFor. */
-const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR, population: POPULATION };
-/** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
-
-function isSourced(v: unknown): v is Sourced<number | null> {
-	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;
-}
-
-function walk(): { sourced: { key: string; value: Sourced<number | null> }[]; bare: string[] } {
-	const sourced: { key: string; value: Sourced<number | null> }[] = [];
-	const bare: string[] = [];
-	for (const [prefix, obj] of Object.entries(CONFIG)) {
-		for (const [k, v] of Object.entries(obj)) {
-			const key = `${prefix}.${k}`;
-			if (PLAIN.has(k)) continue;
-			if (isSourced(v)) {
-				sourced.push({ key, value: v });
-				// Nested sourced reasons, e.g. a band's outsideHospitalReason.
-				for (const [nk, nv] of Object.entries(v))
-					if (nv && typeof nv === 'object' && 'text' in nv && 'sources' in nv)
-						sourced.push({
-							key: `${key}.${nk}`,
-							value: { value: null, sources: (nv as { sources: string[] }).sources }
-						});
-			} else bare.push(key);
-		}
-	}
-	return { sourced, bare };
-}
+import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
+import { isSourced, walk } from './configWalk';
 
 describe('citations', () => {
 	const ids = new Set(CITATIONS.map((c) => c.id));
@@ -47,6 +15,17 @@ describe('citations', () => {
 
 	it('has no bare numbers in research config', () => {
 		expect(bare).toEqual([]);
+	});
+
+	it('checks every number inside the vaccine lists', () => {
+		const keys = sourced.map((n) => n.key);
+		expect(keys).toContain('polio.vaccines.IPV.full.infection');
+		expect(keys).toContain('polio.vaccines.IPV.partial.severe');
+		expect(keys).toContain('polio.vaccines.IPV.waningDays');
+		// A placeholder still counts as a sourced number, so its sources are checked too.
+		expect(keys).toContain('ebola.vaccines.rVSV-ZEBOV.waningDays');
+		expect(isSourced({ value: 1, sources: ['x'], provisional: 'placeholder' })).toBe(true);
+		expect(keys).toContain('covid19.vaccines.covid-original.deathsPer100kDoses');
 	});
 
 	it('gives every research number at least one source', () => {
