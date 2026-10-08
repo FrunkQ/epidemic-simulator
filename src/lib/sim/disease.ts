@@ -10,16 +10,28 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 	return {
 		id: config.id,
 		r0: config.r0.value,
-		silentTicks: days(config.silentDays.value),
+		// Zero is allowed here: some diseases are not contagious before symptoms (see infect).
+		silentTicks: Math.max(0, Math.round(config.silentDays.value * TICKS_PER_DAY)),
 		illTicks: days(config.illDays.value),
 		asymptomaticFraction: config.asymptomaticFraction.value,
 		mortality: config.mortality.value,
-		waningTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value),
+		waningMeanTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value / Math.LN2),
 		fullEfficacy: config.fullEfficacy.value,
-		partialEfficacy: config.partialEfficacy.value,
+		partialEfficacy: config.partialEfficacy?.value ?? 0,
+		hasPartialCourse: config.partialEfficacy !== undefined,
+		hospitalisedShare: config.hospitalisedShare.value,
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};
+}
+
+/**
+ * Ticks until a dot's protection next drops a level, or -1 when it never fades. Exponential with
+ * mean waningDays / ln 2, so half of a cohort has lost protection at waningDays (step 3 uses it).
+ */
+export function drawWaneTicks(disease: DiseaseRuntime, rng: Rng): number {
+	if (disease.waningMeanTicks === 0) return -1;
+	return Math.max(1, Math.round(-Math.log(1 - rng.next()) * disease.waningMeanTicks));
 }
 
 /** Callbacks the disease step reports to, so the engine can keep its counters. */
@@ -42,6 +54,14 @@ export function infect(
 	agents.infectedBy[i] = source;
 	const asymptomatic = rng.next() < disease.asymptomaticFraction;
 	agents.asymptomatic[i] = asymptomatic ? 1 : 0;
+	// No silent phase (e.g. Ebola): symptoms start at once, so the dot is never mobile and contagious.
+	if (!asymptomatic && disease.silentTicks === 0) {
+		agents.state[i] = State.SYMPTOMATIC;
+		agents.stateTicks[i] = illTicksFor(agents, i, disease);
+		agents.vx[i] = 0;
+		agents.vy[i] = 0;
+		return;
+	}
 	// A case that never shows symptoms stays orange for its whole contagious period.
 	agents.stateTicks[i] = asymptomatic
 		? disease.silentTicks + illTicksFor(agents, i, disease)
@@ -70,27 +90,30 @@ export function transmit(
 	secondaryOnly: boolean
 ): void {
 	const { x, y, state, infectedTick, region, vaccineWorks } = agents;
-	const { cellStart, cellItems, cols, rows } = grid;
+	const { cellStart, cellItems } = grid;
 	const n = agents.activeCount;
 	const r2 = disease.transmissionRadius * disease.transmissionRadius;
 	const beta = disease.beta;
-	const cellSize = grid.cellSize;
 
 	for (let i = 0; i < n; i++) {
 		const s = state[i];
 		if (s !== State.SILENT && s !== State.SYMPTOMATIC) continue;
-		if (infectedTick[i] >= tick || region[i] < 0) continue;
+		const reg = region[i];
+		if (infectedTick[i] >= tick || reg < 0) continue;
 		const xi = x[i];
 		const yi = y[i];
-		const cx = Math.floor(xi / cellSize);
-		const cy = Math.floor(yi / cellSize);
+		const cols = grid.cols[reg];
+		const rows = grid.rows[reg];
+		const base = grid.offset[reg];
+		const cx = grid.col(reg, xi);
+		const cy = grid.row(reg, yi);
 		const x0 = cx > 0 ? cx - 1 : 0;
 		const x1 = cx < cols - 1 ? cx + 1 : cols - 1;
 		const y0 = cy > 0 ? cy - 1 : 0;
 		const y1 = cy < rows - 1 ? cy + 1 : rows - 1;
 		for (let gy = y0; gy <= y1; gy++) {
 			for (let gx = x0; gx <= x1; gx++) {
-				const c = gy * cols + gx;
+				const c = base + gy * cols + gx;
 				const end = cellStart[c + 1];
 				for (let k = cellStart[c]; k < end; k++) {
 					const j = cellItems[k];

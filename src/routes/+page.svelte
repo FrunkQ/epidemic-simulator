@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { loadDisease } from '../lib/config/index';
 	import { DISEASES } from '../lib/config/diseases';
 	import { microcosm } from '../lib/config/scenarios';
 	import { START_MAPS } from '../lib/config/startMaps.generated';
@@ -20,7 +19,7 @@
 	let world = generateWorld(microcosm(0).mapSeed);
 	const sim = createSimulation(microcosm(0), {
 		seed: 1,
-		disease: loadDisease('measles'),
+		diseaseId: 'measles',
 		world
 	});
 	let telemetry: Telemetry | null = $state.raw(null);
@@ -48,7 +47,7 @@
 	}
 
 	function restart() {
-		sim.setup($state.snapshot(scenario), loadDisease(diseaseId), seed, world);
+		sim.setup($state.snapshot(scenario), diseaseId, seed, world);
 		telemetry = sim.snapshot();
 	}
 
@@ -208,7 +207,10 @@
 	<footer>
 		{#if telemetry}
 			<Charts {telemetry} />
-			<Legend peoplePerDot={telemetry.peoplePerDot} />
+			<Legend
+				peoplePerDot={telemetry.peoplePerDot}
+				hasPartialCourse={DISEASES[diseaseId].partialEfficacy !== undefined}
+			/>
 		{/if}
 	</footer>
 </main>

@@ -31,6 +31,8 @@
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
 	const people = (dots: number) => (dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
+	/** Diseases whose vaccine is one dose have no "partly vaccinated" (partialEfficacy left out). */
+	let partialEfficacy = $derived(disease.partialEfficacy?.value);
 	let unprotected = $derived(Math.max(0, 1 - region.vaccinatedFull - region.vaccinatedPartial));
 </script>
 
@@ -48,8 +50,11 @@
 		</button>
 	</header>
 	<p class="summary">
-		<i style:background={COLOURS.full}></i>{pct(region.vaccinatedFull)} fully ·
-		<i style:background={COLOURS.partial}></i>{pct(region.vaccinatedPartial)} partly vaccinated
+		<i style:background={COLOURS.full}></i>{pct(region.vaccinatedFull)}
+		{#if partialEfficacy !== undefined}
+			fully · <i style:background={COLOURS.partial}></i>{pct(region.vaccinatedPartial)} partly
+		{/if}
+		vaccinated
 	</p>
 	{#if open}
 		<label>
@@ -64,18 +69,20 @@
 			/>
 			<small>The vaccine {protects(disease.fullEfficacy.value)}.</small>
 		</label>
-		<label>
-			<span>Partly vaccinated <b>{pct(region.vaccinatedPartial)}</b></span>
-			<input
-				type="range"
-				min="0"
-				max="1"
-				step="0.01"
-				value={region.vaccinatedPartial}
-				onchange={(e) => onvaccination(region.vaccinatedFull, Number(e.currentTarget.value))}
-			/>
-			<small>An unfinished course {protects(disease.partialEfficacy.value)}.</small>
-		</label>
+		{#if partialEfficacy !== undefined}
+			<label>
+				<span>Partly vaccinated <b>{pct(region.vaccinatedPartial)}</b></span>
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.01"
+					value={region.vaccinatedPartial}
+					onchange={(e) => onvaccination(region.vaccinatedFull, Number(e.currentTarget.value))}
+				/>
+				<small>An unfinished course {protects(partialEfficacy)}.</small>
+			</label>
+		{/if}
 		<p class="unprotected">Not vaccinated: {pct(unprotected)}</p>
 	{/if}
 	{#if t}

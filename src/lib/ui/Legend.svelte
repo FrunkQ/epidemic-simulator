@@ -3,10 +3,12 @@
 
 	interface Props {
 		peoplePerDot: number;
+		/** Diseases whose vaccine is one dose have no "partly vaccinated". */
+		hasPartialCourse: boolean;
 	}
-	let { peoplePerDot }: Props = $props();
+	let { peoplePerDot, hasPartialCourse }: Props = $props();
 
-	const items = [
+	const allItems = [
 		{ colour: COLOURS.unprotected, label: 'Not protected' },
 		{ colour: COLOURS.full, label: 'Fully vaccinated' },
 		{ colour: COLOURS.partial, label: 'Partly vaccinated' },
@@ -15,6 +17,9 @@
 		{ colour: COLOURS.recovered, label: 'Recovered' },
 		{ colour: COLOURS.deceased, label: 'Died' }
 	];
+	let items = $derived(
+		hasPartialCourse ? allItems : allItems.filter((item) => item.colour !== COLOURS.partial)
+	);
 </script>
 
 <div class="legend" role="list" aria-label="What the colours mean">
