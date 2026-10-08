@@ -21,6 +21,24 @@ export interface Sourced<T = number> {
 	sources: string[];
 }
 
+/** One value per age band: 0-14, 15-64, 65+ (the World Bank bands). */
+export type Bands = [number, number, number];
+
+/** What a banded rate is counted per. */
+export type BandUnit = 'infection' | 'symptomatic-case' | 'person-year';
+
+/**
+ * A sourced rate by age band. `reference` is the source's own population or case mix (shares
+ * summing to 1) and `overall` its published all-ages figure, so the bands can be checked.
+ */
+export interface Banded extends Sourced<Bands> {
+	per: BandUnit;
+	reference: Bands;
+	overall: number;
+	/** Required on a death band above its hospital band: why some die without admission (sourced). */
+	outsideHospitalReason?: { text: string; sources: string[] };
+}
+
 /**
  * Disease ids and picker groups come from config, so adding a disease never touches the engine.
  * (Type-only imports: no runtime dependency on config.)
@@ -44,7 +62,11 @@ export interface DiseaseConfig {
 	asymptomaticFraction: Sourced;
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
-	/** Days for immunity to fade one step; null when research says it does not fade. */
+	/**
+	 * Half-life of protection: days until half of protected people have lost a level of
+	 * protection, as sources report it (7 Oct). The engine draws each dot's time from an
+	 * exponential with mean waningDays / ln 2. null when research says it does not fade.
+	 */
 	waningDays: Sourced<number | null>;
 	/** How much a full course of vaccine cuts the chance of catching it (0 to 1). */
 	fullEfficacy: Sourced;
@@ -62,6 +84,10 @@ export interface DiseaseConfig {
 	 * is then worked out from it with `perSymptomatic`, so the two can't drift apart.
 	 */
 	infectionFatalityRate?: Sourced;
+	/** Deaths by age band (the engine reads them from step 3; until then it uses `mortality`). */
+	mortalityByAge?: Banded;
+	/** Hospital admissions by age band. */
+	hospitalisedByAge?: Banded;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -87,7 +113,8 @@ export interface DiseaseRuntime {
 	illTicks: number;
 	asymptomaticFraction: number;
 	mortality: number;
-	waningTicks: number;
+	/** Mean ticks until protection drops a level (waningDays / ln 2); 0 when it never fades. */
+	waningMeanTicks: number;
 	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
 	fullEfficacy: number;
 	partialEfficacy: number;

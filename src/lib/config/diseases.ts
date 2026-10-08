@@ -1,10 +1,12 @@
-import type { DiseaseConfig, Sourced } from '../sim/types';
+import type { Banded, Bands, DiseaseConfig, Sourced } from '../sim/types';
+import { covid19BandsPerInfection, covid19SevereBandsPerInfection } from './covidAgeIfr';
 
 /** How the disease picker groups diseases, in plain words. */
 export const DISEASE_GROUPS = {
 	common: 'Common',
 	eradicated: 'Wiped out by vaccines',
-	deadly: 'Deadly but burns out fast'
+	deadly: 'Deadly but burns out fast',
+	historic: 'Historic pandemics'
 } as const;
 export type DiseaseGroup = keyof typeof DISEASE_GROUPS;
 
@@ -21,6 +23,52 @@ const COVID19_ASYMPTOMATIC: Sourced = {
 	sources: ['buitrago-garcia-2020-asymptomatic-sars-cov-2']
 };
 const COVID19_IFR: Sourced = { value: 0.0068, sources: ['meyerowitzkatz2020-covid-ifr'] };
+/** Hospital admissions per infection, England's pre-vaccine peak (Ward 2024: 3.39%). */
+const COVID19_IHR: Sourced = { value: 0.0339, sources: ['ward-2024-covid-ihr-ifr'] };
+const COVID19_AGE = covid19BandsPerInfection();
+const ukWeighted = (b: Bands) => b.reduce((a, v, i) => a + v * COVID19_AGE.shares[i], 0);
+/** Deaths per infection by band, derived in covidAgeIfr.ts; UK 2019 ages are the reference. */
+const COVID19_DEATHS_BY_AGE: Banded = {
+	value: COVID19_AGE.bands,
+	per: 'infection',
+	reference: COVID19_AGE.shares,
+	overall: ukWeighted(COVID19_AGE.bands),
+	sources: ['covid19-forecasting-team-2022-ifr', 'eurostat-uk-population-2018-2019-5yr']
+};
+const COVID19_SEVERE = covid19SevereBandsPerInfection();
+/** Hospitalised or died outside hospital, per infection by band (Herrera-Esposito 2022). */
+const COVID19_HOSPITAL_BY_AGE: Banded = {
+	value: COVID19_SEVERE,
+	per: 'infection',
+	reference: COVID19_AGE.shares,
+	overall: ukWeighted(COVID19_SEVERE),
+	sources: ['herrera-esposito-2022-severe-by-age', 'eurostat-uk-population-2018-2019-5yr']
+};
+
+/**
+ * Omicron against the 2020 virus in people with no immunity: basic infection fatality 0.7% vs
+ * 1.2% (Perez-Guzman 2023). Applied per infection, before converting with Omicron's own share
+ * of cases without symptoms.
+ */
+const OMICRON_SEVERITY_RATIO = 0.7 / 1.2;
+const OMICRON_ASYMPTOMATIC: Sourced = { value: 0.324, sources: ['shang-2022-omicron-asymptomatic'] };
+const OMICRON_IFR: Sourced = {
+	value: COVID19_IFR.value * OMICRON_SEVERITY_RATIO,
+	sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
+};
+/** The 2020 virus's hospital share per infection, scaled the same way (an assumption). */
+const OMICRON_HOSPITAL_PER_INFECTION = COVID19_IHR.value * OMICRON_SEVERITY_RATIO;
+
+/** A disease's banded rate as per-symptomatic-case values, whatever unit its source used. */
+export function perSymptomaticBands(banded: Banded, asymptomaticFraction: Sourced): Bands {
+	if (banded.per === 'symptomatic-case') return banded.value;
+	if (banded.per === 'infection') {
+		return banded.value.map((v) =>
+			perSymptomatic({ value: v, sources: banded.sources }, asymptomaticFraction)
+		) as Bands;
+	}
+	throw new Error(`a disease rate can't be counted per ${banded.per}`);
+}
 
 /**
  * Disease presets. Every number carries the ids of its sources in citations.ts.
@@ -154,7 +202,22 @@ export const DISEASES = {
 			value: 0.2,
 			sources: ['belongia2016-flu-ve-review', 'young2018-flu-ve-waning-review', 'hu2022-flu-ve-waning']
 		},
-		hospitalisedShare: { value: 0.012, sources: ['cdc-flu-burden-2022-23', 'cdc-flu-burden-about'] }
+		hospitalisedShare: { value: 0.012, sources: ['cdc-flu-burden-2022-23', 'cdc-flu-burden-about'] },
+		// US 2018-19 season; the 0-17 and 18-64 groups stand in for 0-14 and 15-64.
+		mortalityByAge: {
+			value: [0.0000386, 0.0003517, 0.009459],
+			per: 'symptomatic-case',
+			reference: [0.3335, 0.5887, 0.0777],
+			overall: 0.000955,
+			sources: ['cdc-flu-burden-2018-19']
+		},
+		hospitalisedByAge: {
+			value: [0.004066, 0.007732, 0.09091],
+			per: 'symptomatic-case',
+			reference: [0.3335, 0.5887, 0.0777],
+			overall: 0.01297,
+			sources: ['cdc-flu-burden-2018-19']
+		}
 	},
 	covid19: {
 		id: 'covid19',
@@ -164,20 +227,56 @@ export const DISEASES = {
 			'The 2020 pandemic virus. Many people pass it on before they feel ill, or without ever feeling ill.',
 		r0: { value: 3.32, sources: ['alimohamadi-2020-covid-r0'] },
 		silentDays: { value: 2, sources: ['alene2021-covid-serial-incubation', 'byrne-2020-infectious-period'] },
-		illDays: { value: 8, sources: ['cevik2021-covid-shedding', 'byrne-2020-infectious-period'] },
+		illDays: { value: 7.3, sources: ['rahmani-a-2022-covid-shedding'] },
 		asymptomaticFraction: COVID19_ASYMPTOMATIC,
 		infectionFatalityRate: COVID19_IFR,
 		mortality: {
 			value: perSymptomatic(COVID19_IFR, COVID19_ASYMPTOMATIC),
 			sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr']
 		},
+		mortalityByAge: COVID19_DEATHS_BY_AGE,
+		hospitalisedByAge: COVID19_HOSPITAL_BY_AGE,
 		waningDays: {
 			value: 660,
 			sources: ['stein2023-covid-past-infection', 'chemaitelly-2022-natural-immunity-waning']
 		},
 		fullEfficacy: { value: 0.35, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
 		partialEfficacy: { value: 0.2, sources: ['mmwr-2025-covid-vaccine-effectiveness'] },
-		hospitalisedShare: { value: 0.042, sources: ['ward-2024-covid-ihr-ifr'] }
+		hospitalisedShare: {
+			value: perSymptomatic(COVID19_IHR, COVID19_ASYMPTOMATIC),
+			sources: ['ward-2024-covid-ihr-ifr', 'buitrago-garcia-2020-asymptomatic-sars-cov-2']
+		}
+	},
+	covid19omicron: {
+		id: 'covid19omicron',
+		name: 'COVID-19 (Omicron era)',
+		group: 'common',
+		blurb:
+			'The 2022 variant. It spreads far faster than the 2020 virus and is milder per case, and the original vaccine stops it less well.',
+		r0: { value: 8.4, sources: ['perez-guzman-2023-omicron', 'liu-rocklov-2022-omicron-r'] },
+		silentDays: {
+			value: 0.3,
+			sources: [
+				'madewell-2023-omicron-serial',
+				'wu-2022-incubation-variants',
+				'alene2021-covid-serial-incubation',
+				'byrne-2020-infectious-period'
+			]
+		},
+		illDays: { value: 5, sources: ['wu-2023-omicron-shedding'] },
+		asymptomaticFraction: OMICRON_ASYMPTOMATIC,
+		infectionFatalityRate: OMICRON_IFR,
+		mortality: {
+			value: perSymptomatic(OMICRON_IFR, OMICRON_ASYMPTOMATIC),
+			sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
+		},
+		waningDays: { value: 195, sources: ['bobrovitz-2023-omicron-reinfection'] },
+		fullEfficacy: { value: 0.234, sources: ['mohammed-2023-omicron-ve'] },
+		partialEfficacy: { value: 0.136, sources: ['tan-2022-omicron-children-partial'] },
+		hospitalisedShare: {
+			value: OMICRON_HOSPITAL_PER_INFECTION / (1 - OMICRON_ASYMPTOMATIC.value),
+			sources: ['ward-2024-covid-ihr-ifr', 'perez-guzman-2023-omicron']
+		}
 	},
 	chickenpox: {
 		id: 'chickenpox',
@@ -295,5 +394,58 @@ export const DISEASES = {
 		fullEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
 		partialEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
 		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] }
+	},
+	flu1918: {
+		id: 'flu1918',
+		name: '1918 flu ("Spanish flu")',
+		group: 'historic',
+		blurb:
+			'The 1918 pandemic flu. Unlike ordinary flu, a large share of the people it killed were young adults.',
+		r0: { value: 1.8, sources: ['biggerstaff2014-flu-r-review'] },
+		// No 1918-specific contagious periods exist: seasonal flu's, checked against the 1918 serial interval.
+		silentDays: {
+			value: 1,
+			sources: [
+				'memoli2015-flu-challenge',
+				'suess2012-flu-shedding-germany',
+				'lau2010-flu-shedding-hk',
+				'white-pagano-2008-1918-serial',
+				'vink-2014-serial-intervals'
+			]
+		},
+		illDays: {
+			value: 4,
+			sources: [
+				'carrat2008-flu-timelines-review',
+				'suess2012-flu-shedding-germany',
+				'white-pagano-2008-1918-serial',
+				'vink-2014-serial-intervals'
+			]
+		},
+		asymptomaticFraction: { value: 0, sources: ['fraser-2011-1918-households'] },
+		mortality: { value: 0.017, sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass'] },
+		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },
+		fullEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
+		partialEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
+		// Lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.
+		hospitalisedShare: {
+			value: 0.017,
+			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		},
+		// Reported cases by age (Britten 1932, Tables 7 and 28): 15,761 / 25,927 / 666 cases.
+		mortalityByAge: {
+			value: [0.0115, 0.0195, 0.041],
+			per: 'symptomatic-case',
+			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
+			overall: 0.017,
+			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		},
+		hospitalisedByAge: {
+			value: [0.0115, 0.0195, 0.041],
+			per: 'symptomatic-case',
+			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
+			overall: 0.017,
+			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		}
 	}
 } satisfies Record<string, DiseaseConfig>;

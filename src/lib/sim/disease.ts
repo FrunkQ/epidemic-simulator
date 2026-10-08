@@ -15,13 +15,22 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		illTicks: days(config.illDays.value),
 		asymptomaticFraction: config.asymptomaticFraction.value,
 		mortality: config.mortality.value,
-		waningTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value),
+		waningMeanTicks: config.waningDays.value === null ? 0 : days(config.waningDays.value / Math.LN2),
 		fullEfficacy: config.fullEfficacy.value,
 		partialEfficacy: config.partialEfficacy.value,
 		hospitalisedShare: config.hospitalisedShare.value,
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};
+}
+
+/**
+ * Ticks until a dot's protection next drops a level, or -1 when it never fades. Exponential with
+ * mean waningDays / ln 2, so half of a cohort has lost protection at waningDays (step 3 uses it).
+ */
+export function drawWaneTicks(disease: DiseaseRuntime, rng: Rng): number {
+	if (disease.waningMeanTicks === 0) return -1;
+	return Math.max(1, Math.round(-Math.log(1 - rng.next()) * disease.waningMeanTicks));
 }
 
 /** Callbacks the disease step reports to, so the engine can keep its counters. */

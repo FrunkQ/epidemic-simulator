@@ -3,7 +3,8 @@
 //   measles: target R0 15, measured 15 ± 0.269 over 60 seeds, 240 index cases
 //   polio: target R0 6, measured 6.002 ± 0.101 over 50 seeds, 500 index cases
 //   flu: target R0 1.3, measured 1.304 ± 0.022 over 60 seeds, 2760 index cases
-//   covid19: target R0 3.32, measured 3.321 ± 0.0548 over 60 seeds, 1080 index cases
+//   covid19: target R0 3.32, measured 3.32 ± 0.0537 over 70 seeds, 1260 index cases
+//   covid19omicron: target R0 8.4, measured 8.417 ± 0.153 over 50 seeds, 350 index cases
 //   chickenpox: target R0 5, measured 5.013 ± 0.0928 over 50 seeds, 600 index cases
 //   mumps: target R0 11, measured 10.99 ± 0.203 over 50 seeds, 250 index cases
 //   rubella: target R0 5, measured 4.997 ± 0.0879 over 50 seeds, 600 index cases
@@ -11,6 +12,7 @@
 //   smallpox: target R0 5, measured 4.997 ± 0.0846 over 60 seeds, 720 index cases
 //   ebola: target R0 1.95, measured 1.947 ± 0.0326 over 60 seeds, 1860 index cases
 //   marburg: target R0 1.59, measured 1.59 ± 0.0292 over 50 seeds, 1900 index cases
+//   flu1918: target R0 1.8, measured 1.797 ± 0.0308 over 60 seeds, 1980 index cases
 import type { DiseaseCalibration, DiseaseId } from '../sim/types';
 
 export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
@@ -39,12 +41,20 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		indexCases: 2760
 	},
 	covid19: {
-		beta: 0.004827,
+		beta: 0.005331,
 		transmissionRadius: 8,
-		measuredR0: 3.321,
-		standardError: 0.0548,
-		seeds: 60,
-		indexCases: 1080
+		measuredR0: 3.32,
+		standardError: 0.0537,
+		seeds: 70,
+		indexCases: 1260
+	},
+	covid19omicron: {
+		beta: 0.02686,
+		transmissionRadius: 8,
+		measuredR0: 8.417,
+		standardError: 0.153,
+		seeds: 50,
+		indexCases: 350
 	},
 	chickenpox: {
 		beta: 0.01124,
@@ -101,5 +111,13 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		standardError: 0.0292,
 		seeds: 50,
 		indexCases: 1900
+	},
+	flu1918: {
+		beta: 0.005412,
+		transmissionRadius: 8,
+		measuredR0: 1.797,
+		standardError: 0.0308,
+		seeds: 60,
+		indexCases: 1980
 	}
 };
