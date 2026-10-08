@@ -194,7 +194,7 @@
 		<p class="counts">
 			<span><i style:background={COLOURS.silent}></i>{people(t.counts.silent)} spreading unaware</span>
 			<span><i style:background={COLOURS.symptomatic}></i>{people(t.counts.symptomatic)} ill</span>
-			<span><i style:background={COLOURS.deceased}></i>{people(t.counts.deceased)} died</span>
+			<span><i style:background={COLOURS.deceased}></i>{Math.round(t.deaths).toLocaleString()} died</span>
 		</p>
 	{/if}
 	<button class="seed" onclick={onseed}>Bring in one infected person</button>

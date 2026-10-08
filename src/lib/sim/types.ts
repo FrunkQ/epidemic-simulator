@@ -340,8 +340,13 @@ export interface RegionTelemetry {
 	name: string;
 	dots: number;
 	counts: Counts;
-	/** Deaths so far by age band (0-14, 15-64, 65+). */
+	/**
+	 * Deaths so far in people, by age band (0-14, 15-64, 65+): the tally of each ended illness's
+	 * chance of death (6.6), not the dead dots. Fractional; show it rounded to whole people.
+	 */
 	deathsByAge: Bands;
+	/** Deaths so far in people, all ages (the sum of deathsByAge). */
+	deaths: number;
 	/** Outbreak patients need more beds than are spare (pressure over 100%). */
 	overloaded: boolean;
 	/** Spare hospital beds, in dots. Multiply by peoplePerDot to show people. */
@@ -374,6 +379,8 @@ export interface Telemetry {
 	inTransit: Counts;
 	/** Every dot: the regions plus inTransit. */
 	totals: Counts;
+	/** Deaths so far in people, every region (a death on a trip counts in its origin). */
+	deaths: number;
 	/** Today's history sample per region. The full history comes from sim.history(region). */
 	latest: Record<HistoryChannel, number>[];
 	/** Changes whenever a new daily sample is stored. */
@@ -394,7 +401,9 @@ export interface RegionHistory {
 
 /**
  * Daily channels per region, in dots. inHospital (here and per age band) is an expected value in
- * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%).
+ * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%). `deceased`
+ * is the dead dots on the map (a sample); `deaths` is the deaths tally in whole people (6.6), the
+ * figure every death count shows.
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -403,7 +412,8 @@ export const HISTORY_CHANNELS = [
 	'deceased',
 	'susceptible',
 	'inHospital',
-	'pressure'
+	'pressure',
+	'deaths'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 

@@ -22,8 +22,8 @@ export function lesson15(firstSeed: number, lastSeed: number): void {
 				seed,
 				{ population: 600_000, vaccinatedFull: 0.7, vaccinatedPartial: 0, vaccine },
 				SEASON_DAYS
-			).snapshot().regions[0].counts;
-		if (run('covid-updated').deceased < run('covid-original').deceased) fewer++;
+			).snapshot().regions[0].deaths;
+		if (run('covid-updated') < run('covid-original')) fewer++;
 	}
 	expect(fewer / (lastSeed - firstSeed + 1)).toBeGreaterThanOrEqual(0.8);
 }

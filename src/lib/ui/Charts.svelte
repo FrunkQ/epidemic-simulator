@@ -27,6 +27,23 @@
 
 	const people = (values: Int32Array, perDot: number) => Array.from(values, (v) => v * perDot);
 
+	/**
+	 * The stack in people. Deaths are the tally (6.6), not the dead dots, so they grow smoothly;
+	 * "Recovered" is everyone who has had it and isn't counted as died, so the stack still adds up.
+	 */
+	function stack(h: RegionHistory, perDot: number): Band[] {
+		const deaths = Array.from(h.series.deaths);
+		const values = (key: (typeof BANDS)[number]['key']) => {
+			if (key === 'deceased') return deaths;
+			if (key === 'recovered')
+				return Array.from(h.series.recovered, (v, k) =>
+					Math.max(0, (v + h.series.deceased[k]) * perDot - deaths[k])
+				);
+			return people(h.series[key], perDot);
+		};
+		return BANDS.map((b) => ({ ...b, values: values(b.key) })) as Band[];
+	}
+
 	// Rebuilt only when a new day's history arrives, not on every 10 Hz snapshot: names, dots and
 	// people per dot only change on a restart, which also brings new history.
 	const perRegion = $derived.by(() => {
@@ -36,7 +53,7 @@
 			id: t.regions[r]?.id ?? r,
 			days: Array.from(h.days),
 			max: (t.regions[r]?.dots ?? 1) * t.peoplePerDot,
-			bands: BANDS.map((b) => ({ ...b, values: people(h.series[b.key], t.peoplePerDot) })) as Band[]
+			bands: stack(h, t.peoplePerDot)
 		}));
 	});
 
@@ -94,16 +111,8 @@
 			/>
 		{/if}
 		{#each telemetry.regions as r (r.id)}
-			{#if r.counts.deceased > 0}
-				<AgeBarsChart
-					title="{r.name}: who died, by age"
-					values={[
-						r.deathsByAge[0] * telemetry.peoplePerDot,
-						r.deathsByAge[1] * telemetry.peoplePerDot,
-						r.deathsByAge[2] * telemetry.peoplePerDot
-					]}
-					asShares
-				/>
+			{#if Math.round(r.deaths) > 0}
+				<AgeBarsChart title="{r.name}: who died, by age" values={r.deathsByAge} asShares />
 			{/if}
 		{/each}
 	</div>

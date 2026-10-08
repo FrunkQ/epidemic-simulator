@@ -140,6 +140,11 @@ export function drawWaneTicks(meanTicks: number, rng: Rng): number {
 export interface DiseaseHooks {
 	onInfected(target: number, source: number): void;
 	onDeath(dot: number): void;
+	/**
+	 * A red phase ended in `region`'s hospitals (a traveller's trip origin, 6.8) with this chance of
+	 * death, whether or not the dot's own draw killed it; the engine adds it to the deaths tally.
+	 */
+	onIllnessEnd(dot: number, slot: number, region: number, deathChance: number, died: boolean): void;
 }
 
 /** Subsystem switches the illness rules read (6.14). */
@@ -345,14 +350,16 @@ export function advanceIllness(
 		}
 		// End of the red phase: one death draw (6.6), with the strain of the dot's hospital region.
 		agents.bedNeed[k] = 0;
+		const home = hospitalRegion(agents, routes, i);
 		let p = 0;
 		if (rules.deaths) {
 			const d = deathChance(agents, k, i, disease, rules);
 			const h = bedChance(agents, k, i, disease, rules);
-			const r = rules.hospital ? hospitalRegion(agents, routes, i) : -1;
-			p = deathChanceAtEnd(d, h, r >= 0 ? strain[r] : 1);
+			p = deathChanceAtEnd(d, h, rules.hospital && home >= 0 ? strain[home] : 1);
 		}
-		if (p > 0 && rng.next() < p) {
+		const died = p > 0 && rng.next() < p;
+		hooks.onIllnessEnd(i, slot, home, p, died);
+		if (died) {
 			state[k] = State.DECEASED;
 			dead[i] = 1;
 			agents.vx[i] = 0;
