@@ -1,3 +1,42 @@
+import {
+	ALL_VACCINE_ANAPHYLAXIS_PER_MILLION,
+	BOBROVITZ,
+	BOLORMAA,
+	CHIT,
+	CHO,
+	CHOI,
+	COVID_INFECTION_HALF_LIFE_MONTHS,
+	DAYS_PER_MONTH,
+	DAYS_PER_YEAR,
+	DTAP_SERIOUS_DOSES,
+	FAMULARE,
+	FEIKIN,
+	FLU_SERIOUS,
+	IPV_ONE_DOSE,
+	IPV_ONE_DOSE_SEROCONVERSION,
+	LANE,
+	LEWNARD_HALF_LIFE_YEARS,
+	MCGIRR,
+	MENEGALE,
+	MMR_SEIZURE_DOSES,
+	MMR_SERIOUS_PER_100K,
+	MORO,
+	MRNA_SERIOUS,
+	OMICRON_VACCINE,
+	OPV_RISK,
+	OPV_SHEDDING_OR,
+	OSTER,
+	RANJEVA_HALF_LIFE_YEARS,
+	SMALLPOX_VACCINE_HALF_LIFE,
+	SMALLPOX_VACCINE_YEARS,
+	WENDELBOE_HALF_LIFE,
+	WENDELBOE_YEARS,
+	YOUNG,
+	fmt,
+	per100kFromPerMillion
+} from './derived';
+import { stackedProtection as stacked } from './vaccines';
+
 /**
  * Every source behind a number in config. The About page is generated from this list.
  * Each entry is checked by a separate verification pass before it is used (verified.ok).
@@ -146,17 +185,25 @@ export const CITATIONS: Citation[] = [
 			'measles.illDays',
 			'measles.partialEfficacy',
 			'measles.fullEfficacy',
-			'measles.waningDays'
+			'measles.waningDays',
+			'measles.vaccines.MMR.full.infection',
+			'measles.vaccines.MMR.partial.infection',
+			'measles.vaccines.MMR.seriousPer100kDoses',
+			'mumps.vaccines.MMR.seriousPer100kDoses',
+			'rubella.vaccines.MMR.seriousPer100kDoses',
+			'measles.vaccines.MMR.waningDays'
 		],
 		quote:
-			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong',
-		location: 'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024)',
-		why: 'CDC reference text, read directly.',
+			'transmissible from 4 days before through 4 days after rash onset … 2% to 7% of children who receive only 1 dose of MMR vaccine fail to respond … probably lifelong … MMR vaccine is associated with a very small risk of febrile seizures; approximately one case for every 3,000 to 4,000 doses of MMR vaccine administered.',
+		location:
+			'Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 24 April 2024); Vaccine Safety (febrile seizures)',
+		why: `CDC reference text, read directly. Vaccine risk (the same MMR vaccine for measles, mumps and rubella): 1 in ${fmt(MMR_SEIZURE_DOSES[0])} to ${fmt(MMR_SEIZURE_DOSES[1])} doses, the middle of which is ${fmt(MMR_SERIOUS_PER_100K, 1)} per 100,000 doses. These are febrile seizures in young children, which usually need emergency care and leave no lasting harm. Deaths caused by MMR come from IOM 2012, not this page.`,
 		context: 'US; seroconversion data.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Vaccine Safety sentence re-opened in a separate pass and confirmed verbatim (last reviewed 24 April 2024).'
 		}
 	},
 	{
@@ -247,7 +294,12 @@ export const CITATIONS: Citation[] = [
 		year: 2011,
 		evidence: 'review',
 		doi: '10.1093/infdis/jir102',
-		usedFor: ['measles.partialEfficacy', 'measles.fullEfficacy'],
+		usedFor: [
+			'measles.partialEfficacy',
+			'measles.fullEfficacy',
+			'measles.vaccines.MMR.full.infection',
+			'measles.vaccines.MMR.partial.infection'
+		],
 		quote: '≥12 months, the median VE was … 92.0% … For 2 doses … the median VE was 94.1%',
 		location: 'abstract',
 		why: 'Review of 70 papers.',
@@ -266,7 +318,12 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1002/14651858.cd004407.pub4',
-		usedFor: ['measles.partialEfficacy', 'measles.fullEfficacy'],
+		usedFor: [
+			'measles.partialEfficacy',
+			'measles.fullEfficacy',
+			'measles.vaccines.MMR.full.infection',
+			'measles.vaccines.MMR.partial.infection'
+		],
 		quote: '95% after one dose ... and 96% after two doses',
 		location: 'abstract',
 		why: 'Cochrane review; added support.',
@@ -285,7 +342,7 @@ export const CITATIONS: Citation[] = [
 		year: 2025,
 		evidence: 'study',
 		doi: '10.2807/1560-7917.es.2025.30.46.2500130',
-		usedFor: ['measles.fullEfficacy'],
+		usedFor: ['measles.fullEfficacy', 'measles.vaccines.MMR.full.infection'],
 		quote: 'VE was 96.4%',
 		location: 'abstract',
 		why: 'Single outbreak; support only.',
@@ -305,7 +362,12 @@ export const CITATIONS: Citation[] = [
 		year: 2026,
 		evidence: 'study',
 		doi: '10.1093/ije/dyag083',
-		usedFor: ['measles.fullEfficacy', 'measles.waningDays'],
+		usedFor: [
+			'measles.fullEfficacy',
+			'measles.waningDays',
+			'measles.vaccines.MMR.full.infection',
+			'measles.vaccines.MMR.waningDays'
+		],
 		quote: 'remained high after 15 years 99.7%',
 		location: 'abstract',
 		why: 'Large cohort.',
@@ -344,7 +406,7 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'study',
 		doi: '10.1016/s2468-2667(24)00181-6',
-		usedFor: ['measles.waningDays'],
+		usedFor: ['measles.waningDays', 'measles.vaccines.MMR.waningDays'],
 		quote: 'waning rate was slow (0·039% per year of age',
 		location: 'abstract',
 		why: 'Fitted national model.',
@@ -364,7 +426,7 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jiac039',
-		usedFor: ['measles.waningDays'],
+		usedFor: ['measles.waningDays', 'measles.vaccines.MMR.waningDays'],
 		quote: 'Decreases in the proportion of seropositive individuals over time were not significant',
 		location: 'abstract',
 		why: 'Systematic review.',
@@ -389,20 +451,27 @@ export const CITATIONS: Citation[] = [
 			'polio.illDays',
 			'polio.asymptomaticFraction',
 			'polio.mortality',
-			'polio.fullEfficacy',
 			'polio.waningDays',
-			'polio.hospitalisedShare'
+			'polio.hospitalisedShare',
+			'polio.vaccines.IPV.full.severe',
+			'polio.vaccines.IPV.seriousPer100kDoses',
+			'polio.vaccines.OPV.full.severe',
+			'polio.vaccines.OPV.partial.severe',
+			'polio.vaccines.OPV.seriousPer100kDoses',
+			'polio.vaccines.OPV.deathsPer100kDoses',
+			'polio.vaccines.IPV.waningDays'
 		],
 		quote:
-			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series',
+			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
 		location:
-			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024)',
-		why: 'CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases.',
+			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024); OPV vaccine efficacy; Vaccine-associated paralytic polio; IPV safety',
+		why: `CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per ${OPV_RISK.millionDosesPerVapp[0]} to ${OPV_RISK.millionDosesPerVapp[1]} million doses, the middle of which is ${fmt(OPV_RISK.vappPer100k, 4)} per 100,000 doses; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). OPV deaths are worked out: ${fmt(OPV_RISK.vappPer100k, 4)} x the middle of the ${OPV_RISK.paralyticCaseFatality[0] * 100}% to ${OPV_RISK.paralyticCaseFatality[1] * 100}% case fatality ratio for paralytic polio (${fmt(OPV_RISK.caseFatality * 100, 1)}%) = ${fmt(OPV_RISK.deathsPer100k, 5)} per 100,000 doses. That no death is established for IPV comes from ACIP 2024.`,
 		context: 'US; children.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Vaccine sentences re-opened in separate passes: the IPV 99% sentence, the single-dose tOPV sentence, the VAPP sentence and the all-IPV safety sentence returned verbatim; the OPV three-dose phrase is given as a short fragment because only one read returned it.'
 		}
 	},
 	{
@@ -595,11 +664,12 @@ export const CITATIONS: Citation[] = [
 		year: 2014,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jit601',
-		usedFor: ['polio.partialEfficacy', 'polio.fullEfficacy'],
-		quote: 'One full dose of intramuscular IPV seroconverted 33%, 41%, and 47%',
-		location: 'abstract',
-		why: 'Systematic review.',
-		context: 'Infants.',
+		usedFor: ['polio.vaccines.IPV.partial.severe'],
+		quote:
+			'One full dose of intramuscular IPV seroconverted 33%, 41%, and 47% of infants against serotypes 1, 2, and 3 on average, whereas 2 full doses seroconverted 79%, 80%, and 90%, respectively. … Limited data from case-control studies indicate clinical efficacy equivalent to the proportion seroconverting.',
+		location: 'Abstract, Results',
+		why: `One IPV dose, a started course: the mean of ${IPV_ONE_DOSE_SEROCONVERSION.map((x) => `${x * 100}%`).join(', ')} = ${fmt(IPV_ONE_DOSE, 3)} protection against paralysis, since clinical efficacy about equals the share seroconverting.`,
+		context: '20 study arms from 12 articles; infants. Seroconversion rises with age at the dose.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -615,10 +685,10 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'study',
 		doi: '10.1016/s1473-3099(23)00688-6',
-		usedFor: ['polio.partialEfficacy'],
+		usedFor: ['polio.vaccines.IPV.partial.severe'],
 		quote: 'effectiveness of one IPV dose was 43%',
 		location: 'abstract',
-		why: 'Large case-control study.',
+		why: "Context for one IPV dose against paralysis: 43% here agrees with Grassly 2014's pooled 0.40, which sets the value.",
 		context: 'Nigeria; 89% with community controls.',
 		verified: {
 			by: 'independent verification pass',
@@ -628,22 +698,30 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'hird2012-ipv-mucosal-review',
-		authors: 'Hird TR, et al.',
+		authors: 'Hird TR, Grassly NC',
 		title:
 			'Systematic Review of Mucosal Immunity Induced by Oral and Inactivated Poliovirus Vaccines against Virus Shedding following Oral Poliovirus Challenge',
 		journal: 'PLoS Pathogens',
 		year: 2012,
 		evidence: 'systematic-review',
 		doi: '10.1371/journal.ppat.1002599',
-		usedFor: ['polio.fullEfficacy'],
-		quote: 'IPV provided no protection against shedding',
+		usedFor: [
+			'polio.fullEfficacy',
+			'polio.partialEfficacy',
+			'polio.vaccines.IPV.full.infection',
+			'polio.vaccines.IPV.partial.infection',
+			'polio.vaccines.OPV.full.infection'
+		],
+		quote:
+			'Individuals vaccinated with OPV were protected against infection and shedding of poliovirus in stool samples collected after challenge compared with unvaccinated individuals (summary odds ratio [OR] for shedding 0.13 (95% confidence interval [CI] 0.08–0.24)). In contrast, IPV provided no protection against shedding compared with unvaccinated individuals (summary OR 0.81 [95% CI 0.59–1.11])',
 		location: 'abstract',
-		why: 'Systematic review.',
-		context: 'Caveat: efficacy is against paralysis, not shedding.',
+		why: `OPV: 1 - OR ${OPV_SHEDDING_OR} = ${fmt(1 - OPV_SHEDDING_OR, 2)} protection against infection (an odds ratio overstates the risk reduction a little when shedding is common). IPV: 1 - OR 0.81 = 0.19, but its 95% CI (0.59-1.11) includes no effect, so it is not statistically significant and is stored as 0, for a full or a started course. IPV cuts shedding from the throat more than from the gut; this model has no route of spread (throat or gut), so it uses this gut-shedding result, and an IPV-vaccinated person can still catch and pass on polio while being protected from paralysis.`,
+		context: '31 stool-shedding challenge studies through May 2011, mostly trivalent OPV schedules.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'PLoS article page confirms title, authors Hird TR and Grassly NC, year 2012, and both quoted sentences verbatim; no correction or retraction notice.'
 		}
 	},
 	{
@@ -655,10 +733,11 @@ export const CITATIONS: Citation[] = [
 		year: 2014,
 		evidence: 'systematic-review',
 		doi: '10.1186/1471-2334-14-480',
-		usedFor: ['flu.r0', 'flu.herdImmunityThreshold'],
-		quote: 'median R value for seasonal influenza was 1.28',
-		location: 'abstract',
-		why: 'Systematic review.',
+		usedFor: ['flu.r0', 'flu.herdImmunityThreshold', 'flu1918.r0'],
+		quote:
+			'median R value for seasonal influenza was 1.28 … The median R value for 1918 was 1.80 (interquartile range [IQR]: 1.47-2.27).',
+		location: 'Abstract, Results',
+		why: 'Systematic review giving median R for both seasonal flu (1.28, rounded to 1.3) and the 1918 pandemic (1.80).',
 		context: 'Threshold derived as 1 - 1/1.3.',
 		verified: {
 			by: 'independent verification pass',
@@ -695,7 +774,7 @@ export const CITATIONS: Citation[] = [
 		year: 2011,
 		evidence: 'study',
 		doi: '10.1098/rsif.2011.0309',
-		usedFor: ['flu.r0', 'flu.waningDays'],
+		usedFor: ['flu.r0'],
 		quote: 'R(0), in the range 1.6-3',
 		location: 'abstract',
 		why: 'Model fitted to temperate series.',
@@ -714,7 +793,7 @@ export const CITATIONS: Citation[] = [
 		year: 2008,
 		evidence: 'systematic-review',
 		doi: '10.1093/aje/kwm375',
-		usedFor: ['flu.illDays', 'flu.asymptomaticFraction'],
+		usedFor: ['flu.illDays', 'flu.asymptomaticFraction', 'flu1918.illDays'],
 		quote: 'duration of viral shedding averaged over 375 participants was 4.80 days',
 		location: 'abstract',
 		why: 'Systematic review of volunteer challenge studies. Shedding lasts 4.8 days in all and starts about 1 day before symptoms, so illDays = 4.8 - 1 = about 4 (worked out).',
@@ -736,7 +815,7 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No meta-analysis measures how long flu is contagious before symptoms start; the pooled challenge-study review (Carrat 2008) times shedding from infection, not from symptoms.',
 		doi: '10.1093/cid/ciu924',
-		usedFor: ['flu.silentDays'],
+		usedFor: ['flu.silentDays', 'flu1918.silentDays'],
 		quote: 'Viral shedding preceded symptoms by 12-24 hours',
 		location: 'abstract',
 		why: 'Direct observation.',
@@ -756,7 +835,7 @@ export const CITATIONS: Citation[] = [
 		year: 2012,
 		evidence: 'study',
 		doi: '10.1371/journal.pone.0051653',
-		usedFor: ['flu.silentDays', 'flu.illDays'],
+		usedFor: ['flu.silentDays', 'flu.illDays', 'flu1918.silentDays', 'flu1918.illDays'],
 		quote: 'infectiousness as measured by viral culture lasted approximately until illness days 4-6',
 		location: 'abstract',
 		why: 'Household study.',
@@ -775,7 +854,7 @@ export const CITATIONS: Citation[] = [
 		year: 2010,
 		evidence: 'study',
 		doi: '10.1086/652241',
-		usedFor: ['flu.silentDays'],
+		usedFor: ['flu.silentDays', 'flu1918.silentDays'],
 		quote: '1%-8% of infectiousness occurs prior to illness onset',
 		location: 'abstract',
 		why: 'Community study.',
@@ -932,7 +1011,7 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s1473-3099(16)00129-8',
-		usedFor: ['flu.partialEfficacy', 'flu.fullEfficacy'],
+		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.full.infection'],
 		quote: 'Pooled VE was 33% (95% CI 26-39; I(2)=44·4) for H3N2',
 		location: 'abstract',
 		why: 'Meta-analysis.',
@@ -952,11 +1031,12 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.vaccine.2024.02.059',
-		usedFor: ['flu.fullEfficacy'],
-		quote: 'pooled IVE was 41.4 %',
+		usedFor: ['flu.fullEfficacy', 'flu.vaccines.inactivated.full.infection'],
+		quote: 'The pooled IVE was 41.4 % (95 % CI: 39.2-43.5 %) against any influenza',
 		location: 'abstract',
-		why: 'Largest recent meta-analysis.',
-		context: '191 studies, 2017-2022.',
+		why: 'Largest recent meta-analysis: 0.414 is real-world protection against any flu, all ages, in a typical season.',
+		context:
+			'191 test-negative studies, 2017-2022. Same abstract: 48.6% in children, 36.7% at 18-64, 30.6% at 65+.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -965,22 +1045,26 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'young2018-flu-ve-waning-review',
-		authors: 'Young B, et al.',
+		authors: 'Young B, Sadarangani S, Jiang L, Wilder-Smith A, Chen MI-C',
 		title:
 			'Duration of Influenza Vaccine Effectiveness: A Systematic Review, Meta-analysis, and Meta-regression of Test-Negative Design Case-Control Studies',
 		journal: 'The Journal of Infectious Diseases',
 		year: 2018,
 		evidence: 'meta-analysis',
 		doi: '10.1093/infdis/jix632',
-		usedFor: ['flu.partialEfficacy', 'flu.waningDays'],
-		quote: 'A/H3 (change in VE, -33',
-		location: 'abstract',
-		why: 'Meta-analysis.',
-		context: 'VE 15-90 vs 91-180 days.',
+		usedFor: ['flu.vaccines.inactivated.waningDays'],
+		quote:
+			'Meta-analyses were performed to compare VE 15-90 days after vaccination to VE 91-180 days after vaccination. A significant decline in VE was observed for influenza virus subtype A/H3 (change in VE, -33; 95% confidence interval [CI], -57 to -12) and type B (change in VE, -19; 95% CI, -33 to -6). VE declined for influenza virus subtype A/H1, but this difference was not statistically significant (change in VE -8; 95% CI, -27 to 21).',
+		location:
+			"Abstract (Results); pooled VE by window from Table 4 'Summary of Findings': A(H3) 45 -> 13 (10,736 cases), B 62 -> 43 (6,424 cases), A(H1) 62 -> 54 (5,148 cases), VE 15-90 days -> 91-180 days",
+		why: `Meta-analysis. Vaccine waningDays is worked out as an exponential half-life between the window midpoints (day ${YOUNG.early.day} and day ${YOUNG.late.day}, ${YOUNG.late.day - YOUNG.early.day} days apart), using the mean VE weighted by cases, ${YOUNG.early.ve} -> ${fmt(YOUNG.late.ve, 2)}: ${YOUNG.late.day - YOUNG.early.day} x ln2 / ln(${YOUNG.early.ve} / ${fmt(YOUNG.late.ve, 2)}) = ${fmt(YOUNG.halfLife)} days. By subtype: H3 46, B 157, H1 416 days; unweighted mean 134 days.`,
+		context:
+			"Vaccine-derived protection against medically attended, laboratory-confirmed flu in test-negative studies; each window is pooled from a different set of studies, and part of the decline may be bias from the test-negative design (Tokars 2020), so real waning may be slower. Range: 78 days if subtype decay rates are averaged by cases instead, and Hu 2022's 77.5 days. Infection-acquired protection lasts years (Ranjeva 2019), which is why the disease's own waningDays is far longer.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Crossref: title, five authors and J Infect Dis 217(5):731-741 match, no relation, update-to or updated-by entries. Abstract quote verbatim in the Consensus record and the DR-NTU manuscript; Table 4 read from the publisher page. Half-lives recomputed: case-weighted 104.9 days, unweighted 134.0, linear 98.3; averaging the decay rates by cases gives 78 days.'
 		}
 	},
 	{
@@ -992,15 +1076,18 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'study',
 		doi: '10.3390/vaccines10060888',
-		usedFor: ['flu.partialEfficacy', 'flu.waningDays'],
-		quote: 'wanes within 180 days after 14 days of influenza vaccination',
+		usedFor: ['flu.vaccines.inactivated.waningDays'],
+		quote:
+			'The adjusted overall VE against any medically attended, laboratory-confirmed influenza decreased from 50% (95% confidence interval (CI): 41–58%) in adults vaccinated 14 to 74 days prior to the onset of influenza-like illness (ILI), to 39% (95% CI: 31–47%) in adults vaccinated 75 to 134 days prior to the onset of ILI, then to 17% (95% CI: 0–32%) in adults vaccinated 135 to 194 days prior to the onset of ILI. … wanes within 180 days after 14 days of influenza vaccination',
 		location: 'abstract',
-		why: 'Large multi-season study; support.',
-		context: 'US adults, seasons before 2020.',
+		why: 'Large multi-season study; check on the vaccine half-life. A log-linear fit through the window midpoints (days 44, 104.5 and 164.5) gives 77.5 days, a little shorter than the 105 days from Young 2018, which sets the value as a meta-analysis.',
+		context:
+			'US Department of Defense adult beneficiaries, inactivated vaccine, 2016-17 to 2019-20. The decline is not steady: 169 days between the first two windows, 50 days between the last two.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Crossref: title, authors and Vaccines 10(6):888 (2022) match, no update or relation entries. Abstract quote verbatim in the Consensus record. Fit recomputed: 77.5 days through the midpoints, 77.4 from the end points alone.'
 		}
 	},
 	{
@@ -1149,7 +1236,9 @@ export const CITATIONS: Citation[] = [
 			'chickenpox.fullEfficacy',
 			'chickenpox.partialEfficacy',
 			'chickenpox.hospitalisedShare',
-			'chickenpox.about'
+			'chickenpox.about',
+			'chickenpox.vaccines.varicella.full.infection',
+			'chickenpox.vaccines.varicella.partial.infection'
 		],
 		quote:
 			'The period of communicability extends from 1 to 2 days before the onset of rash until all lesions have formed crusts.',
@@ -1242,11 +1331,16 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/smallpox/vaccines/index.html',
-		usedFor: ['smallpox.fullEfficacy', 'smallpox.partialEfficacy', 'smallpox.coverageToday'],
+		usedFor: [
+			'smallpox.fullEfficacy',
+			'smallpox.coverageToday',
+			'smallpox.vaccines.vaccinia.full.infection',
+			'smallpox.vaccines.vaccinia.waningDays'
+		],
 		quote:
 			'Historically, the vaccine has been effective in preventing smallpox infection in 95% of those vaccinated.',
 		location: 'Effectiveness section',
-		why: "fullEfficacy=0.95 straight from this sentence. partialEfficacy=0.5 is my own pick: the page says 'Smallpox vaccination can protect you from smallpox for about 3 to 5 years', so someone vaccinated decades ago counts as only partly protected. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated.",
+		why: `fullEfficacy=0.95 straight from this sentence. There is no partial course: someone vaccinated decades ago is a waned vaccination, which the vaccine's waningDays covers, and a waned dot keeps its severe protection. The page also states 'Routine smallpox vaccination among the American public stopped in 1972 after the disease was eradicated in the United States', which is the source for almost nobody under about 50 being vaccinated. waningDays for the vaccine = the middle of 'about ${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years' x 365.25 = ${fmt(SMALLPOX_VACCINE_HALF_LIFE)} days, treated as a half-life; protection against death lasts far longer than against infection, which suits the rule that waned dots keep their severe protection.`,
 		context: 'Official CDC page on the smallpox vaccine; last reviewed October 23, 2024.',
 		verified: {
 			by: 'independent verification pass',
@@ -1293,11 +1387,12 @@ export const CITATIONS: Citation[] = [
 			'mumps.fullEfficacy',
 			'mumps.partialEfficacy',
 			'mumps.hospitalisedShare',
-			'mumps.waningDays'
+			'mumps.vaccines.MMR.full.infection',
+			'mumps.vaccines.MMR.partial.infection'
 		],
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
-		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. fullEfficacy=0.88 and partialEfficacy=0.78 from 'vaccine effectiveness of one dose of mumps or MMR vaccine was 78% and two dose mumps vaccine effectiveness is 88%'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. waningDays≈41 years is my own pick, informed by 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows protection is not permanent but does not give a decay rate.",
+		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. fullEfficacy=0.88 and partialEfficacy=0.78 from 'vaccine effectiveness of one dose of mumps or MMR vaccine was 78% and two dose mumps vaccine effectiveness is 88%'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
 		context:
 			'Official US reference text; the 78%/88% figures are pooled post-licensure effectiveness estimates.',
 		verified: {
@@ -1344,15 +1439,18 @@ export const CITATIONS: Citation[] = [
 			'pertussis.silentDays',
 			'pertussis.illDays',
 			'pertussis.mortality',
-			'pertussis.waningDays',
 			'pertussis.fullEfficacy',
 			'pertussis.partialEfficacy',
-			'pertussis.hospitalisedShare'
+			'pertussis.hospitalisedShare',
+			'pertussis.vaccines.DTaP.full.infection',
+			'pertussis.vaccines.DTaP.partial.infection',
+			'pertussis.vaccines.DTaP.seriousPer100kDoses'
 		],
 		quote:
-			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms',
-		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy',
-		why: "illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). waningDays=12 years is my own pick anchored on 'Immunity following B. pertussis infection is not permanent.' fullEfficacy=0.85 from 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%'; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify.",
+			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms … Rates of these moderate or severe systemic reactions vary by symptom and vaccine but generally occur in fewer than 1 in 10,000 doses.',
+		location:
+			'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy; Vaccine Safety (DTaP adverse reactions)',
+		why: `illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). CDC's 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%' backs fullEfficacy alongside Chit 2018's meta-analysed 0.91, which sets it; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in ${fmt(DTAP_SERIOUS_DOSES)} doses = under ${fmt(100_000 / DTAP_SERIOUS_DOSES)} per 100,000 doses, stored as that upper bound (not all need hospital care). No death caused by DTaP is established (IOM 2003).`,
 		context: 'Official US reference text; page last reviewed October 19, 2022.',
 		verified: {
 			by: 'independent verification pass',
@@ -1441,10 +1539,10 @@ export const CITATIONS: Citation[] = [
 		evidence: 'review',
 		doi: '10.1136/bmjopen-2020-039856',
 		url: 'https://bmjopen.bmj.com/content/10/8/e039856',
-		usedFor: ['covid19.silentDays', 'covid19.illDays'],
+		usedFor: ['covid19.silentDays', 'covid19omicron.silentDays'],
 		quote: 'One study provided approximate median infectious period for asymptomatic cases of 6.5-9.5 days.',
 		location: 'Abstract — Results',
-		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'. illDays=8 is my own pick: it sits inside the quoted 6.5–9.5 day asymptomatic window and is shorter than the review's mean of 13.4 days from symptom onset to two negative PCR tests, because PCR positivity outlasts infectiousness — the review itself warns about 'limitations of inferring infectiousness from repeated diagnosis, viral loads and viral replication data alone'.",
+		why: "silentDays=2 is the middle of the review's 'Median presymptomatic infectious period across studies varied over <1-4 days'.",
 		context:
 			'Rapid scoping review pooling virological, contact-tracing and modelling estimates of how long COVID-19 cases are infectious.',
 		verified: {
@@ -1466,7 +1564,7 @@ export const CITATIONS: Citation[] = [
 			'No meta-analysis of the share of all symptomatic cases admitted to hospital before vaccines was found (search, 7 Oct 2026).',
 		doi: '10.1038/s41467-024-47199-3',
 		url: 'https://www.nature.com/articles/s41467-024-47199-3',
-		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare'],
+		usedFor: ['covid19.mortality', 'covid19.hospitalisedShare', 'covid19omicron.hospitalisedShare'],
 		quote:
 			'The IHR and the IFR in England peaked in January 2021 at 3.39% (95% Credible Intervals (CrI): 2.79, 3.97) and 0.97% (95% CrI: 0.62, 1.36), respectively.',
 		location: 'Abstract',
@@ -1494,7 +1592,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Fitting the waning of protection to a Gompertz curve suggested that effectiveness reaches 50% in the 22nd month and < 10% by the 32nd month.',
 		location: 'Abstract — Results',
-		why: 'waningDays=660 (about 22 months) comes straight from this sentence: the preset models immunity as all-or-nothing, so the half-life point is the natural single number to use. Protection against severe reinfection was far more durable (97.3%, with no evidence of waning), which this one-number preset cannot express.',
+		why: `waningDays comes straight from this sentence: protection reaches 50% in month ${COVID_INFECTION_HALF_LIFE_MONTHS}, so ${COVID_INFECTION_HALF_LIFE_MONTHS} x 365.25 / 12 = ${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days. The preset models immunity as all-or-nothing, so the half-life point is the natural single number to use. Protection against severe reinfection was far more durable (97.3%, with no evidence of waning), which this one-number preset cannot express.`,
 		context:
 			'Three matched national retrospective cohort studies in Qatar covering February 2020 to June 2022, among unvaccinated people with a documented primary infection.',
 		verified: {
@@ -1502,29 +1600,6 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: "Re-opened: J Travel Med 2022;29:taac109, DOI 10.1093/jtm/taac109, first author Hiam Chemaitelly; the '85.5%' and '50% in the 22nd month' sentences confirmed verbatim. A correction dated 28 October 2022 is noted on the record; there is no retraction."
-		}
-	},
-	{
-		id: 'mmwr-2025-covid-vaccine-effectiveness',
-		authors: 'Link-Gelles R and CDC COVID-19 Vaccine Effectiveness Collaborators',
-		title:
-			'Interim Estimates of 2024-2025 COVID-19 Vaccine Effectiveness Among Adults Aged >=18 Years - VISION and IVY Networks, September 2024-January 2025',
-		journal: 'MMWR Morbidity and Mortality Weekly Report',
-		year: 2025,
-		evidence: 'official',
-		publisher: 'CDC',
-		url: 'https://www.cdc.gov/mmwr/volumes/74/wr/mm7406a1.htm',
-		usedFor: ['covid19.fullEfficacy', 'covid19.partialEfficacy'],
-		quote: 'VE against COVID-19-associated ED/UC visits was 33% (95% CI = 28%-38%)',
-		location: 'Results / Summary',
-		why: "fullEfficacy=0.35 is the quoted 33% against emergency-department and urgent-care visits, rounded; the report's hospitalisation estimates in adults 65 and over were 45% (95% CI 36-53) and 46% (95% CI 26-60), so 0.35 is a reasonable all-ages figure for 'not getting ill'. partialEfficacy=0.20 is my own pick for someone whose last dose is out of date, since these estimates all cover the first 7-119 days after vaccination.",
-		context:
-			'CDC interim vaccine-effectiveness estimates from two US surveillance networks for the current (2024-2025 formula) COVID-19 vaccine; MMWR 2025;74(6):73-82.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true,
-			note: 'Re-opened: MMWR 2025;74(6):73-82, first author Ruth Link-Gelles; the 33% ED/UC estimate and the 45%/46% hospitalisation estimates confirmed verbatim; no retraction.'
 		}
 	},
 	{
@@ -1572,29 +1647,6 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
-		id: 'dean-2016-ebola-household-sar',
-		authors: 'Dean NE, Halloran ME, Yang Y, Longini IM',
-		title:
-			'Transmissibility and Pathogenicity of Ebola Virus: A Systematic Review and Meta-analysis of Household Secondary Attack Rate and Asymptomatic Infection',
-		journal: 'Clinical Infectious Diseases',
-		year: 2016,
-		evidence: 'meta-analysis',
-		doi: '10.1093/cid/ciw114',
-		url: 'https://academic.oup.com/cid/article-lookup/doi/10.1093/cid/ciw114',
-		usedFor: ['ebola.about'],
-		quote: 'The greatest risk factor was the provision of nursing care (SAR, 47.9% [95% CI, 23.3%-72.6%]).',
-		location: 'Abstract — results',
-		why: "The strongest single piece of evidence that Ebola spreads almost only to people physically caring for someone too ill to move, set against 'little transmission occurring in its absence (SAR, 0.8% [95% CI, 0%-2.3%])'. Its 27% asymptomatic estimate is not used: Glynn 2017 found silent infection uncommon, and no study shows silent cases spreading it.",
-		context:
-			'Meta-analysis of household secondary attack rates from 1976 to 2014, disaggregated by exposure type.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true,
-			note: 'Re-opened: Clin Infect Dis 2016;62(10):1277-1286, DOI 10.1093/cid/ciw114, first author Natalie E. Dean; the 12.5%, 0.8%, 47.9% and 27.1% figures all confirmed verbatim; no retraction.'
-		}
-	},
-	{
 		id: 'faye-2015-conakry-transmission-chains',
 		authors:
 			'Faye O, Boelle P-Y, Heleze E, Faye O, Loucoubar C, Magassouba N, Soropogui B, Keita S, Gakou T, Bah EI, Koivogui L, Sall AA, Cauchemez S',
@@ -1627,10 +1679,10 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/vhf/ebola/clinicians/vaccine',
-		usedFor: ['ebola.fullEfficacy', 'ebola.partialEfficacy'],
+		usedFor: ['ebola.fullEfficacy', 'ebola.vaccines.rVSV-ZEBOV.full.infection'],
 		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
 		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
-		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. partialEfficacy=0.0 follows from the page's statement that ERVEBO is approved 'as a single dose administration' — there is no incomplete course to model. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
+		why: "fullEfficacy=0.95 is my own pick. The page reports the ring-vaccination trial result in words rather than as a percentage, so I chose a high but not perfect value rather than 1.0. There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why this value must not be reused for the Marburg preset.",
 		context: 'CDC clinician page on the licensed Zaire ebolavirus vaccine; last reviewed 30 January 2025.',
 		verified: {
 			by: 'independent verification pass',
@@ -1704,16 +1756,18 @@ export const CITATIONS: Citation[] = [
 			'rubella.illDays',
 			'rubella.asymptomaticFraction',
 			'rubella.mortality',
-			'rubella.waningDays',
 			'rubella.fullEfficacy',
 			'rubella.partialEfficacy',
 			'rubella.hospitalisedShare',
-			'rubella.about'
+			'rubella.about',
+			'rubella.vaccines.MMR.full.infection',
+			'rubella.vaccines.MMR.partial.infection',
+			'rubella.vaccines.MMR.waningDays'
 		],
 		quote:
 			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Characteristics',
-		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
+		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' The vaccine's waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' (immunity after infection comes from WHO 2020) partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
 		context:
 			'Official US reference text; page last reviewed August 18, 2021. The serious burden of rubella is congenital rubella syndrome in pregnancy, which this per-case preset does not represent.',
 		verified: {
@@ -1823,7 +1877,7 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1371/journal.pmed.1003346',
-		usedFor: ['covid19.asymptomaticFraction'],
+		usedFor: ['covid19.asymptomaticFraction', 'covid19.hospitalisedShare'],
 		quote:
 			'The overall estimate of the proportion of people who become infected with SARS-CoV-2 and remain asymptomatic throughout infection was 20% (95% confidence interval [CI] 17–25)',
 		location: 'Abstract — results',
@@ -1995,7 +2049,12 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'meta-analysis',
 		doi: '10.1016/j.ijid.2020.09.1464',
-		usedFor: ['covid19.infectionFatalityRate', 'covid19.mortality'],
+		usedFor: [
+			'covid19.infectionFatalityRate',
+			'covid19.mortality',
+			'covid19omicron.infectionFatalityRate',
+			'covid19omicron.mortality'
+		],
 		quote:
 			'The meta-analysis demonstrated a point estimate of IFR of 0.68% (0.53%-0.82%) with high heterogeneity (p < 0.001).',
 		location: 'Abstract (results)',
@@ -2016,7 +2075,7 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'meta-analysis',
 		doi: '10.1186/s12879-021-05950-x',
-		usedFor: ['covid19.silentDays'],
+		usedFor: ['covid19.silentDays', 'covid19omicron.silentDays'],
 		quote: 'the weighted pooled mean serial interval of COVID-19 was 5.2 (95%CI: 4.9-5.5) days',
 		location:
 			'Abstract (results); the same abstract gives a pooled incubation period of 6.5 (95%CI: 5.9-7.1) days',
@@ -2030,6 +2089,31 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
+		id: 'rahmani-a-2022-covid-shedding',
+		authors: 'Rahmani A, Dini G, Leso V, Montecucco A, Kusznir Vitturi B, Iavicoli I, Durando P',
+		title:
+			'Duration of SARS-CoV-2 shedding and infectivity in the working age population: a systematic review and meta-analysis',
+		journal: 'La Medicina del Lavoro',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.23749/mdl.v113i2.12724',
+		url: 'https://mattioli1885journals.com/index.php/lamedicinadellavoro/article/view/12724',
+		mirrorUrl: 'https://iris.unige.it/retrieve/9b992393-39f0-41b6-8aaa-2e00efada06c/03-mdl-12724-1.pdf',
+		usedFor: ['covid19.illDays'],
+		quote:
+			'Overall, a mean duration of RT-PCR positivity after symptom onset was found equal to 27.9 days (95%CI 23.3-32.5), while the mean duration of replicant competent virus isolation was 7.3 days (95%CI 5.7-8.8).',
+		location: 'Abstract (Results)',
+		why: "A pooled mean of how long live virus can be grown after symptoms start (7.3 days), so it matches the Omicron figure (Wu 2023, 5.16 days), which is also a pooled mean of live virus. Measured slightly differently: this counts from symptom onset to the last positive culture, while Wu counts from the earlier of onset or first positive test to the day after the last positive culture, so on Wu's clock this would be about a day longer. No review pools the 2020 virus on Wu's exact clock (search, 7 Oct 2026).",
+		context:
+			'Studies published 1 Dec 2019 to 10 Sep 2021, before Omicron; 20 studies, 866 people, mostly working age. The immunocompetent subgroup mean is 6.3 days.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked in two copies: the publisher record page (Med Lav 2022;113(2):e2022014) and the publisher PDF in the University of Genoa repository; authors, year, journal and DOI match and the quote is verbatim; no correction or retraction found. doi.org itself was blocked.'
+		}
+	},
+	{
 		id: 'cevik2021-covid-shedding',
 		authors: 'Cevik M, Tate M, Lloyd O, Maraolo AE, Schafers J, Ho A',
 		title:
@@ -2038,11 +2122,11 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'meta-analysis',
 		doi: '10.1016/s2666-5247(20)30172-5',
-		usedFor: ['covid19.illDays'],
+		usedFor: ['covid19.about'],
 		quote:
 			'No study detected live virus beyond day 9 of illness, despite persistently high viral loads, which were inferred from cycle threshold values.',
 		location: 'Abstract (findings)',
-		why: 'Systematic review and meta-analysis: no live virus after day 9 of illness, which supports about 8 contagious days after symptoms start.',
+		why: 'About-page context: no live virus was found after day 9 of illness, although tests stayed positive far longer. It pools only how long tests stay positive, not how long live virus lasts, so the contagious days come from Rahmani 2022 instead.',
 		context: 'Studies from many countries, 2020',
 		verified: {
 			by: 'independent verification pass',
@@ -2063,7 +2147,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Protection from re-infection from ancestral, alpha, and delta variants declined over time but remained at 78·6% (49·8-93·6) at 40 weeks.',
 		location: 'Abstract (findings)',
-		why: 'Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (660 days).',
+		why: `Meta-analysis: protection from a past infection stayed at 78.6% at 40 weeks against pre-Omicron variants, consistent with protection falling to about half after roughly two years (${fmt(COVID_INFECTION_HALF_LIFE_MONTHS * DAYS_PER_MONTH)} days, from Chemaitelly 2022).`,
 		context: 'Studies from many countries, pre-Omicron variants',
 		verified: {
 			by: 'independent verification pass',
@@ -2123,10 +2207,11 @@ export const CITATIONS: Citation[] = [
 		year: 2016,
 		evidence: 'meta-analysis',
 		doi: '10.1093/cid/ciw114',
-		usedFor: ['ebola.asymptomaticFraction'],
-		quote: 'We estimate that 27.1% (95% CI, 14.5%-39.6%) of Ebola infections are asymptomatic.',
+		usedFor: ['ebola.asymptomaticFraction', 'ebola.about'],
+		quote:
+			'We estimate that 27.1% (95% CI, 14.5%-39.6%) of Ebola infections are asymptomatic. … The greatest risk factor was the provision of nursing care (SAR, 47.9% [95% CI, 23.3%-72.6%]).',
 		location: 'Abstract (results)',
-		why: 'Meta-analysis: about 27% of Ebola infections have no symptoms, but there is no evidence those people pass it on. The model sets asymptomaticFraction to 0 because it only counts cases that spread the disease; the About page says so.',
+		why: "Meta-analysis: about 27% of Ebola infections have no symptoms, but there is no evidence those people pass it on. The model sets asymptomaticFraction to 0 because it only counts cases that spread the disease; the About page says so. About page: the strongest single piece of evidence that Ebola spreads almost only to people physically caring for someone too ill to move, set against 'little transmission occurring in its absence (SAR, 0.8% [95% CI, 0%-2.3%])'. Its 27% asymptomatic estimate is not used: Glynn 2017 found silent infection uncommon, and no study shows silent cases spreading it.",
 		context: 'Ebola serosurveys, Africa',
 		verified: {
 			by: 'independent verification pass',
@@ -2155,6 +2240,1565 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Quote checked in full-text excerpt via Consensus; indexed in PubMed (38040006) and PMC (PMC7615873) per web search, no retraction found; doi.org not checked separately.'
+		}
+	},
+	{
+		id: 'perez-guzman-2023-omicron',
+		authors: 'Perez-Guzman PN, Knock E, Imai N, et al.',
+		title: 'Epidemiological drivers of transmissibility and severity of SARS-CoV-2 in England',
+		journal: 'Nature Communications',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis gives Omicron R0 or severity in people with no immunity; pooled severity studies compare Omicron with Delta in partly immune populations.',
+		doi: '10.1038/s41467-023-39661-5',
+		usedFor: [
+			'covid19omicron.r0',
+			'covid19omicron.infectionFatalityRate',
+			'covid19omicron.hospitalisedShare',
+			'covid19omicron.mortality'
+		],
+		quote:
+			'Omicron (BA.1) had the highest basic reproduction number at 8.4 (95% credible interval (CrI) 7.8-9.1).',
+		location:
+			'Abstract, as corrected by the Author Correction (Nat Commun 2023, doi 10.1038/s41467-023-44062-9); the same abstract gives the basic infection fatality ratio as 1.2% for wildtype and 0.7% for Omicron',
+		why: 'R0 8.4 from the corrected abstract. Severity: Omicron infection fatality = original x (0.7 / 1.2) = 0.583, applied to the original-virus infection fatality and hospital rates (worked out). Applying the same ratio to hospital admission is an assumption; the About page says so.',
+		context: 'England, 2020-2022, adjusted for immunity',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote taken from the Author Correction, which changes R0 from 8.3 to 8.4 and keeps the 1.2% and 0.7% figures.'
+		}
+	},
+	{
+		id: 'liu-rocklov-2022-omicron-r',
+		authors: 'Liu Y, Rocklöv J',
+		title:
+			'The effective reproductive number of the Omicron variant of SARS-CoV-2 is several times relative to Delta',
+		journal: 'Journal of Travel Medicine',
+		year: 2022,
+		evidence: 'review',
+		doi: '10.1093/jtm/taac037',
+		usedFor: ['covid19omicron.r0'],
+		quote: 'The Omicron variant has an average basic and effective reproduction number of 8.2 and 3.6.',
+		location: 'Abstract',
+		why: 'Review that agrees with an Omicron R0 of about 8.',
+		context: 'Studies of Omicron, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched title, authors, year, DOI and quote. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'wu-2022-incubation-variants',
+		authors: 'Wu Y, Kang L, Guo Z, Liu J, Liu M, Liang W',
+		title:
+			'Incubation Period of COVID-19 Caused by Unique SARS-CoV-2 Strains: A Systematic Review and Meta-analysis',
+		journal: 'JAMA Network Open',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1001/jamanetworkopen.2022.28008',
+		usedFor: ['covid19omicron.silentDays'],
+		quote: '3.42 days (95% CI, 2.88-3.96 days) for the Omicron variant',
+		location: 'Abstract, Results',
+		why: 'Pooled Omicron incubation period, 3.42 days. Together with the pooled serial interval (Madewell 2023, 3.2 days) it gives the gap behind silentDays.',
+		context: 'Studies from many countries, 2020-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'shang-2022-omicron-asymptomatic',
+		authors: 'Shang W, Kang L, Cao G, et al.',
+		title:
+			'Percentage of Asymptomatic Infections among SARS-CoV-2 Omicron Variant-Positive Individuals: A Systematic Review and Meta-Analysis',
+		journal: 'Vaccines',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.3390/vaccines10071049',
+		usedFor: ['covid19omicron.asymptomaticFraction'],
+		quote:
+			'The pooled percentage of asymptomatic infections was 32.40% (95% CI: 25.30−39.51%) among SARS-CoV-2 Omicron variant-positive individuals.',
+		location: 'Abstract, Results',
+		why: '0.324 directly.',
+		context: 'Studies from many countries, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'mohammed-2023-omicron-ve',
+		authors: 'Mohammed H, Pham-Tran DD, Yeoh ZYM, Wang B, McMillan M, Andraweera PH, Marshall HS',
+		title:
+			'A Systematic Review and Meta-Analysis on the Real-World Effectiveness of COVID-19 Vaccines against Infection, Symptomatic and Severe COVID-19 Disease Caused by the Omicron Variant (B.1.1.529)',
+		journal: 'Vaccines',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.3390/vaccines11020224',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9965204/',
+		usedFor: [
+			'covid19omicron.fullEfficacy',
+			'covid19omicron.vaccines.covid-original.full.infection',
+			'covid19omicron.vaccines.covid-original.full.severe',
+			'covid19omicron.vaccines.covid-updated.full.infection',
+			'covid19omicron.vaccines.covid-updated.full.severe'
+		],
+		quote:
+			'For all ages and vaccines, the pooled VE against any SARS-CoV-2 Omicron infection was 20.4% (95%CI: 12.1–28.7%, I2 = 96.4%). … The pooled VE against severe COVID-19 was 56.9% (95%CI: 51.4–62.5%, I2 = 84.4%)',
+		location:
+			"Results 3.2.1 (any Omicron infection after the primary course) and 3.2.3 (severe disease). Symptomatic infection, 3.2.2: 'The pooled VE estimate against symptomatic Omicron infection for all ages and vaccine types was 23.4% (95%CI: 13.5–33.3%, I2 = 99.6%)'.",
+		why: "A full course of the original vaccine against Omicron, compared with unvaccinated people: 0.204 against any infection and 0.569 against severe disease. The 0.234 figure is symptomatic infection, so it is not used: the model's infection protection means any infection. The updated vaccine's protection is worked out on top of these two numbers (Cheng 2024), so old and new vaccines sit on the same footing.",
+		context:
+			"Search to 1 Aug 2022 (BA.1/BA.2). Full course, 14 days or more after it; comparator unvaccinated. 'Any type' means studies did not say whether people had symptoms. Pools mRNA, AZD1222, CoronaVac and Ad26 courses, so not mRNA-only (BNT162b2 alone 38.1% against any infection). Severe disease is a composite (hospitalisation 59.1%, emergency department 14.2%, ventilation 14.2%, ICU 6.1%, death 6.1%), pooled over all follow-up from 14 days on: 63.6% at 3 months, 48.3% at 6 months, then steady at 49.7%. No one-dose figure.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, seven authors, Vaccines 11(2):224 (online 19 Jan 2023) match; no update-to, updated-by or relation entries. PMC9965204 full text: 20.4% (3.2.1), 23.4% symptomatic (3.2.2) and 56.9% severe (3.2.3) found, with the composite breakdown and the 14-day window in Methods. is_retracted false.'
+		}
+	},
+	{
+		id: 'tan-2022-omicron-children-partial',
+		authors: 'Tan SHX, Cook AR, Heng D, Ong B, Lye DC, Tan KB',
+		title: 'Effectiveness of BNT162b2 Vaccine against Omicron in Children 5 to 11 Years of Age',
+		journal: 'The New England Journal of Medicine',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis gives one-dose protection of the original vaccine against Omicron infection (Mohammed 2023 includes only completed courses).',
+		doi: '10.1056/nejmoa2203209',
+		usedFor: ['covid19omicron.partialEfficacy', 'covid19omicron.vaccines.covid-original.partial.infection'],
+		quote:
+			'Among partially vaccinated children, vaccine effectiveness was 13.6% (95% confidence interval [CI], 11.7 to 15.5) against all SARS-CoV-2 infections, 24.3% (95% CI, 19.5 to 28.9) against PCR-confirmed SARS-CoV-2 infection, and 42.3% (95% CI, 24.9 to 55.7) against Covid-19-related hospitalization',
+		location: 'Abstract, Results; definitions in Abstract, Methods',
+		why: "Protection of a started course of the original vaccine against any reported Omicron infection (PCR, rapid antigen test or both): 0.136, the outcome closest to the 'any infection' used for the full course (Mohammed 2023).",
+		context:
+			"Singapore, children aged 5-11, Jan-Apr 2022; compared with unvaccinated children. Biased low: the partial window starts 1 day after dose 1 ('≥1 day after the first dose of vaccine and up to 6 days after the second dose'), so it includes the first two weeks, when no protection is expected yet. Counts reported infections only.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked at abstract level: DOI matches in OpenAlex and the Consensus record; title, six authors, N Engl J Med 2022;387(6):525-532 match; the quote and the definitions of reported infection and of partial vaccination are verbatim in the abstract. OpenAlex is_retracted false. Full text paywalled, not read.'
+		}
+	},
+	{
+		id: 'britten-1932-phr-1918-canvass',
+		authors: 'Britten RH',
+		title:
+			'The Incidence of Epidemic Influenza, 1918-19: A Further Analysis According to Age, Sex, and Color of the Records of Morbidity and Mortality Obtained in Surveys of 12 Localities',
+		journal: 'Public Health Reports 47(6):303-337',
+		year: 1932,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review gives numeric age-specific 1918 case fatality; this canvass is the primary dataset behind the published curves.',
+		doi: '10.2307/4580340',
+		mirrorUrl: 'https://stacks.cdc.gov/view/cdc/68997/cdc_68997_DS1.pdf',
+		usedFor: [
+			'flu1918.mortality',
+			'flu1918.mortalityByAge',
+			'flu1918.hospitalisedShare',
+			'flu1918.hospitalisedByAge'
+		],
+		quote:
+			'Fatality of influenza and of pneumonia by age, in all surveyed localities during epidemic of 1918-19 (percentage of cases which died)',
+		location:
+			"Table 28, p. 332 (fatality by age); Table 7, p. 311 (cases by age: 'Incidence of influenza among canvassed persons in each age group in all surveyed localities during the epidemic of 1918-19')",
+		why: 'Deaths per case by age from Table 28, banded with the case counts in Table 7: 0-14 0.0115, 15-64 0.0195, 65+ 0.0410 (worked out); overall 1.7% as published. The W shape (peaks under 1, at 25-29 and at 70+) shows only at single ages. Hospital share is set equal to deaths per case in each band, as a lower bound: everyone who died of it needed a bed, and no 1918 hospital figure exists.',
+		context: 'US house-to-house canvass of 1918-19 (about 130,000 people in 18 localities)',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Scanned PDF on CDC Stacks read twice through text extraction. The Table 28 rows matched on both reads. The table title is quoted from the extraction. Article title and pages 303-337 confirmed. Morabia 2021 independently confirms the 25-29 (~3%), 45-49 (<1.5%), 70+ (5.1%) and 'Table 28, p332' values. Table 7 check: the 65-69 count was read once as 332 and once as 392; 332 fits the printed rate of 135/1,000 (332/2,456 = 0.135) and is used. The 40-44 count printed as 2,219 does not fit its rate of 256/1,000, and age rows sum to 42,354 against 42,920; effect on band values is under 0.01 percentage points. The JSTOR DOI 10.2307/4580340 was later found and matches the title, journal and pages; no retraction applies to a 1932 government report."
+		}
+	},
+	{
+		id: 'morabia-2021-1918-canvass',
+		authors: 'Morabia A',
+		title:
+			'The US Public Health Service House-to-House Canvass Survey of the Morbidity and Mortality of the 1918 Influenza Pandemic',
+		journal: 'American Journal of Public Health 111(3):438-445',
+		year: 2021,
+		evidence: 'study',
+		doi: '10.2105/ajph.2020.306025',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7893349/',
+		usedFor: [
+			'flu1918.mortality',
+			'flu1918.mortalityByAge',
+			'flu1918.hospitalisedShare',
+			'flu1918.hospitalisedByAge'
+		],
+		quote:
+			'The CFR rose to nearly 3% in the group aged 25 to 29 years and fell to less than 1.5% among those aged 45 to 49 years, but in people aged 70 years and older it rose again, reaching 5.1%.',
+		location: 'Results of the National House-to-House Surveys (citing Britten, Table 28, p332)',
+		why: 'Peer-reviewed reanalysis that confirms the Britten Table 28 values used for the bands.',
+		context: 'Reanalysis of the US 1918-19 canvass',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'PMC page read twice. Quote word for word, with the paragraph around it. Journal, volume, pages and DOI read from PMC. No correction or retraction notice shown.'
+		}
+	},
+	{
+		id: 'cdc-1918-pandemic-page',
+		authors: 'US Centers for Disease Control and Prevention',
+		title: '1918 Pandemic (H1N1 virus)',
+		journal: 'CDC (archived web page)',
+		year: 2019,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://archive.cdc.gov/www_cdc_gov/flu/pandemic-resources/1918-pandemic-h1n1.html',
+		usedFor: ['flu1918.fullEfficacy', 'flu1918.partialEfficacy'],
+		quote:
+			'With no vaccine to protect against influenza infection and no antibiotics to treat secondary bacterial infections that can be associated with influenza infections, control efforts worldwide were limited to non-pharmaceutical interventions.',
+		location: 'Main text',
+		why: 'No vaccine existed in 1918, so both efficacies are 0.',
+		context: 'Worldwide, 1918-1919',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Page opened twice; both quotes present. Official page.'
+		}
+	},
+	{
+		id: 'fraser-2011-1918-households',
+		authors: 'Fraser C, Cummings DAT, Klinkenberg D, Burke DS, Ferguson NM',
+		title: 'Influenza transmission in households during the 1918 pandemic.',
+		journal: 'American Journal of Epidemiology',
+		year: 2011,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis estimates the asymptomatic share in 1918; this household analysis is the only estimate.',
+		doi: '10.1093/aje/kwr122',
+		usedFor: ['flu1918.asymptomaticFraction'],
+		quote:
+			'The authors estimated a very low probability of asymptomatic infection, a previously unknown parameter for this pandemic, consistent with an unusually virulent virus.',
+		location: 'Abstract',
+		why: 'The authors estimate a very low chance of infection without symptoms; no number is given, so the model uses 0.',
+		context: 'US households, 1918',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search record matched. Retraction check through Crossref/PMC was not possible (rate limit and captcha); no retraction notice seen in the search record.'
+		}
+	},
+	{
+		id: 'white-pagano-2008-1918-serial',
+		authors: 'White LF, et al.',
+		title: 'Transmissibility of the Influenza Virus in the 1918 Pandemic',
+		journal: 'PLoS ONE',
+		year: 2008,
+		evidence: 'study',
+		noReviewReason: 'No systematic review estimates 1918-specific latent or infectious periods.',
+		doi: '10.1371/journal.pone.0001498',
+		usedFor: ['flu1918.silentDays', 'flu1918.illDays'],
+		quote:
+			'The results that we have presented suggest that the average serial interval for pandemic influenza in 1918 was consistently between three and four, regardless of the setting.',
+		location: 'Discussion',
+		why: '1918 serial interval of 3-4 days. No 1918-specific contagious periods exist, so the seasonal flu timings (1 day silent, 4 days ill) are used as an assumption; this serial interval shows they are reasonable.',
+		context: 'US and European 1918 outbreaks',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Quote checked in full-text excerpt via Consensus. The Consensus record lists 'L. White et al.'; only the first author was confirmed, so the rest are given as et al. Title, journal, year and DOI match. No retraction notice seen."
+		}
+	},
+	{
+		id: 'vink-2014-serial-intervals',
+		authors: 'Vink MA, Bootsma MCJ, Wallinga J',
+		title: 'Serial intervals of respiratory infectious diseases: a systematic review and analysis',
+		journal: 'American Journal of Epidemiology',
+		year: 2014,
+		evidence: 'systematic-review',
+		doi: '10.1093/aje/kwu209',
+		usedFor: ['flu1918.silentDays', 'flu1918.illDays'],
+		quote:
+			'The reported values of the mean serial interval of influenza A(H1N1) and pandemic influenza A(H1N1)pdm09 ranged from 1.9 to 5 days (Table 2).',
+		location: 'Results, Influenza',
+		why: 'Pooled context: H1N1 serial intervals of 1.9-5 days (pooled pdm09 mean 2.8 days), consistent with the 1918 estimate of 3-4 days.',
+		context: 'Influenza A(H1N1) outbreaks',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Quote checked in full-text excerpt via Consensus. The PDF text breaks 'influenza' with a ligature ('in /uniFB02 uenza'), which is normalised here. Authors from the title-page excerpt. No retraction notice seen."
+		}
+	},
+	{
+		id: 'worldbank-pop-0014',
+		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
+		title:
+			'Population ages 0-14 (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP0014TOZSWLD, SPPOP0014TOZSEUU, SPPOP0014TOZSGBR, SPPOP0014TOZSNGA, SPPOP0014TOZSJPN)',
+		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.0014.TO.ZS)',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.POP.0014.TO.ZS',
+		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP0014TOZSWLD',
+		usedFor: ['population.ageMix'],
+		quote:
+			'2025: World 24.40906; European Union 14.20743; United Kingdom 16.96477; Nigeria 40.51972; Japan 11.23840',
+		location: 'FRED series pages, latest observation (2025)',
+		why: 'EU share aged 0-14: 14.21% (the general default population; UK 16.96% is kept for the step 4 preset).',
+		context: 'European Union, 2025',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Values read from the FRED mirror of the World Bank indicator, opened twice.'
+		}
+	},
+	{
+		id: 'worldbank-pop-65up',
+		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
+		title:
+			'Population ages 65 and above (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP65UPTOZSWLD, SPPOP65UPTOZSEUU, SPPOP65UPTOZSGBR, SPPOP65UPTOZSNGA, SPPOP65UPTOZSJPN)',
+		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.65UP.TO.ZS)',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.TO.ZS',
+		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP65UPTOZSWLD',
+		usedFor: ['population.ageMix'],
+		quote:
+			'2025: World 10.40243; European Union 22.44279; United Kingdom 19.70269; Nigeria 3.06954; Japan 29.99410',
+		location: 'FRED series pages, latest observation (2025)',
+		why: 'EU share aged 65+: 22.44%. The 15-64 share is the rest: 100 - 14.21 - 22.44 = 63.35% (worked out).',
+		context: 'European Union, 2025',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Values read from the FRED mirror of the World Bank indicator, opened twice.'
+		}
+	},
+	{
+		id: 'eurostat-deaths-pop-2023',
+		authors: 'Eurostat',
+		title:
+			'Deaths by age and sex (demo_magec); Population on 1 January by broad age group and sex (demo_pjanbroad)',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_magec?format=JSON&geo=EU27_2020&sex=T&time=2023&lang=EN',
+		usedFor: ['population.backgroundDeathRate'],
+		quote:
+			'TOTAL=4856197; population EU27_2020 1 Jan 2023: Y_LT15 66,433,028; Y15-64 285,755,090; Y_GE65 95,507,232',
+		location:
+			'demo_magec EU27_2020, 2023, all single ages; demo_pjanbroad https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjanbroad?format=JSON&geo=EU27_2020&sex=T&time=2023&lang=EN',
+		why: 'Worked out: summed single-age deaths 0-14 = 19,177, 15-64 = 699,423, 65+ = 4,137,597 (sum 4,856,197 = published total). Dividing by population gives 0.000289, 0.00245 and 0.0433 per person per year.',
+		context: 'EU-27, 2023',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened: Y_LT15 population and death TOTAL re-confirmed. A second full read gave values shifted by one age, so the Y14 value was checked with a single-code query (654, matching the first read). Other single ages were not re-queried because of a rate limit.'
+		}
+	},
+	{
+		id: 'eurostat-uk-deaths-2018-5yr',
+		authors: 'Eurostat',
+		title: 'Deaths by age group, sex and NUTS 3 region (demo_r_magec3), United Kingdom, 2018',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_r_magec3?format=JSON&geo=UK&sex=T&time=2018&lang=EN',
+		usedFor: ['population.ukBackgroundDeathRate'],
+		quote:
+			'Total 614,313; Less than 5 years 3,228; From 5 to 9 years 301; From 10 to 14 years 347; From 15 to 19 years 966; From 20 to 24 years 1,571; From 25 to 29 years 2,148; From 30 to 34 years 2,939; From 35 to 39 years 4,244; From 40 to 44 years 5,858; From 45 to 49 years 10,064; From 50 to 54 years 14,998; From 55 to 59 years 21,043; From 60 to 64 years 28,112; From 65 to 69 years 41,218; From 70 to 74 years 61,885; From 75 to 79 years 74,876; From 80 to 84 years 98,768; From 85 to 89 years 111,927; 90 years or over 129,820',
+		location: 'demo_r_magec3, geo=UK, sex=T, time=2018 (dataset updated 2026-09-22)',
+		why: 'Band sums: 0-14 3,876; 15-64 91,943; 65+ 518,494. These add to 614,313, exactly the published total. Divided by the mean of 1 Jan 2018 and 1 Jan 2019 population: 0.000326, 0.00217 and 0.0426 deaths per person per year.',
+		context: 'United Kingdom, 2018',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "API read twice. The second full read gave 61,885 for 65-69, a one-row shift; a third, single-category query (age=Y65-69) returned 41,218, matching the first read. The first read's rows sum exactly to the published total. Total, under 5, 10-14, 15-19, 40-44, 60-64, 85-89 and 90+ matched on both reads."
+		}
+	},
+	{
+		id: 'eurostat-uk-population-2018-2019-5yr',
+		authors: 'Eurostat',
+		title: 'Population on 1 January by age group and sex (demo_pjangroup), United Kingdom, 2018 and 2019',
+		journal: 'Eurostat database',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'Eurostat',
+		url: 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/demo_pjangroup?format=JSON&geo=UK&sex=T&time=2019&lang=EN',
+		usedFor: ['population.ukBackgroundDeathRate', 'covid19.mortalityByAge', 'covid19.hospitalisedByAge'],
+		quote:
+			'2019: Total 66,647,112; Less than 5 years 3,885,007; From 5 to 9 years 4,146,546; From 10 to 14 years 3,908,395; From 15 to 19 years 3,661,722; From 20 to 24 years 4,170,514; From 25 to 29 years 4,527,006; From 30 to 34 years 4,485,180; From 35 to 39 years 4,387,779; From 40 to 44 years 4,008,205; From 45 to 49 years 4,457,239; From 50 to 54 years 4,668,822; From 55 to 59 years 4,351,807; From 60 to 64 years 3,716,512; From 65 to 69 years 3,384,532; From 70 to 74 years 3,286,389; From 75 to 79 years 2,281,501; From 80 to 84 years 1,695,137; 85 years or over 1,624,819',
+		location:
+			'demo_pjangroup, geo=UK, sex=T, time=2019 and time=2018 (2018 total 66,273,576; bands 11,871,549 / 42,309,960 / 12,092,067)',
+		why: 'Denominator for the UK background death rates: the mean of the 1 January 2018 and 2019 populations by band.',
+		context: 'United Kingdom, 1 January 2018 and 2019',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'The 2019 band sums match demo_pjanbroad exactly (11,939,948 / 42,434,786 / 12,272,378, as cited in vaccine-risks.md). The 2018 total matches demo_pjanbroad (66,273,576), read separately. The 5-year groups were each read once; the matching sums act as the second check.'
+		}
+	},
+	{
+		id: 'cdc-flu-burden-2018-19',
+		authors: 'US Centers for Disease Control and Prevention',
+		title:
+			'Estimated Flu-Related Illnesses, Medical visits, Hospitalizations, and Deaths in the United States — 2018–2019 Flu Season',
+		journal: 'CDC (archived web page)',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://archive.cdc.gov/www_cdc_gov/flu/about/burden/2018-2019.html',
+		usedFor: ['flu.mortalityByAge', 'flu.hospitalisedByAge'],
+		quote: 'Older adults also accounted for 75% of flu-related deaths',
+		location:
+			'Table 1 (illnesses, medical visits, hospitalizations, deaths by age group) and the sentence below it',
+		why: 'Worked out from Table 1. Symptomatic illnesses / hospitalisations / deaths: 0-4 3,018,815 / 21,046 / 216; 5-17 6,622,851 / 18,159 / 156; 18-49 9,794,700 / 54,978 / 1,590; 50-64 7,224,769 / 76,617 / 4,396; 65+ 2,247,586 / 204,326 / 21,261; all 28,908,721 / 375,126 / 27,619. 0-17 (stands in for 0-14): deaths 372/9,641,666 = 0.0000386, hospital 39,205/9,641,666 = 0.004066. 18-64 (stands in for 15-64): deaths 5,986/17,019,469 = 0.0003517, hospital 131,595/17,019,469 = 0.007732. 65+: deaths 21,261/2,247,586 = 0.009459, hospital 204,326/2,247,586 = 0.09091. Denominator is symptomatic illness, so each value is a share of symptomatic cases.',
+		context: 'US, 2018-19 season; bands 0-17 and 18-64 stand in for 0-14 and 15-64',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Page opened twice; all table numbers matched. Official page; retraction not applicable.'
+		}
+	},
+	{
+		id: 'bobrovitz-2023-omicron-reinfection',
+		authors:
+			'Bobrovitz N, Ware H, Ma X, Li Z, Hosseini R, Cao C, Selemon A, Whelan M, Premji Z, Issa H, Cheng B, Abu Raddad LJ, Buckeridge DL, Van Kerkhove MD, Piechotta V, Higdon MM, Wilder-Smith A, Bergeri I, Feikin DR, Arora RK, Patel MK, Subissi L',
+		title:
+			'Protective effectiveness of previous SARS-CoV-2 infection and hybrid immunity against the omicron variant and severe disease: a systematic review and meta-regression',
+		journal: 'The Lancet Infectious Diseases',
+		year: 2023,
+		evidence: 'systematic-review',
+		doi: '10.1016/s1473-3099(22)00801-5',
+		usedFor: ['covid19omicron.waningDays'],
+		quote:
+			'The effectiveness of previous infection against reinfection was 65·2% (95% CI 52·9 to 75·9) at 3 months, dropping to 24·7% (16·4 to 35·5) at 12 months',
+		location: 'Results; Table 2 (any infection)',
+		why: `Measures how well a past infection stops reinfection with Omicron, mostly earlier infections against later Omicron sublineages. That fits the Omicron-era disease, which stands for a virus that kept drifting. Worked out: a straight line between ${BOBROVITZ.early.protection}% at ${BOBROVITZ.early.month} months and ${BOBROVITZ.late.protection}% at ${BOBROVITZ.late.month} months falls to half at ${fmt(BOBROVITZ.halfMonths, 2)} months x 365.25 / 12 = ${fmt(BOBROVITZ.halfLife)} days, matching the half-way meaning of covid19.waningDays.`,
+		context:
+			'Studies from many countries, 2021-2022: mostly earlier infections protecting against later Omicron sublineages',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked against Crossref metadata and the published PDF in the University of Victoria repository (the Lancet site returned 403). The quote is from the Results; the abstract words it differently. No correction or retraction.'
+		}
+	},
+	{
+		id: 'madewell-2023-omicron-serial',
+		authors: 'Madewell ZJ, Yang Y, Longini IM Jr, Halloran ME, Vespignani A, Dean NE',
+		title: 'Rapid review and meta-analysis of serial intervals for SARS-CoV-2 Delta and Omicron variants',
+		journal: 'BMC Infectious Diseases',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12879-023-08407-5',
+		usedFor: ['covid19omicron.silentDays'],
+		quote:
+			'The pooled mean serial interval for Delta was 3.9 days (95% CI: 3.4–4.3) (20 studies) and Omicron was 3.2 days (95% CI: 2.9–3.5) (20 studies).',
+		location: 'Abstract, Results',
+		why: "Worked out with the variant rule: the Omicron gap (incubation 3.42 - serial interval 3.2 = 0.22 days) over the 2020 gap (6.5 - 5.2 = 1.3 days) scales the 2020 virus's 2 silent days: 2 x 0.22 / 1.3 = 0.34, stored as 0.3. No review gives Omicron's presymptomatic period directly.",
+		context: 'Studies from many countries, 2021-2023',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked on PMC (PMC10291789); the publisher site was blocked.'
+		}
+	},
+	{
+		id: 'wu-2023-omicron-shedding',
+		authors: 'Wu Y, Guo Z, Yuan J, Cao G, Wang Y, Gao P, Liu J, Liu M',
+		title:
+			'Duration of viable virus shedding and polymerase chain reaction positivity of the SARS-CoV-2 Omicron variant in the upper respiratory tract: a systematic review and meta-analysis',
+		journal: 'International Journal of Infectious Diseases',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.ijid.2023.02.011',
+		usedFor: ['covid19omicron.illDays'],
+		quote:
+			'The pooled duration of viable virus shedding of the SARS-CoV-2 Omicron variant in the upper respiratory tract was 5.16 days (95% CI: 4.18-6.14)',
+		location: 'Abstract, Results',
+		why: 'Pooled days of live (infectious) virus for Omicron, rounded to 5.',
+		context: 'Studies from many countries, 2021-2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Checked against Crossref metadata and Consensus full-text excerpts; PMC and ScienceDirect were blocked. No correction or retraction.'
+		}
+	},
+	{
+		id: 'yu-2008-1918-survivor-antibodies',
+		authors:
+			'Yu X, Tsibane T, McGraw PA, House FS, Keefer CJ, Hicar MD, Tumpey TM, Pappas C, Perrone LA, Martinez O, Stevens J, Wilson IA, Aguilar PV, Altschuler EL, Basler CF, Crowe JE Jr',
+		title: 'Neutralizing antibodies derived from the B cells of 1918 influenza pandemic survivors',
+		journal: 'Nature',
+		year: 2008,
+		evidence: 'study',
+		noReviewReason:
+			'No review measures how long immunity to the 1918 virus lasted; this study of survivors is the direct evidence.',
+		doi: '10.1038/nature07231',
+		usedFor: ['flu1918.waningDays'],
+		quote:
+			'Here we show that of the 32 individuals tested that were born in or before 1915, each showed seroreactivity with the 1918 virus, nearly 90 years after the pandemic.',
+		location: 'Abstract',
+		why: 'Survivors still had antibodies to the 1918 virus about 90 years later, so immunity to it does not fade in the model (waningDays null).',
+		context: 'US survivors of the 1918 pandemic, tested about 2007',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'A 2012 corrigendum (10.1038/nature11235) corrects one antibody sequence and one virus name and states the conclusions are unaffected; it does not touch the serology quoted.'
+		}
+	},
+	{
+		id: 'taubenberger-morens-2006',
+		authors: 'Taubenberger JK, Morens DM',
+		title: '1918 Influenza: the Mother of All Pandemics',
+		journal: 'Emerging Infectious Diseases',
+		year: 2006,
+		evidence: 'review',
+		doi: '10.3201/eid1201.050979',
+		url: 'https://wwwnc.cdc.gov/eid/article/12/1/05-0979_article',
+		usedFor: ['flu1918.about'],
+		quote:
+			'Jordan showed that from 1900 to 1917, the 5- to 15-year age group accounted for 11% of total influenza cases, while the >65-year age group accounted for 6% of influenza cases. But in 1918, cases in the 5- to 15-year-old group jumped to 25% of influenza cases (compatible with exposure to an antigenically novel virus strain), while the >65 age group only accounted for 0.6% of the influenza cases, findings consistent with previously acquired protective immunity caused by an identical or closely related viral protein to which older persons had once been exposed.',
+		location:
+			"Main text, section on age-specific clinical influenza (citing Jordan, ref. 21); see also Figure 3 panel A and the sentence 'Persons <35 years of age in 1918 had a disproportionately high influenza incidence (Figure 3, panel A).'",
+		why: 'Shows that older people made up far fewer 1918 influenza cases (over-65s: 0.6% of cases in 1918 vs 6% in 1900-1917) and that people under 35 had disproportionately high incidence, supporting a lower attack rate in older people.',
+		context:
+			"These are shares of cases, not age-specific attack rates; Figure 3A (incidence per 1,000 by age, USPHS house-to-house surveys, 8 states, 1918) is graphical only. The excerpt renders '>' as the HTML entity '&gt;'.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote confirmed verbatim in the full published article (EID 2006;12(1):15-22) from a university-hosted copy; the DOI printed in the article matches, and Crossref and Consensus records agree on title, authors, year and journal. doi.org and the CDC page were blocked.'
+		}
+	},
+	{
+		id: 'mamelund-2016-missed-summer-wave',
+		authors: 'Mamelund SE, Haneberg B, Mjaaland S',
+		title:
+			'A Missed Summer Wave of the 1918–1919 Influenza Pandemic: Evidence From Household Surveys in the United States and Norway',
+		journal: 'Open Forum Infectious Diseases',
+		year: 2016,
+		evidence: 'study',
+		noReviewReason:
+			'No review with readable age-specific 1918 attack-rate figures was accessible; this primary survey reanalysis gives the direct age-morbidity evidence.',
+		doi: '10.1093/ofid/ofw040',
+		usedFor: ['flu1918.about'],
+		quote:
+			'When relating the reported ILI-rates to age, in both areas of Maryland during the second wave, and in Bergen during the first wave, it appeared that the disease was most frequent in school-age children and young adults, with low morbidity rates in the very young children and steadily declining values in older individuals, creating inverted U-shaped curves.',
+		location: "Discussion; abstract Results: 'Individuals <40 years had the highest morbidity'",
+		why: 'Primary household-survey data (Baltimore, rural Maryland, Bergen) showing 1918 illness rates falling steadily with age from about 30 years.',
+		context:
+			'Self-reported influenza-like illness, not laboratory-confirmed infection; age-specific rates are shown in figures only. The authors attribute the lower morbidity in older people to immunity from the 1889-1890 pandemic.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'OFID 2016;3(1):ofw040. Checked in the Norwegian Institute of Public Health repository record and the Consensus full-text record; authors, year, journal and DOI match and the quote is verbatim; no correction found.'
+		}
+	},
+	{
+		id: 'covid19-forecasting-team-2022-ifr',
+		authors: 'COVID-19 Forecasting Team (Sorensen R, et al.)',
+		title:
+			'Variation in the COVID-19 infection–fatality ratio by age, time, and geography during the pre-vaccine era: a systematic analysis',
+		journal: 'The Lancet',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/S0140-6736(21)02867-1',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8871594/',
+		usedFor: ['covid19.mortalityByAge'],
+		quote:
+			'Age-specific IFR estimates form a J shape, with the lowest IFR occurring at age 7 years (0·0023%, 95% uncertainty interval [UI] 0·0015–0·0039) and increasing exponentially through ages 30 years (0·0573%, 0·0418–0·0870), 60 years (1·0035%, 0·7002–1·5727), and 90 years (20·3292%, 14·6888–28·9754).',
+		location:
+			"Abstract (Findings); single-year values from Table 1 'COVID-19 IFR estimates by age' (ages 1-100), stored in covidAgeIfr.ts",
+		why: 'Pooled global pre-vaccine death rate for every single year of age, preferred over Levin 2020, whose deaths include care homes. Bands are worked out in code with UK 2019 ages: 0-14 0.0034%, 15-64 0.33%, 65+ 6.66% per infection (6.10% to 7.48% depending on how 85+ splits by age), 1.43% overall for UK ages. The all-ages 0.68% (Meyerowitz-Katz) stays the headline; this is higher because it uses UK ages, which are older than the populations behind the all-ages figure.',
+		context:
+			"Infections from 15 April 2020 to 1 January 2021, before vaccines and widespread variants. No row for age 0, so age 0 takes age 1's value. One correction notice (Lancet 399:1468, DOI 10.1016/S0140-6736(22)00666-3, online 14 April 2022) only moves Tanzania and Uganda in Table 2 and leaves Table 1 unchanged. Check against England: Ward 2024 gives an England pre-vaccine peak IFR of 0.97% per infection (January 2021), so these bands' 1.43% for UK ages is 1.48 times that, within the 1.5x the project allows without review.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract quote confirmed in the Consensus full-text record and the author-hosted PDF; Table 1 read from that PDF with two spot-checks. Crossref lists exactly one correction (update-to), which does not touch Table 1; twelve Table 1 rows were compared between the original and corrected versions and are identical.'
+		}
+	},
+	{
+		id: 'herrera-esposito-2022-severe-by-age',
+		authors: 'Herrera-Esposito D, de los Campos G',
+		title:
+			'Age-specific rate of severe and critical SARS-CoV-2 infections estimated with multi-country seroprevalence studies',
+		journal: 'BMC Infectious Diseases',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12879-022-07262-0',
+		url: 'https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-022-07262-0',
+		usedFor: ['covid19.hospitalisedByAge'],
+		quote:
+			'Examples of this are the rate of severe infections (Infection-severe rate, ISR), which we define as infections resulting in hospitalization or out-of-hospital death',
+		location:
+			'Background, paragraph 1 (definition); Additional file 1, Table S1 (5-year ages to 85+), stored in covidAgeIfr.ts',
+		why: "The only multi-country meta-analysis of severe cases by age per infection before vaccines. Weighted by UK 2019 ages: 0-14 0.13%, 15-64 2.35%, 65+ 18.7% per infection. It counts deaths outside hospital as severe, so beds for 65+ are slightly high; in England and Wales 67.8% of 2020 COVID-19 deaths happened in hospital (ONS weekly deaths, week ending 1 January 2021). That definition matches the model's assumption that as many deaths as possible happen in hospital. For UK ages the bands give 4.97% per infection, above Ward 2024's all-ages 3.39%; each figure matches its own source, and the About page gives both.",
+		context:
+			'Serosurveys from early to mid 2020 in 16 high-income locations, England included. The paper says rates for under-10s may be too low; its alternative 0-9 figure (0.42%) would make 0-14 0.34%.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors, journal, volume 22 article 311, 29 March 2022, with no correction or retraction; PMC metadata (PMC8962942) is_retracted false. Full text and supplement Table S1 read from the PMC open-data bucket.'
+		}
+	},
+	{
+		id: 'kow-2021-bnt-ma',
+		authors: 'Kow CS, Hasan SS',
+		title:
+			'Real-world effectiveness of BNT162b2 mRNA vaccine: a meta-analysis of large observational studies',
+		journal: 'Inflammopharmacology',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1007/s10787-021-00839-2',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8266992/',
+		usedFor: [
+			'covid19.fullEfficacy',
+			'covid19.partialEfficacy',
+			'covid19.vaccines.covid-original.full.infection',
+			'covid19.vaccines.covid-original.partial.infection'
+		],
+		quote:
+			'confirmed COVID-19 was defined in the clinical trial as the presence of symptoms and positive RT-PCR test for SARS-CoV-2; while the included studies of our meta-analyses, confirmed COVID-19 was defined as positive RT-PCR test for SARS-CoV-2 regardless of the presence of symptoms. … pooled HR of 0.12 (95% confidence interval: 0.08–0.16; Fig. 2) 14 days or more after the second dose, and thus vaccine effectiveness of 88% (95% confidence interval: 84%–92%).',
+		location:
+			'Discussion, first paragraph (outcome definition); Results (pooled estimates, Fig. 2). Also from Results: one dose 14 days or more 42% (HR) / 53% (IRR), 21 days or more 58% / 59%; two doses 7 days or more 82% (HR) / 91% (IRR) / 81% (OR), 14 days or more 88% (HR) / 96% (IRR).',
+		why: "Check on Liu 2021's infection values for the mRNA vaccine alone, with the same any-infection outcome (RT-PCR positive regardless of symptoms): two doses 0.82-0.96 against Liu's 0.85, one dose 0.42-0.59 against Liu's 0.41. Liu sets the values because it pools all vaccines and gives hospital figures too.",
+		context:
+			"BNT162b2 only; 19 observational studies, mostly early 2021 (original strain and Alpha); variant-specific studies and studies reporting only hospitalisation or death were excluded, so it has no severe-disease figure. The abstract misprints the two-dose interval as '95% (95% confidence interval: 96–97%)'; the Results figures are used.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI matches in the PMC open-data metadata (PMC8266992) and OpenAlex; title, authors, Inflammopharmacology 2021;29(4):1075-90 match. All figures and the definition quote found in the PMC full text. is_retracted false; no correction notice.'
+		}
+	},
+	{
+		id: 'yegorov-2025-flu-severe-ma',
+		authors:
+			'Yegorov S, Patel OD, Sharma H, Khan T, Gupta R, Yao M, Sritharan A, Silverman N, Pullenayegum E, Miller MS, Loeb M',
+		title:
+			'Effectiveness of influenza vaccination to prevent severe disease: a systematic review and meta-analysis of test-negative design studies',
+		journal: 'Clinical Microbiology and Infection',
+		year: 2025,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.cmi.2025.09.023',
+		usedFor: ['flu.vaccines.inactivated.full.severe'],
+		quote:
+			'Pooled IVE was 42% (95% CI: 39-44) against influenza-associated hospitalisation (very low certainty)',
+		location: 'Abstract, Results',
+		why: 'Flu vaccine prevents 0.42 of flu hospital admissions, all ages, counted in everyone vaccinated; a real-world figure on the same scale as the 0.414 infection figure (Guo 2024).',
+		context:
+			'165 test-negative studies to Sept 2024; adults and children. Higher in seasons with a good vaccine match, but the by-match figure was not in the accessible text. Online 2025, in print Feb 2026.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, 11 authors and journal match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'rondy-2017-flu-hosp-ma',
+		authors: 'Rondy M, El Omeiri N, Thompson MG, Levêque A, Moren A, Sullivan SG',
+		title:
+			'Effectiveness of influenza vaccines in preventing severe influenza illness among adults: A systematic review and meta-analysis of test-negative design case-control studies',
+		journal: 'Journal of Infection',
+		year: 2017,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.jinf.2017.09.010',
+		usedFor: ['flu.vaccines.inactivated.full.severe'],
+		quote:
+			'Between 2010-11 and 2014-15, the pooled seasonal IVE was 41% (95%CI:34;48) for any influenza (51% (95%CI:44;58) among people aged 18-64y and 37% (95%CI:30;44) among ≥65 years).',
+		location: 'Abstract, Results',
+		why: "An independent pooled estimate against flu hospital admission in adults (0.41) that agrees with Yegorov's 0.42.",
+		context: '30 hospital test-negative studies, adults, 2010-11 to 2014-15.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, six authors, Journal of Infection, 2017 match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'marin-2016-varicella-ma',
+		authors: 'Marin M, Marti M, Kambhampati A, Jeram SM, Seward JF',
+		title: 'Global Varicella Vaccine Effectiveness: A Meta-analysis',
+		journal: 'Pediatrics',
+		year: 2016,
+		evidence: 'meta-analysis',
+		doi: '10.1542/peds.2015-3741',
+		usedFor: ['chickenpox.vaccines.varicella.partial.severe'],
+		quote:
+			'The pooled 1-dose VE was 81% (95% confidence interval [CI]: 78%-84%) against all varicella and 98% (95% CI: 97%-99%) against moderate/severe varicella with no significant association between VE and vaccine type or study design (P > .1).',
+		location: 'Abstract, Results',
+		why: 'One dose, a partial course of the two-dose schedule, prevents 0.98 of moderate or severe chickenpox, counted in everyone vaccinated. Moderate cases are included, so this is if anything a low estimate of protection against the severe illness the model uses. No pooled two-dose severe figure exists, so the full course has none.',
+		context: 'Post-licensure studies 1995-2014, healthy children.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, five authors, Pediatrics, 2016 match; no update or retraction fields. The abstract contains the quote verbatim.'
+		}
+	},
+	{
+		id: 'oster-2022-mrna-myocarditis',
+		authors: 'Oster ME, Shay DK, Su JR, et al.',
+		title:
+			'Myocarditis Cases Reported After mRNA-Based COVID-19 Vaccination in the US From December 2020 to August 2021',
+		journal: 'JAMA',
+		year: 2022,
+		evidence: 'study',
+		doi: '10.1001/jama.2021.24110',
+		noReviewReason:
+			'Not the value source: Ling 2022 (meta-analysis) sets it. Kept because Ling pools myocarditis with pericarditis and gives its age and sex rows for all COVID-19 vaccines only; Oster gives myocarditis alone after mRNA vaccines by age, sex and dose, with chart-reviewed cases. US reports likely undercount.',
+		usedFor: [
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
+		],
+		quote:
+			'The rates of myocarditis were highest after the second vaccination dose in adolescent males aged 12 to 15 years (70.7 per million doses of the BNT162b2 vaccine), in adolescent males aged 16 to 17 years (105.9 per million doses of the BNT162b2 vaccine), and in young men aged 18 to 24 years (52.4 and 56.3 per million doses of the BNT162b2 vaccine and the mRNA-1273 vaccine, respectively).',
+		location:
+			"Abstract, Results; also 'Among 192 405 448 persons receiving a total of 354 100 845 mRNA-based COVID-19 vaccines ... 1626 of these reports met the case definition of myocarditis' and 'Approximately 96% of persons (784/813) were hospitalized'",
+		why: `Myocarditis only, from US reports: ${fmt(OSTER.cases)} cases in ${fmt(OSTER.doses)} doses = ${fmt(OSTER.per100k, 3)} per 100,000, far higher in young men after dose 2 (105.9 per million at 16-17). The value comes from Ling 2022's meta-analysis (myocarditis or pericarditis, ${fmt(per100kFromPerMillion(MRNA_SERIOUS.myopericarditisPerMillion), 2)} per 100,000); Oster is kept for the mRNA-specific age and sex detail step 5 uses.`,
+		context:
+			'US passive reports (VAERS), Dec 2020 - Aug 2021, within 7 days of a dose; likely under-counted.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors, JAMA 2022, no retraction relation; abstract quote re-read verbatim in a second search. Full text blocked by CAPTCHA.'
+		}
+	},
+	{
+		id: 'cdc-covid-vaccine-safety-2025',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Coronavirus Disease 2019 (COVID-19) Vaccine Safety',
+		journal: 'CDC Vaccine Safety',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/vaccine-safety/vaccines/covid-19.html',
+		usedFor: [
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
+		],
+		quote:
+			'Anaphylaxis occurs at a rate of approximately 5 cases per one million vaccine doses administered. … COVID-19 vaccines do not increase the risk of death from non-COVID causes when compared to those who have not been vaccinated.',
+		location: 'Sections on anaphylaxis and deaths (last updated 31 January 2025)',
+		why: `Context beside Cho 2023's death rate: vaccinated people did not die more often from non-COVID causes, which fits a cause of death as rare as at least ${fmt(CHO.per100k, 3)} per 100,000 doses (about 1 in ${fmt(Math.round(1e5 / CHO.per100k / 1e6))} million). Anaphylaxis comes from Greenhawt 2021, a meta-analysis, rather than this page's 'about 5 per million'.`,
+		context:
+			"US official page; also: 'most patients (80%) were considered by their cardiologist or other healthcare provider to have either fully or probably fully recovered' from myocarditis at 3 months or more.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; all quoted strings confirmed verbatim.'
+		}
+	},
+	{
+		id: 'xu-2021-covid-vaccine-mortality',
+		authors:
+			'Xu S, Huang R, Sy LS, Glenn SC, Ryan DS, Morrissette K, Shay DK, Vazquez-Benitez G, Glanz JM, Klein NP, McClure D, Liles EG, Weintraub ES, Tseng HF, Qian L',
+		title:
+			'COVID-19 Vaccination and Non-COVID-19 Mortality Risk — Seven Integrated Health Care Organizations, United States, December 14, 2020-July 31, 2021',
+		journal: 'MMWR Morbidity and Mortality Weekly Report',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/mmwr/volumes/70/wr/mm7043e2.htm',
+		usedFor: [
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
+		],
+		quote: 'There is no increased risk for mortality among COVID-19 vaccine recipients.',
+		location:
+			"Summary box; also 'COVID-19 vaccine recipients had lower rates of non–COVID-19 mortality than did unvaccinated persons after adjusting for age, sex, race and ethnicity, and study site.'",
+		why: `Context beside Cho 2023's death rate: deaths among vaccinated people were not above those in the unvaccinated, which fits a cause of death as rare as at least ${fmt(CHO.per100k, 3)} per 100,000 doses; a study this size cannot see it.`,
+		context:
+			'US Vaccine Safety Datalink; MMWR 70(43):1520-1524. Covers Pfizer, Moderna and Janssen. A healthy-vaccinee effect may partly explain the lower rate.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; both sentences confirmed verbatim; authors and citation confirmed.'
+		}
+	},
+	{
+		id: 'cdc-flu-gbs-2024',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Guillain-Barré Syndrome and Flu Vaccine',
+		journal: 'CDC Influenza (Flu)',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/flu/vaccine-safety/guillainbarre.html',
+		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses'],
+		quote:
+			'If there is an increased risk of GBS following flu vaccination, it is small, on the order of one to two additional GBS cases per million doses of flu vaccine administered.',
+		location:
+			"Main text; also 'Most people recover fully from GBS, but some people have long-term nerve damage.' and 'In some cases, people have died of GBS, usually from difficulty breathing.'",
+		why: `GBS ${FLU_SERIOUS.gbsPerMillion[0]} to ${FLU_SERIOUS.gbsPerMillion[1]} per million doses (the middle is used) plus anaphylaxis ${FLU_SERIOUS.anaphylaxisPerMillion} per million (McNeil 2016) = ${fmt(FLU_SERIOUS.per100k, 3)} per 100,000 doses. No death is established (Miller 2015, IOM 2012).`,
+		context:
+			"The risk is stated conditionally ('if there is an increased risk'), so this is an upper estimate. Last updated 17 September 2024.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; quotes confirmed verbatim.'
+		}
+	},
+	{
+		id: 'mcneil-2016-anaphylaxis',
+		authors:
+			'McNeil MM, Weintraub ES, Duffy J, Sukumaran L, Jacobsen SJ, Klein NP, Hambidge SJ, Lee GM, Jackson LA, Irving SA, King JP, Kharbanda EO, Bednarczyk RA, DeStefano F',
+		title: 'Risk of anaphylaxis after vaccination in children and adults',
+		journal: 'Journal of Allergy and Clinical Immunology',
+		year: 2016,
+		evidence: 'study',
+		doi: '10.1016/j.jaci.2015.07.048',
+		noReviewReason:
+			'The only meta-analysis of anaphylaxis after non-COVID vaccines found (Pennisi 2025) covers adults only and counts per person rather than per dose, with very wide uncertainty, so it cannot set a per-dose rate; it has no IPV stratum in its abstract. McNeil 2016 is the largest active-surveillance study with chart-confirmed cases and per-dose denominators; it has no IPV-alone row, so IPV uses its all-vaccine rate.',
+		usedFor: ['flu.vaccines.inactivated.seriousPer100kDoses', 'polio.vaccines.IPV.seriousPer100kDoses'],
+		quote:
+			'The rate of anaphylaxis was 1.31 (95% CI, 0.90-1.84) per million vaccine doses. The incidence did not vary significantly by age, and there was a nonsignificant female predominance. Vaccine-specific rates included 1.35 (95% CI, 0.65-2.47) per million doses for inactivated trivalent influenza vaccine',
+		location: 'Abstract, Results',
+		why: `Flu: ${FLU_SERIOUS.anaphylaxisPerMillion} per million added to GBS (CDC) gives ${fmt(FLU_SERIOUS.per100k, 3)} per 100,000 doses. IPV has no vaccine-specific serious risk (CDC), so the all-vaccine anaphylaxis rate ${ALL_VACCINE_ANAPHYLAXIS_PER_MILLION} per million = ${fmt(per100kFromPerMillion(ALL_VACCINE_ANAPHYLAXIS_PER_MILLION), 3)} per 100,000 doses is used.`,
+		context:
+			'US Vaccine Safety Datalink 2009-2011, 25.2 million doses, chart-confirmed cases; same across age bands.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref confirms title, authors and journal, print year 2016; no update or retraction relation; abstract quote re-read in a second search.'
+		}
+	},
+	{
+		id: 'moro-2022-varicella-vaers',
+		authors: 'Moro PL, et al.',
+		title:
+			'Safety Surveillance of Varicella Vaccines in the Vaccine Adverse Event Reporting System, United States, 2006-2020',
+		journal: 'Journal of Infectious Diseases',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis of serious events after chickenpox vaccine was found; this is the largest US surveillance analysis (132.8 million doses).',
+		doi: '10.1093/infdis/jiac306',
+		usedFor: [
+			'chickenpox.vaccines.varicella.seriousPer100kDoses',
+			'chickenpox.vaccines.varicella.deathsPer100kDoses'
+		],
+		quote:
+			'During 2006-2020, approximately 132.8 million VAR doses were distributed; 40 684 reports were received in VAERS (30.6/100 000 doses distributed), with 4.1% classified as serious (1.3/100 000 doses distributed).',
+		location:
+			"Abstract, Results; also 'AEs associated with evidence of vaccine strain varicella-zoster virus (vVZV) infection included meningitis, encephalitis, herpes zoster, and 6 deaths (all in immunocompromised persons with contraindications for vaccination).'",
+		why: `1.3 serious reports per 100,000 doses, used as is: an upper bound, since a serious report is not proof the vaccine caused it. Deaths are worked out: ${MORO.deaths} vaccine-strain deaths in ${fmt(MORO.doses / 1e6, 1)} million doses = ${fmt(MORO.per100k, 4)} per 100,000 doses. All were in people with weakened immune systems who should not have had this vaccine; that is said beside the number rather than leaving it out.`,
+		context: 'US passive surveillance, 2006-2020.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search confirmed title, first author, journal, year, DOI and quotes. Only the first author is given; no retraction seen.'
+		}
+	},
+	{
+		id: 'miller-2015-deaths-after-vaccination',
+		authors: 'Miller E, et al.',
+		title: 'Deaths following vaccination: What does the evidence show?',
+		journal: 'Vaccine',
+		year: 2015,
+		evidence: 'review',
+		doi: '10.1016/j.vaccine.2015.05.023',
+		noReviewReason:
+			'IOM 2012 (systematic review) judged the evidence on seasonal influenza vaccine and GBS inadequate to accept or reject causation but does not discuss deaths; no systematic review or meta-analysis of deaths caused by influenza vaccine was found. This CDC-authored review is the source that addresses vaccine-caused death directly.',
+		usedFor: ['flu.vaccines.inactivated.deathsPer100kDoses', 'polio.vaccines.OPV.deathsPer100kDoses'],
+		quote:
+			'Approximately 5% of Guillain-Barré syndrome cases are fatal [52], but given the indeterminate association between influenza vaccination and GBS, risk of death from vaccine-associated GBS would have to be considered theoretical. … Rare cases where a known or plausible theoretical risk of death following vaccination exists include anaphylaxis, … Guillain-Barré syndrome after inactivated influenza vaccine, … and vaccine-associated paralytic poliomyelitis from oral poliovirus vaccine.',
+		location:
+			'Section 4.4 (Guillain–Barré syndrome after seasonal and 2009 H1N1 inactivated influenza vaccines); Abstract',
+		why: `Flu: a death from vaccine-linked GBS is only theoretical, so deaths are 'none established'. If the link were causal, ${FLU_SERIOUS.gbsPerMillion[0]}-${FLU_SERIOUS.gbsPerMillion[1]} GBS cases per million doses x 4.6% fatal (Censi 2024, GBS after COVID-19 vaccines) would be ${fmt(per100kFromPerMillion(FLU_SERIOUS.gbsPerMillion[0] * 0.046), 4)}-${fmt(per100kFromPerMillion(FLU_SERIOUS.gbsPerMillion[1] * 0.046), 4)} per 100,000 doses, shown only as context. OPV: names vaccine-caused paralysis as a cause of death, which backs the worked-out OPV rate.`,
+		context:
+			'Review by CDC authors; it also warns against reading reports of deaths after vaccination as caused by it.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Second search confirmed title, first author, journal, year, DOI and quote. Only the first author is given.'
+		}
+	},
+	{
+		id: 'lane-1969-smallpox-complications',
+		authors: 'Lane JM, et al.',
+		title: 'Complications of smallpox vaccination, 1968',
+		journal: 'New England Journal of Medicine',
+		year: 1969,
+		evidence: 'study',
+		noReviewReason:
+			'Routine smallpox vaccination ended before pooled analyses of its complications were made; this 1968 US national survey is still the standard reference.',
+		doi: '10.1056/NEJM196911272812201',
+		usedFor: [
+			'smallpox.vaccines.vaccinia.seriousPer100kDoses',
+			'smallpox.vaccines.vaccinia.deathsPer100kDoses'
+		],
+		quote:
+			'There were 74 complications and one death per 1,000,000 primary vaccinations. Morbidity and mortality rates were highest for infants, with 112 complications and five deaths per 1,000,000 primary vaccinations.',
+		location: 'Abstract',
+		why: `${LANE.complicationsPerMillion} complications per million primary vaccinations = ${fmt(per100kFromPerMillion(LANE.complicationsPerMillion), 1)} per 100,000 (not all serious, so an upper bound); ${LANE.deathsPerMillion} death per million = ${fmt(per100kFromPerMillion(LANE.deathsPerMillion), 1)} per 100,000 (infants 0.5). These deaths were caused by the vaccine.`,
+		context:
+			"US 1968, NYCBH vaccinia strain; deaths from postvaccinial encephalitis, vaccinia necrosum and eczema vaccinatum. Today's populations may fare worse because more people have weakened immunity or eczema.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened in a second search; title, first author, journal, year, DOI and quote confirmed. Only the first author is given.'
+		}
+	},
+	{
+		id: 'choi-2021-acip-ebola',
+		authors:
+			'Choi MJ, Cossaboom CM, Whitesell AN, Dyal JW, Joyce A, Morgan RL, Campos-Outcalt D, Person M, Ervin E, Yu YC, Rollin PE, Harcourt BH, Atmar RL, Bell BP, Helfand R, Damon IK, Frey SE',
+		title:
+			'Use of Ebola Vaccine: Recommendations of the Advisory Committee on Immunization Practices, United States, 2020',
+		journal: 'MMWR Recommendations and Reports',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/mmwr/volumes/70/rr/rr7001a1.htm',
+		usedFor: [
+			'ebola.vaccines.rVSV-ZEBOV.seriousPer100kDoses',
+			'ebola.vaccines.rVSV-ZEBOV.deathsPer100kDoses'
+		],
+		quote:
+			'Overall, reported vaccine-related serious adverse events were rare. Across 12 clinical trials, out of 15,399 persons who received the vaccine, three serious adverse events were judged to be related or possibly related to the vaccine: one febrile reaction, one anaphylactic reaction, and one influenza-like illness. All resolved without sequelae.',
+		location: "'Vaccine-Related Serious Adverse Events' section; MMWR Recomm Rep 70(1):1-12",
+		why: `Worked out: ${CHOI.events} / ${fmt(CHOI.people)} people = ${fmt(CHOI.per100k, 1)} per 100,000; the vaccine is one dose, so this is also per 100,000 doses. All three resolved with no lasting harm and no vaccine-related death is reported, so deaths are 'none established'.`,
+		context: 'Clinical-trial data (rVSV-ZEBOV); MMWR 70(1):1-12.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Re-opened; quotes confirmed verbatim; authors and issue confirmed.'
+		}
+	},
+	{
+		id: 'liu-2021-realworld-ve-meta',
+		authors: 'Liu Q, Qin C, Liu M, Liu J',
+		title:
+			'Effectiveness and safety of SARS-CoV-2 vaccine in real-world studies: a systematic review and meta-analysis',
+		journal: 'Infectious Diseases of Poverty',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s40249-021-00915-3',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8590867/',
+		usedFor: [
+			'covid19.fullEfficacy',
+			'covid19.partialEfficacy',
+			'covid19.vaccines.covid-original.full.infection',
+			'covid19.vaccines.covid-original.full.severe',
+			'covid19.vaccines.covid-original.partial.infection',
+			'covid19.vaccines.covid-original.partial.severe'
+		],
+		quote:
+			'For the first dose of SARS-CoV-2 vaccines, the pooled VE was 41% (95% CI: 28–54%) for the prevention of SARS-CoV-2 infection, 52% (95% CI: 31–73%) for the prevention of symptomatic COVID-19, 66% (95% CI: 50–81%) for the prevention of hospital admissions … For the second dose of SARS-CoV-2 vaccines, the pooled VE was 85% (95% CI: 81–89%) for the prevention of SARS-CoV-2 infection, 97% (95% CI: 97–98%) for the prevention of symptomatic COVID-19, 93% (95% CI: 89–96%) for the prevention of hospital admissions',
+		location:
+			"Results, 'Vaccine effectiveness for different clinical outcomes of COVID-19', and Table 1. Timing subgroups for infection: one dose 14 days or more 48%, 21 days or more 56%; two doses 14 days or more 81%.",
+		why: 'One meta-analysis of real-world use gives all four numbers on the same outcomes: two doses 0.85 against infection and 0.93 against hospital admission; one dose 0.41 and 0.66. Hospital admission is counted in everyone vaccinated, so it fits the severe slot. Kow & Hasan 2021 checks the infection values for the mRNA vaccine alone.',
+		context:
+			'Observational studies to 22 Jul 2021: original strain and Alpha (some Gamma and Delta in a separate analysis). The outcome is laboratory-confirmed infection, kept separate from symptomatic COVID-19; that it includes screening of people without symptoms is inferred from the included studies (e.g. Zacay, Angel, Hall/SIREN), not stated by the authors. Pools all vaccine types, mostly mRNA (BNT162b2, some mRNA-1273), with some CoronaVac and ChAdOx1 studies. Heterogeneity is very high (I² about 99%). No mRNA-only figures for one dose, two doses or hospital admission are given (only infection after a full course in Fig. 2B: BNT162b2 89%, mRNA-1273 97%), so the entry stays pooled. Its risks are those of the mRNA vaccines; the rare blood clots with low platelets (TTS) after the AstraZeneca vaccine are a known harm of a vaccine this sim does not model, and the About page says so.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI matches in the PMC open-data metadata (PMC8590867 v1 and v2) and OpenAlex; title, authors, Infect Dis Poverty 2021;10:132 match. Full text gives 85% and 41% against infection, 93% and 66% against hospitalisation. is_retracted false; no correction notice. The screening reading is an inference from the included studies, not a statement in the paper.'
+		}
+	},
+	{
+		id: 'feikin-2022-covid-ve-duration',
+		authors:
+			"Feikin DR, Higdon MM, Abu-Raddad LJ, Andrews N, Araos R, Goldberg Y, Groome MJ, Huppert A, O'Brien KL, Smith PG, Wilder-Smith A, Zeger S, Deloria Knoll M, Patel MK",
+		title:
+			'Duration of effectiveness of vaccines against SARS-CoV-2 infection and COVID-19 disease: results of a systematic review and meta-regression',
+		journal: 'The Lancet',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/S0140-6736(22)00152-0',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8863502/',
+		usedFor: ['covid19.vaccines.covid-original.waningDays'],
+		quote:
+			'COVID-19 vaccine efficacy or effectiveness against severe disease remained high, although it did decrease somewhat by 6 months after full vaccination. By contrast, vaccine efficacy or effectiveness against infection and symptomatic disease decreased approximately 20-30 percentage points by 6 months. … On average, vaccine efficacy or effectiveness against SARS-CoV-2 infection decreased from 1 month to 6 months after full vaccination by 21·0 percentage points (95% CI 13·9–29·8) among people of all ages',
+		location: 'Summary: Interpretation; Findings',
+		why: `Worked out: half-life assuming exponential decay from Liu 2021's ${FEIKIN.start} with the Findings' ${fmt(FEIKIN.drop * 100, 1)}-point fall against infection between months 1 and 6 (5 x 365.25 / 12 = ${fmt(FEIKIN.windowDays, 1)} days): ${FEIKIN.start} -> ${fmt(FEIKIN.end, 2)} gives ${fmt(FEIKIN.windowDays, 1)} x ln2 / ln(${FEIKIN.start} / ${fmt(FEIKIN.end, 2)}) = ${fmt(FEIKIN.exponential)} days; a straight-line fall reaches half of ${FEIKIN.start} after ${fmt(FEIKIN.straightLine)} days. The middle of the two, ${fmt(FEIKIN.halfLife)} days, is used. Over the whole 20-30 point range in the Interpretation, the exponential gives about 240-390 days.`,
+		context:
+			"Meta-regression of 18 studies, all before Omicron spread widely; 78 vaccine-specific evaluations (Pfizer 38, Moderna 23, Janssen 9, AstraZeneca 8). Gives falls in percentage points, not a starting value, so the half-life depends on the starting value taken from Liu 2021. In its own words, protection against severe disease 'remained high, although it did decrease somewhat by 6 months' (a 10.0-point fall). Two correction notices: 10.1016/S0140-6736(22)00428-7 fixes one label in Table 4; 10.1016/S0140-6736(23)00331-8 (23 Feb 2023) corrects the appendix's meta-regression methods. Neither changes the figures in the abstract.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, authors, The Lancet 399(10328):924-944 (March 2022) match; updated-by lists two errata and no retraction. The first erratum, read on thelancet.com, fixes a label in Table 4 (column 1, row 5), corrected online 4 April 2022; the second could not be opened in that pass. Interpretation and Findings quotes verbatim in the abstract; full text read in PMC8863502.'
+		}
+	},
+	{
+		id: 'menegale-2023-waning-meta',
+		authors:
+			"Menegale F, Manica M, Zardini A, Guzzetta G, Marziano V, d'Andrea V, Trentini F, Ajelli M, Poletti P, Merler S",
+		title:
+			'Evaluation of Waning of SARS-CoV-2 Vaccine–Induced Immunity: A Systematic Review and Meta-analysis',
+		journal: 'JAMA Network Open',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1001/jamanetworkopen.2023.10650',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10157431/',
+		usedFor: [
+			'covid19omicron.vaccines.covid-original.waningDays',
+			'covid19omicron.vaccines.covid-updated.waningDays'
+		],
+		quote:
+			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron.',
+		location:
+			"Results, laboratory-confirmed infection paragraph; model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
+		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found.`,
+		context:
+			'40 studies of original (ancestral) vaccines; Omicron BA.1/BA.2. Pooled VE against laboratory-confirmed Omicron infection 44.4% at 1 month, 20.7% at 6 months and 13.4% at 9 months after the primary course. Laboratory-confirmed infection mixes symptomatic and under-counted symptomless infections. No severe-disease analysis.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "DOI matches in the PMC open-data metadata (PMC10157431) and OpenAlex; title, authors, JAMA Netw Open 2023;6(5):e2310650 match. Quote and the exponential model found in the full text, including the half-life definition 'log(2)/w + 14 days'. is_retracted false; no correction notice."
+		}
+	},
+	{
+		id: 'cheng-2024-bivalent-rve-meta',
+		authors: 'Cheng M-Q, Li R, Weng Z-Y, Song G',
+		title: 'Relative effectiveness of bivalent COVID-19 vaccine: a systematic review and meta-analysis',
+		journal: 'Frontiers in Medicine',
+		year: 2024,
+		evidence: 'meta-analysis',
+		doi: '10.3389/fmed.2023.1322396',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10879625/',
+		usedFor: [
+			'covid19omicron.fullEfficacy',
+			'covid19omicron.vaccines.covid-updated.full.infection',
+			'covid19omicron.vaccines.covid-updated.full.severe'
+		],
+		quote:
+			'Meta-analysis results showed, compared with the monovalent vaccines (MVs), the relative effectiveness (rVE) of the BVs in COVID-19-associated infections/symptomatic infections, illnesses, hospitalizations, and deaths was 30.90% [95% confidence interval (CI), 8.43–53.37], 39.83% (95% CI, 27.34–52.32), 59.70% (95% CI, 44.08–75.32), and 72.23% (95% CI, 62.08–82.38), respectively.',
+		location: 'Abstract, Results; repeated in the Discussion',
+		why: `Worked out: Cheng gives the bivalent vaccine's protection relative to the original vaccine, not against unvaccinated people, so it is applied on top of Mohammed 2023's original-vaccine figures: infection 1 - (1 - ${OMICRON_VACCINE.bivalentRelativeInfection}) x (1 - ${OMICRON_VACCINE.originalInfection}) = ${fmt(stacked(OMICRON_VACCINE.bivalentRelativeInfection, OMICRON_VACCINE.originalInfection), 3)}, and severe disease (hospital admission) 1 - (1 - ${OMICRON_VACCINE.bivalentRelativeSevere}) x (1 - ${OMICRON_VACCINE.originalSevere}) = ${fmt(stacked(OMICRON_VACCINE.bivalentRelativeSevere, OMICRON_VACCINE.originalSevere), 3)}. This keeps the original and updated vaccines on the same footing, both against unvaccinated people.`,
+		context:
+			"Systematic review and meta-analysis of 22 observational studies, search to 4 Nov 2023; bivalent (BA.1 or BA.4-5) boosters against original monovalent doses. Infection and symptomatic infection are pooled together (I² = 99.6%). No waning estimate. As a check in words only: Ma 2025's meta-analysis of the XBB.1.5 vaccine gives 0.529 against infection in the first month, but its full text could not be checked and it measures added protection in people who were already immune, so it is not used.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI matches in the PMC open-data metadata (PMC10879625) and OpenAlex; title, four authors, Front Med (Lausanne) 2024;10:1322396 match; confirmed as a systematic review and meta-analysis (PRISMA). Full text gives 30.90% (8.43-53.37) and 59.70% (44.08-75.32). is_retracted false; no correction notice.'
+		}
+	},
+	{
+		id: 'ranjeva2019-flu-infection-protection',
+		authors: 'Ranjeva S, Subramanian R, Fang VJ, et al.',
+		title: 'Age-specific differences in the dynamics of protective immunity to influenza',
+		journal: 'Nature Communications',
+		year: 2019,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review of how long protection after flu infection lasts, with a figure that can be read as a half-life, was found.',
+		doi: '10.1038/s41467-019-09652-6',
+		url: 'https://www.nature.com/articles/s41467-019-09652-6',
+		usedFor: ['flu.waningDays'],
+		quote:
+			'In adults, the model favors non-HI-correlated protection against H3N2, with a half-life of 4.1y (95% CI (3.2, 5.5)) (Table1).',
+		location:
+			"Results; Table 1. Abstract: 'Protection against circulating strains wanes to half of peak levels 3.5–7 years after infection in both age groups, and wanes faster against influenza A(H3N2) than A(H1N1)pdm09.'",
+		why: `Already a half-life of infection-acquired protection: H3N2 in adults, ${RANJEVA_HALF_LIFE_YEARS} years = ${fmt(RANJEVA_HALF_LIFE_YEARS * DAYS_PER_YEAR, 1)} days. H3N2 is the faster-waning subtype; the abstract range is 3.5-7 years (1,278-2,557 days), and adults against H1N1pdm09 about 6.4 years.`,
+		context:
+			"Hong Kong household cohort; mechanistic models fitted to repeated blood samples. Measures protection 'against circulating strains', so it includes the effect of the virus drifting.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, nine authors, Nat Commun 10, article 1660 (10 April 2019) match; only relation is a preprint (not used); no correction or retraction. Abstract and Results quotes verbatim; Table 1 lists H3N2 adults 4.1y [3.2, 5.5]. 4.1 years recomputed as 1,497.5 days.'
+		}
+	},
+	{
+		id: 'lewnard-grad-2018-mumps-waning',
+		authors: 'Lewnard JA, Grad YH',
+		title: 'Vaccine waning and mumps re-emergence in the United States',
+		journal: 'Science Translational Medicine',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason:
+			'A pooled re-analysis of six vaccine-effectiveness studies, not a formal meta-analysis. No meta-analysis of how long mumps vaccine protection against disease lasts was found; the antibody meta-analysis (Schenk 2021) measures antibodies, not protection.',
+		doi: '10.1126/scitranslmed.aao5945',
+		usedFor: ['mumps.vaccines.MMR.waningDays'],
+		quote:
+			'Applying our estimate of the vaccine waning rate to a model of exponentially distributed durations of protection, we estimated that immunity persists, on average, 27.4 years [95% confidence interval (CI), 16.7 to 51.1 years] after receipt of any dose. … we thus expected that 25% may lose protection within 7.9 years (95% CI, 4.7 to 14.7 years), 50% within 19.0 years (95% CI, 11.2 to 35.4 years), and 75% within 38.0 years (95% CI, 22.4 to 70.8 years).',
+		location:
+			"Results, vaccine waning estimate; abstract: 'wanes on average 27 years (95% confidence interval, 16 to 51 years)'",
+		why: `Read off '50% within ${fmt(LEWNARD_HALF_LIFE_YEARS, 1)} years': the source uses exponential waning like the model, so ${fmt(LEWNARD_HALF_LIFE_YEARS, 1)} x 365.25 = ${fmt(LEWNARD_HALF_LIFE_YEARS * DAYS_PER_YEAR, 2)} days (95% CI 4,091-12,930 days). Check: 27.4 x ln2 = 18.99 years.`,
+		context:
+			'Six published mumps vaccine-effectiveness studies pooled, plus a US transmission model; the clock runs from the last dose. The 3.6% who never respond to the vaccine are covered by the efficacy values, not by waning.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, authors, Sci Transl Med 10(433):eaao5945 (21 March 2018) match; only relation is a preprint (not used); no update-to or updated-by. Results and abstract quotes verbatim. 19.0 x 365.25 recomputed as 6,939.75 days.'
+		}
+	},
+	{
+		id: 'who-2007-mumps-position-paper',
+		authors: 'World Health Organization',
+		title: 'Mumps virus vaccines: WHO position paper',
+		journal: 'Weekly Epidemiological Record 82(7)',
+		year: 2007,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/publications/i/item/WHO-WER8207-51-60',
+		usedFor: ['mumps.waningDays'],
+		quote: 'Natural infection with this virus is thought to confer lifelong protection.',
+		location:
+			"Weekly Epidemiological Record 82(7):51-60, 16 February 2007; last sentence of the first 'Summary and conclusions' paragraph",
+		why: "waningDays=null for infection-acquired immunity: WHO says natural infection is thought to protect for life, far longer than any run. The CDC Pink Book chapter on mumps does not say this (it notes only that reinfection has been reported), so WHO's position paper is the official source.",
+		context:
+			"Background also says: 'In general, natural infection confers lifelong protection against the disease, but recurrent mumps attacks have been reported.' The model does not show reinfection.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: "Separate verification pass, 7 Oct 2026 (not the pass that found it): quote exact in the English text, and the French matches. WHO's catalogue gives pp. 51-60 but the PDF's own page markers read 50-59, so the location is given by section rather than page."
+		}
+	},
+	{
+		id: 'chit2018-acellular-pertussis-ve-waning',
+		authors: 'Chit A, Zivaripiran H, Shin T, et al.',
+		title:
+			'Acellular pertussis vaccines effectiveness over time: A systematic review, meta-analysis and modeling study',
+		journal: 'PLOS ONE',
+		year: 2018,
+		evidence: 'meta-analysis',
+		doi: '10.1371/journal.pone.0197970',
+		url: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0197970',
+		usedFor: [
+			'pertussis.vaccines.DTaP.waningDays',
+			'pertussis.fullEfficacy',
+			'pertussis.vaccines.DTaP.full.infection'
+		],
+		quote:
+			'We estimate initial childhood series absolute VE is 91% (95% CI: 87% to 95%) and declines at 9.6% annually. … the primary acellular pertussis series (5-dose DTaP) … VEexpected=VEbaseline e−λ(time)',
+		location:
+			"Abstract; Results (primary series: 'estimated at 91% … and declined by 9.6% per year'); Methods (objectives and the exponential model)",
+		why: `The sim vaccinates with the childhood series, so its figures are used: full.infection ${CHIT.start}, and the exponential decay of ${CHIT.decayPerYear} a year gives a half-life of ln2 / ${CHIT.decayPerYear} = ${fmt(CHIT.halfLifeYears, 2)} years = ${fmt(CHIT.halfLife)} days. A meta-analysis, so it sets fullEfficacy over CDC's 80-85%.`,
+		context:
+			'US and other high-income settings. The full 6-dose series with the adolescent Tdap booster is 85% falling 11.7% a year (by year 3 49%, year 5 37%, year 7 28%). The childhood absolute figures are partly modelled: they come from transforming relative odds ratios. A fit to the five pooled points gives 2,839 days. Eight of the nine authors worked for Sanofi Pasteur, which makes pertussis vaccine and funded the study.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Separate verification pass, 7 Oct 2026: the childhood (5-dose DTaP) series figures, 91% and 9.6% a year, confirmed verbatim in the abstract and Results of the PMC text (PMC6005504); 85% falling 11.7% is the 6-dose series with the adolescent booster. Half-life ln2 / 0.096 = 7.22 years = 2,637 days reproduced. No correction notice in PMC.'
+		}
+	},
+	{
+		id: 'mcgirr-fisman-2015-dtap-duration',
+		authors: 'McGirr A, Fisman DN',
+		title: 'Duration of Pertussis Immunity After DTaP Immunization: A Meta-analysis',
+		journal: 'Pediatrics',
+		year: 2015,
+		evidence: 'meta-analysis',
+		doi: '10.1542/peds.2014-1729',
+		usedFor: ['pertussis.vaccines.DTaP.waningDays'],
+		quote:
+			'For every additional year after the last dose of DTaP, the odds of pertussis increased by 1.33 times (95% confidence interval: 1.23-1.43). Assuming 85% vaccine efficacy, we estimated that 10% of children vaccinated with DTaP would be immune to pertussis 8.5 years after the last dose.',
+		location: 'Abstract (Results)',
+		why: `Check only: ${MCGIRR.start * 100}% immune falling to ${MCGIRR.end * 100}% in ${MCGIRR.years} years gives an exponential half-life of ${fmt(MCGIRR.exponential)} days, or ${fmt(MCGIRR.straightLine)} days if the fall is a straight line. Both are shorter than the ${fmt(CHIT.halfLife)} days from Chit 2018's childhood series, which sets the value as the newer meta-analysis with yearly estimates; McGirr assumes 85% at the start and measures time since the last dose, so it suggests faster waning than the value used.`,
+		context:
+			"11 studies of 3- or 5-dose DTaP in children; the paper's exact model of failure over time is not confirmed (full text not read).",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Crossref: title, authors, Pediatrics 135(2):331-343 (1 Feb 2015) match; only relation is an F1000 review; no correction or retraction. Abstract quote verbatim. Half-lives recomputed: 1,006 days exponential, 1,759 linear.'
+		}
+	},
+	{
+		id: 'wendelboe2005-pertussis-immunity-duration',
+		authors: 'Wendelboe AM, Van Rie A, Salmaso S, Englund JA',
+		title: 'Duration of Immunity Against Pertussis After Natural Infection or Vaccination',
+		journal: 'The Pediatric Infectious Disease Journal',
+		year: 2005,
+		evidence: 'systematic-review',
+		doi: '10.1097/01.inf.0000160914.59160.41',
+		usedFor: ['pertussis.waningDays'],
+		quote:
+			'A review of the published data on duration of immunity reveals estimates that infection-acquired immunity against pertussis disease wanes after 4-20 years and protective immunity after vaccination wanes after 4-12 years.',
+		location: 'Abstract',
+		why: `Worked out: the middle of the ${WENDELBOE_YEARS[0]}-${WENDELBOE_YEARS[1]} years after infection is ${(WENDELBOE_YEARS[0] + WENDELBOE_YEARS[1]) / 2} years = ${fmt(WENDELBOE_HALF_LIFE)} days, treated as a half-life. The review gives times by which waning occurs in individual studies, not half-lives, so this is an approximation.`,
+		context:
+			"Mostly whole-cell vaccine era. Wearing & Rohani 2009 cite this review as '7-20 years' for natural immunity; the 4-20 here is the review's own abstract.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI found and confirmed. Crossref: title, four authors, Pediatr Infect Dis J 24(5 Suppl):S58-S61 (May 2005) match; no update or relation entries. Abstract wording verbatim; full text not read.'
+		}
+	},
+	{
+		id: 'famulare2018-opv-waning',
+		authors: 'Famulare M, Selinger C, McCarthy KA, Eckhoff PA, Chabot-Couture G',
+		title: 'Assessing the stability of polio eradication after the withdrawal of oral polio vaccine',
+		journal: 'PLOS Biology 16(4):e2002468',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason:
+			'No systematic review or meta-analysis estimates how OPV-induced gut immunity against infection decays with time since the last dose. The two higher-ranked sources in this area measure gut immunity at a single point after a primary series, with no time axis: Grassly 2019 network meta-analysis (10.1016/s1473-3099(19)30301-9) and Hird & Grassly 2012 systematic review and meta-analysis (10.1371/journal.ppat.1002599).',
+		doi: '10.1371/journal.pbio.2002468',
+		url: 'https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.2002468',
+		mirrorUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5942853/',
+		usedFor: ['polio.vaccines.OPV.waningDays'],
+		quote:
+			'We modeled waning as a power-law decay [83] during the months since last immunization, NAb(t) ∝ t-λ, with exponent λ = 0.87 (0.73–1.02) (S1 Text Eq F). … Our waning model (S1 Text Eq F, Fig 4) predicts that without reinfection, typical peak OPV-equivalent antibody titers (NAb = 2,048) decline to typical three-dose healthy child immunity (NAb = 512) in 5 (4–7) months and to typical two-dose immunity (NAb = 64) in an additional 4 (2–10) years. … Susceptibility is also strongly impacted by immunity, with the expected fraction shedding after Sabin 2 challenge dropping below half at all relevant doses for NAb ≥ 64 (Fig 7B).',
+		location:
+			"Methods, 'Waning immunity' (power-law model); Results, paragraph after the Fig 7 caption (titre milestones); Results, last sentence of the paragraph introducing Fig 7 (NAb ≥ 64); Methods, 'Oral susceptibility to infection' (unprotected shedding approaches 1)",
+		why: `Worked out: protection against infection is taken as 1 minus the share shedding after challenge, which is about half once antibodies fall to 64. Peak immunity (2,048) reaches 64 in ${FAMULARE.months} months plus ${FAMULARE.years} years = ${fmt(FAMULARE.halfLife / DAYS_PER_YEAR, 2)} years = ${fmt(FAMULARE.halfLife)} days (the reported windows give 850 to 3,865 days). Check: a 32-fold fall under t^-0.87 takes 32^(1/0.87) = 53.7 times as long, month 1 to month 54, about 4.5 years.`,
+		context:
+			"Gut immunity against infection and shedding after a full OPV series, not protection against paralysis, which is lifelong (cdc-pinkbook-polio). An order-of-magnitude figure that leans towards faster waning: NAb 64 is a threshold, and unprotected shedding is below 1 at realistic doses. The decay is a power law, so an exponential with this half-life overstates waning after about 5 years (the same model has 'residual immunity' persisting for life).",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI resolves to PLOS Biology 2018;16(4):e2002468; authors, year and journal match. All quotes found verbatim in the PMC open-access text (PMC5942853.1); locations corrected. Arithmetic reproduced. No correction or retraction on the PLOS or PMC pages; registries (Europe PMC, OpenAlex) could not be reached.'
+		}
+	},
+	{
+		id: 'bolormaa2025-varicella-duration',
+		authors: 'Bolormaa E, Lee YH, Choe YJ, Choe SA',
+		title:
+			'Varicella Vaccine Effectiveness and Duration of Protection: A Systematic Review and Meta-Analysis',
+		journal: 'Journal of Korean Medical Science 40:e286',
+		year: 2025,
+		evidence: 'meta-analysis',
+		doi: '10.3346/jkms.2025.40.e286',
+		url: 'https://jkms.org/DOIx.php?id=10.3346%2Fjkms.2025.40.e286',
+		usedFor: ['chickenpox.vaccines.varicella.waningDays'],
+		quote:
+			'For two-dose vaccinations, VE decreased from 93.5% (92.1-94.9; I2 = 31.6%) in the first year to 49.6% (46.5-82.7; I2 = 100%) by nine years post-vaccination (Table 3). … The duration of protection showed a slight decline over time. Evidence suggests that both one and two doses of the varicella vaccine offer short-term protection, though this protection wanes rapidly.',
+		location:
+			"Results, paragraph beginning 'Thirteen studies assessed the duration of varicella vaccine protection (Table 2)', with Tables 2 and 3; conclusion in the Abstract",
+		why: `Worked out from the two-dose series (a full course): exponential fall from ${BOLORMAA.early.ve}% at year ${BOLORMAA.early.year} to ${BOLORMAA.late.ve}% at year ${BOLORMAA.late.year}, half-life ${fmt(BOLORMAA.halfLife / DAYS_PER_YEAR, 2)} years = ${fmt(BOLORMAA.halfLife)} days. The only meta-analysis found that reports effectiveness by year since vaccination. Low confidence; see context.`,
+		context:
+			"Mostly observational outbreak studies. The year-9 two-dose estimate has I2 = 100% and a confidence interval that does not contain its own point estimate as printed. The one-dose series rises again (65.2% at year 6, 70.2% at year 7, 81.8% at year 10), so a fit over all its points implies a half-life of decades; it is not used. Pawaskar 2022's network meta-analysis of trials found no waning over 10 years, so the plausible range runs from about 6 years to no meaningful waning.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Results paragraph and abstract conclusion confirmed verbatim at jkms.org; the abstract continues "wanes rapidly", so it is quoted in full. Arithmetic reproduced. Tables 2-3 themselves not opened (prose values only). No retraction visible on the publisher page; registries could not be reached.'
+		}
+	},
+	{
+		id: 'pawaskar2022-varicella-nma',
+		authors: 'Pawaskar M, et al.',
+		title: 'Relative efficacy of varicella vaccines: network meta-analysis of randomized controlled trials',
+		journal: 'Current Medical Research and Opinion',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1080/03007995.2022.2091334',
+		usedFor: ['chickenpox.vaccines.varicella.waningDays'],
+		quote:
+			'MBNMA indicated that protection against varicella was sustained without waning over the 10 year follow-up.',
+		location: 'Abstract (Results)',
+		why: 'The counterpoint to Bolormaa 2025, cited so the disagreement is visible: trials alone show no waning over 10 years. Not used for the value because it gives no year-by-year series and covers trial settings with little exposure.',
+		context:
+			'8 randomised trials of Varivax, Varilrix, Priorix-Tetra and Sinovac vaccines; efficacy in trials, not effectiveness in use.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'DOI, journal, year and quote confirmed from the abstract record; the publisher page (403) and volume/pages were not read. No retraction seen.'
+		}
+	},
+	{
+		id: 'who-wer-2024-sage-ebola',
+		authors: 'World Health Organization, Strategic Advisory Group of Experts on Immunization',
+		title:
+			'Extraordinary meeting of the Strategic Advisory Group of Experts on Immunization on Ebola vaccination, May 2024: conclusions and recommendations',
+		journal: 'Weekly Epidemiological Record 99(27):355-362',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/publications/i/item/WER-9927-355-362',
+		mirrorUrl: 'https://www.nitag-resource.org/sites/default/files/2024-07/WER9927-eng-fre.pdf',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.waningDays'],
+		quote:
+			'Duration of protective clinical efficacy has not been formally assessed but Ebola-specific antibodies after rVSVΔG-ZEBOV-GP vaccination have been shown to be sustained without evidence of waning for at least 5 years.',
+		location: "p. 356, section 'rVSVΔG-ZEBOV-GP vaccine'; revaccination guidance on p. 359",
+		why: 'waningDays null: WHO finds no evidence of waning for at least 5 years, so no half-life is established. Huttner 2023 shows the same flat antibody levels from year 1 to year 5.',
+		context:
+			'Based on antibody persistence, not clinical protection over time, which has not been formally assessed; null is a statement about 5 years, not decades. WHO still offers ring contacts vaccinated more than 6 months earlier an extra dose (p. 359).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Published WER wording and pages confirmed by two agreeing reads of the official bilingual PDF (mirror); WHO IRIS returned 403, so not compared character by character there.'
+		}
+	},
+	{
+		id: 'huttner2023-rvsv-zebov-5-year',
+		authors: 'Huttner A, et al.',
+		title:
+			'Antibody responses to recombinant vesicular stomatitis virus-Zaire Ebolavirus vaccination for Ebola virus disease across doses and continents: 5-year durability',
+		journal: 'Clinical Microbiology and Infection 29(12):1587-1594',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review of how long rVSV-ZEBOV protection lasts exists; the official source (WHO SAGE 2024) sets the value and this is the cohort behind it.',
+		doi: '10.1016/j.cmi.2023.08.026',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.waningDays'],
+		quote:
+			'ZEBOV-GP ELISA IgG GMTs plateaued, with no declining trend from 1 year through the last time point assessed (1147.8 [95% CI 874.3-1507.0] at Y1 versus 1548.1 [95% CI 1136.6-2108.5] at Y5 in Geneva volunteers receiving ≥10 million plaque-forming units of rVSV-ZEBOV)',
+		location:
+			"Abstract (Results); 'titres drop to approximately 50% of their peak 1 year post-vaccination' in the Introduction",
+		why: 'Supports null: binding antibodies do not fall between year 1 and year 5, so no half-life can be fitted. The halving from peak to year 1 is the response settling after vaccination, not waning, and is not converted.',
+		context:
+			'168 healthy adults from the 2014-2015 trials in Geneva (5 years) and Lambaréné, Gabon (4 years); antibody levels only.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract and Introduction quotes confirmed verbatim; pages corrected to 29(12):1587-1594 (PMID 37661067) and the published title used. No retraction seen; registries could not be reached.'
+		}
+	},
+	{
+		id: 'iom-2012-adverse-effects-vaccines',
+		authors: 'Institute of Medicine (Stratton K, Ford A, Rusch E, Clayton EW, eds.)',
+		title: 'Adverse Effects of Vaccines: Evidence and Causality',
+		journal: 'National Academies Press',
+		year: 2012,
+		evidence: 'systematic-review',
+		doi: '10.17226/13164',
+		url: 'https://nap.nationalacademies.org/read/13164/chapter/6',
+		usedFor: [
+			'measles.vaccines.MMR.deathsPer100kDoses',
+			'mumps.vaccines.MMR.deathsPer100kDoses',
+			'rubella.vaccines.MMR.deathsPer100kDoses',
+			'flu.vaccines.inactivated.deathsPer100kDoses'
+		],
+		quote:
+			'The evidence convincingly supports a causal relationship between MMR vaccine and measles inclusion body encephalitis in individuals with demonstrated immunodeficiencies. … Furthermore, measles inclusion body encephalitis is confined to immunodeficient patients and is inevitably fatal. … No studies were identified in the literature for the committee to evaluate the risk of measles inclusion body encephalitis after the administration of MMR vaccine.',
+		location:
+			'Chapter 4 (Measles, Mumps, and Rubella Vaccine), measles inclusion body encephalitis: Conclusion 4.1 (about p. 126), mechanistic evidence (about p. 125), epidemiologic evidence (about p. 122); Appendix D, Table D-1 (influenza vaccine and GBS: "Inadequate")',
+		why: "MMR: deaths caused by the vaccine are established, but only in people with immune deficiencies, for whom it isn't recommended, and no study gives a rate, so the kind is 'established-no-rate'. Flu: the committee found the evidence on flu vaccine and Guillain-Barré syndrome inadequate to accept or reject causation, which backs 'none-established' alongside Miller 2015.",
+		context:
+			'US expert committee review with systematic literature searches and explicit causality categories. The committee attributes the MMR finding to the measles component. Of the fatal cases it reviews, one has the virus confirmed as the vaccine strain (Bitnun 1999). It also finds MMR and tetanus-toxoid vaccines cause anaphylaxis ("convincingly supports"), without reporting deaths.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Conclusion 4.1, the "inevitably fatal" sentence, the no-studies sentence and the Table D-1 rows confirmed on the NAP openbook pages; printed page numbers came from a page summariser, so they are approximate. doi.org not reachable; the DOI follows NAP record 13164.'
+		}
+	},
+	{
+		id: 'iom-2003-vaccines-sudi',
+		authors: 'Institute of Medicine (Stratton K, Almario DA, Wizemann TM, McCormick MC, eds.)',
+		title: 'Immunization Safety Review: Vaccinations and Sudden Unexpected Death in Infancy',
+		journal: 'National Academies Press',
+		year: 2003,
+		evidence: 'systematic-review',
+		doi: '10.17226/10649',
+		url: 'https://nap.nationalacademies.org/read/10649/chapter/2',
+		usedFor: ['pertussis.vaccines.DTaP.deathsPer100kDoses'],
+		quote:
+			'The committee concludes that the evidence is inadequate to accept or reject a causal relationship between DTaP vaccine and SIDS. … The present committee concludes that the evidence favors acceptance of a causal relationship between diphtheria toxoid and whole cell pertussis vaccine and death due to anaphylaxis in infants. … despite the more than 50 years subsequent to the publication of that case report and despite the widespread use of vaccines in infants, the committee could not identify in the medical literature any additional reports of death in infants due to vaccine-related anaphylaxis.',
+		location: 'Executive Summary, pp. 6-8',
+		why: 'No death has been shown to be caused by the acellular vaccine (DTaP): sudden infant death is not linked, and the one documented anaphylaxis death, in 1946, followed the older whole-cell vaccine. So the kind is none-established.',
+		context:
+			'US expert committee review. It also finds the evidence favours rejecting a link between multiple vaccines and sudden infant death.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'All three sentences confirmed in the NAP Executive Summary, pp. 6-8 (page numbers from a page summariser).'
+		}
+	},
+	{
+		id: 'cdc-acip-2024-ipv-etr',
+		authors: 'Advisory Committee on Immunization Practices (CDC)',
+		title:
+			'ACIP Evidence to Recommendations for Booster Doses of Inactivated Poliovirus Vaccine (IPV) Among Adults Aged ≥18 Years',
+		journal: 'CDC',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/acip/evidence-to-recommendations/booster-IPV-polio-vax-adults-etr.html',
+		usedFor: ['polio.vaccines.IPV.deathsPer100kDoses'],
+		quote:
+			'No serious adverse events have been causally associated with use of the current formulation of IPV.',
+		location: "'Benefits and Harms' section (page dated 5 September 2024)",
+		why: 'An official statement that no serious harm, and so no death, has been shown to be caused by IPV: none-established.',
+		context:
+			"Also: 'Data from more than 20 years of use as part of the routine childhood vaccination schedule have demonstrated that IPV has an excellent safety profile.'",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Both sentences confirmed in the Benefits and Harms section.'
+		}
+	},
+	{
+		id: 'halperin-2017-rvsv-zebov-phase3-safety',
+		authors: 'Halperin SA, Arribas JR, Rupp R, et al.',
+		title:
+			'Six-Month Safety Data of Recombinant Vesicular Stomatitis Virus–Zaire Ebola Virus Envelope Glycoprotein Vaccine in a Phase 3 Double-Blind, Placebo-Controlled Randomized Study in Healthy Adults',
+		journal: 'Journal of Infectious Diseases 215(12):1789-1798',
+		year: 2017,
+		evidence: 'study',
+		noReviewReason:
+			'Supports the official ACIP review (Choi 2021), which carries the value; the systematic reviews found (Bache 2020, Zarro 2025) give no explicit statement about vaccine-related deaths in their abstracts.',
+		doi: '10.1093/infdis/jix189',
+		usedFor: ['ebola.vaccines.rVSV-ZEBOV.deathsPer100kDoses'],
+		quote:
+			'Twenty-one SAEs and 2 deaths were reported, all assessed by investigators as unrelated to vaccine. … no vaccine-related SAEs or deaths.',
+		location: 'Abstract (Results; Conclusions)',
+		why: 'An explicit statement that no death was caused by the vaccine in a placebo-controlled trial, supporting none-established.',
+		context: '1,061 vaccinated and 133 given placebo, followed for 6 months.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract wording confirmed. Volume and pages not confirmed (no PMC copy; publisher not opened).'
+		}
+	},
+	{
+		id: 'cho-2023-korea-vaccine-myocarditis',
+		authors: 'Cho JY, Kim KH, Lee N, et al.',
+		title: 'COVID-19 vaccination-related myocarditis: a Korean nationwide study',
+		journal: 'European Heart Journal 44(24):2234-2243',
+		year: 2023,
+		evidence: 'study',
+		noReviewReason:
+			'Systematic reviews of vaccine myocarditis (e.g. Ishisaka 2023) report all-cause deaths among cases without judging cause; Cho 2023 is the only nationwide study found with official expert judgement of cause, autopsy-proven vaccine-caused deaths and complete dose counts.',
+		doi: '10.1093/eurheartj/ehad339',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10290868/',
+		usedFor: [
+			'covid19.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-original.deathsPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.deathsPer100kDoses'
+		],
+		quote:
+			'Eight out of 21 deaths were sudden cardiac death (SCD) attributable to VRM proved by an autopsy, and all cases of SCD attributable to VRM were aged under 45 years and received mRNA vaccines. … BNT162b2 (n = 24 828 152), mRNA-1273 (n = 6 781 796) … BNT162b2 (n = 23 369 725), or mRNA-1273 (n = 6 621 577) … BNT162b2 (n = 11 458 290), mRNA-1273 (n = 6 930 450)',
+		location:
+			"Abstract (Methods and results); Methods, 'Study population' paragraph (doses by vaccine and dose number); Table 3 (the 8 sudden deaths: 5 BNT162b2, 3 mRNA-1273); Discussion: 'Vaccine-related myocarditis was the only possible cause of death in all SCD cases.'",
+		why: `Worked out: the six mRNA dose counts sum to ${fmt(CHO.mrnaDoses)}; ${CHO.provenDeaths} / ${fmt(CHO.mrnaDoses)} = ${fmt(CHO.per100k, 3)} per 100,000 doses. Stored with lowerBound, shown as "at least", because only autopsy-proven deaths are counted: all ${CHO.allDeaths} deaths among confirmed cases give ${fmt(CHO.allDeathsPer100k, 3)} per 100,000 mRNA doses.`,
+		context:
+			"South Korea, 26 February to 31 December 2021, doses 1-3; cases confirmed by the national disease agency's expert committee; all 8 aged 22-45, dying 1-6 days after dose 1 or 2. Not every case had viral testing. Cross-checks: Ishisaka 2023 meta-analysis, 19.7 per million x 2.0% = 0.039 per 100,000 (all-cause, not judged). Passive reports of fatal anaphylaxis after mRNA vaccines (Maltezou 2023: 2 in 28,520,812 doses in children, 0.007 per 100,000; Boufidou 2023) are smaller and not established as caused by the vaccine; Greenhawt 2021 found no anaphylaxis deaths. The same rate is used for all mRNA versions, as one platform.",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quotes verbatim in the PMC full text (PMC10290868); dose counts are in the Methods, not Table 1 (location corrected). Arithmetic reproduced. No retraction or correction notice in PMC; a web search found none.'
+		}
+	},
+	{
+		id: 'ling-2022-myopericarditis-meta',
+		authors: 'Ling RR, Ramanathan K, Tan FL, Tai BC, Somani J, Fisher D, MacLaren G',
+		title:
+			'Myopericarditis following COVID-19 vaccination and non-COVID-19 vaccination: a systematic review and meta-analysis',
+		journal: 'The Lancet Respiratory Medicine 10(7):679-688',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1016/S2213-2600(22)00059-5',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9000914/',
+		usedFor: [
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
+		],
+		quote:
+			'the incidence of myopericarditis was significantly higher (p=0·0010) among those who received mRNA vaccines (22·6 cases [12·2–42·0] per million doses; 290730653 doses, nine studies; figure 3)',
+		location:
+			'Results, COVID-19 vaccine subgroups paragraph and figure 3; subgroup table by age, sex and dose',
+		why: `Worked out: ${MRNA_SERIOUS.myopericarditisPerMillion} per million = ${fmt(per100kFromPerMillion(MRNA_SERIOUS.myopericarditisPerMillion), 2)} per 100,000 mRNA doses, added to anaphylaxis (Greenhawt 2021) for ${fmt(MRNA_SERIOUS.per100k, 2)} serious events per 100,000 doses. It counts myocarditis or pericarditis together and gives no myocarditis-only pooled rate, so wherever serious events are broken down this line is labelled "myocarditis or pericarditis" (pericarditis is often mild, so this slightly overstates serious harm).`,
+		context:
+			'Among all COVID-19 vaccines (not mRNA only), per million doses: under 30 40.9, 30 and over 2.9; males 23.0, females 5.1; males under 30 59.7; dose 2 31.3. Oster 2022 (myocarditis only, US reports) gives mRNA-specific age and sex detail for step 5. Corrected version online 10 May 2022.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Quote and the mRNA row (9 studies, 290,730,653 doses, 22.6) confirmed in the PMC text (PMC9000914); the subgroup table is readable there and covers all COVID-19 vaccines.'
+		}
+	},
+	{
+		id: 'greenhawt-2021-covid-vaccine-anaphylaxis-meta',
+		authors: 'Greenhawt M, Abrams EM, Shaker M, et al.',
+		title:
+			'The Risk of Allergic Reaction to SARS-CoV-2 Vaccines and Recommended Evaluation and Management: A Systematic Review, Meta-Analysis, GRADE Assessment, and International Consensus Approach',
+		journal: 'Journal of Allergy and Clinical Immunology: In Practice 9(10):3546-3567',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.jaip.2021.06.006',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8248554/',
+		usedFor: [
+			'covid19.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-original.seriousPer100kDoses',
+			'covid19omicron.vaccines.covid-updated.seriousPer100kDoses'
+		],
+		quote:
+			'the meta-analyzed incidence of anaphylaxis was 7.91 per million (95% confidence interval [95% CI 4.02-15.59), and no anaphylaxis-related fatalities were reported.',
+		location:
+			'Abstract; Results (adenoviral-vector OR 0.47 and inactivated OR 0.31 compared with mRNA vaccines)',
+		why: `Worked out: ${MRNA_SERIOUS.anaphylaxisPerMillion} per million = ${fmt(per100kFromPerMillion(MRNA_SERIOUS.anaphylaxisPerMillion), 3)} per 100,000 doses. It pools all vaccine types, but the others had lower odds than mRNA, so this does not overstate mRNA.`,
+		context:
+			'Studies to 19 March 2021. Alhumaid 2021 (mRNA only) gives 5.0 per million, with publication bias; CDC says about 5 per million.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Abstract and Results wording confirmed in the PMC text (PMC8248554). Arithmetic reproduced.'
+		}
+	},
+	{
+		id: 'who-2020-rubella-position-paper',
+		authors: 'World Health Organization',
+		title: 'Rubella vaccines: WHO position paper – July 2020',
+		journal: 'Weekly Epidemiological Record 95(27):306-324',
+		year: 2020,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/publications/i/item/WHO-WER9527',
+		usedFor: ['rubella.waningDays'],
+		quote:
+			'A rubella-specific T-cell response begins 1 week after the humoral response, and cell-mediated immunity appears to persist throughout life. However, occasional re-infections have been reported.',
+		location: "Section 'Immunity acquired through infection', p. 311",
+		why: 'waningDays null for immunity after infection: WHO says it appears to last for life, far longer than any run. This is about infection, not the vaccine.',
+		context: 'Occasional re-infections are reported; the model does not show them.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-07',
+			ok: true,
+			note: 'Paragraph wording confirmed on p. 311 of the WER 95(27) PDF (read through a mirror of the official PDF).'
 		}
 	}
 ];

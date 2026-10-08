@@ -19,6 +19,29 @@ export const Protection = {
 export interface Sourced<T = number> {
 	value: T;
 	sources: string[];
+	/**
+	 * Set on a placeholder: why the value is not yet properly sourced. Placeholders are listed by
+	 * tests/sim/provisional.test.ts, and a release build (RELEASE=1) fails while any remain.
+	 */
+	provisional?: string;
+}
+
+/** One value per age band: 0-14, 15-64, 65+ (the World Bank bands). */
+export type Bands = [number, number, number];
+
+/** What a banded rate is counted per. */
+export type BandUnit = 'infection' | 'symptomatic-case' | 'person-year';
+
+/**
+ * A sourced rate by age band. `reference` is the source's own population or case mix (shares
+ * summing to 1) and `overall` its published all-ages figure, so the bands can be checked.
+ */
+export interface Banded extends Sourced<Bands> {
+	per: BandUnit;
+	reference: Bands;
+	overall: number;
+	/** Required on a death band above its hospital band: why some die without admission (sourced). */
+	outsideHospitalReason?: { text: string; sources: string[] };
 }
 
 /**
@@ -27,6 +50,62 @@ export interface Sourced<T = number> {
  */
 export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
 export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
+
+/**
+ * Deaths caused by a vaccine (6.13). Every kind carries sources, so "no deaths" can't be claimed
+ * without one, and code that shows it must handle all three kinds.
+ * - rate: deaths per 100,000 doses; `lowerBound` when the source counts only proven cases.
+ * - none-established: a source says no death has been shown to be caused by the vaccine.
+ * - established-no-rate: deaths are confirmed in `group` (people it isn't recommended for), but no
+ *   rate has been published; `text` says what the source found.
+ */
+export type VaccineDeathRate =
+	| { kind: 'rate'; value: number; sources: string[]; lowerBound?: true }
+	| { kind: 'none-established'; sources: string[] }
+	| { kind: 'established-no-rate'; group: string; text: string; sources: string[] };
+
+/**
+ * Protection from one course of a vaccine, as shares from 0 to 1. `severe` is the published
+ * protection against severe disease in everyone vaccinated (not only in breakthrough cases); it is
+ * left out when no pooled figure exists.
+ */
+export interface VaccineProtection {
+	/** Share of infections prevented. */
+	infection: Sourced;
+	severe?: Sourced;
+}
+
+/**
+ * One vaccine a population can be given against a disease, keyed by product and version (6.13).
+ * Risk rates are per 100,000 doses; deaths use `VaccineDeathRate`, so a missing rate is never 0.
+ */
+export interface Vaccine {
+	product: string;
+	/** Set when a product has more than one version; the picker groups versions under the product. */
+	version?: string;
+	/** Plain name for the picker. */
+	label: string;
+	/** Exactly one entry per disease is the default. */
+	default?: true;
+	/** A completed course. */
+	full: VaccineProtection;
+	/**
+	 * A started but unfinished course, and nothing else (not an old or waned vaccination, which
+	 * waningDays covers). Left out when the vaccine has no multi-dose course; a field is left out
+	 * when no figure exists for it.
+	 */
+	partial?: { infection?: Sourced; severe?: Sourced };
+	/** Serious adverse events (usually needing hospital or emergency care) per 100,000 doses. */
+	seriousPer100kDoses: Sourced<number | null>;
+	/** Deaths caused by the vaccine: a rate per 100,000 doses, or a sourced reason there is none (6.13). */
+	deathsPer100kDoses: VaccineDeathRate;
+	/**
+	 * Half-life of the vaccine's protection against infection: days until that protection has
+	 * fallen to half its starting value (vaccinated dots wane with this, 6.3). null when no
+	 * meaningful waning is established within the time the sim covers, and then a source must say so.
+	 */
+	waningDays: Sourced<number | null>;
+}
 
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
@@ -44,12 +123,21 @@ export interface DiseaseConfig {
 	asymptomaticFraction: Sourced;
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
-	/** Days for immunity to fade one step; null when research says it does not fade. */
+	/**
+	 * Half-life of infection-acquired immunity (recovered dots): days until half of recovered
+	 * people have lost protection, as sources report it (7 Oct). Vaccine protection has its own
+	 * `Vaccine.waningDays`. The engine draws each dot's time from an exponential with mean
+	 * waningDays / ln 2. null when research says it does not fade.
+	 */
 	waningDays: Sourced<number | null>;
 	/** How much a full course of vaccine cuts the chance of catching it (0 to 1). */
 	fullEfficacy: Sourced;
-	/** The same for a started but unfinished course. */
-	partialEfficacy: Sourced;
+	/**
+	 * The same for a started but unfinished course. Left out when the default vaccine has no
+	 * unfinished course (one dose, e.g. flu or Ebola): nobody is then partly vaccinated, and the UI
+	 * hides that control.
+	 */
+	partialEfficacy?: Sourced;
 	/** Share of symptomatic (red) cases who need a hospital bed. */
 	hospitalisedShare: Sourced;
 	/**
@@ -62,6 +150,17 @@ export interface DiseaseConfig {
 	 * is then worked out from it with `perSymptomatic`, so the two can't drift apart.
 	 */
 	infectionFatalityRate?: Sourced;
+	/** Deaths by age band (the engine reads them from step 3; until then it uses `mortality`). */
+	mortalityByAge?: Banded;
+	/** Hospital admissions by age band. */
+	hospitalisedByAge?: Banded;
+	/** Vaccines on offer; `fullEfficacy` and `partialEfficacy` equal the default's infection values. */
+	vaccines?: Vaccine[];
+	/**
+	 * Which vaccine entry (by vaccineKey) "partly vaccinated" means, when it isn't the default's
+	 * course; e.g. Omicron-era people part-way through a primary course got the original vaccine.
+	 */
+	partialCourse?: string;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -87,10 +186,14 @@ export interface DiseaseRuntime {
 	illTicks: number;
 	asymptomaticFraction: number;
 	mortality: number;
-	waningTicks: number;
+	/** Mean ticks until protection drops a level (waningDays / ln 2); 0 when it never fades. */
+	waningMeanTicks: number;
 	/** Share of fully / partly vaccinated people for whom the vaccine works (all or nothing). */
 	fullEfficacy: number;
+	/** 0 when the disease has no unfinished course. */
 	partialEfficacy: number;
+	/** False when the default vaccine has no unfinished course: partly vaccinated dots spawn unprotected. */
+	hasPartialCourse: boolean;
 	hospitalisedShare: number;
 	beta: number;
 	transmissionRadius: number;

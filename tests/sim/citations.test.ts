@@ -1,32 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { BEHAVIOUR } from '../../src/lib/config/behaviour';
 import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
 import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
-import type { DiseaseConfig, DiseaseId, Sourced } from '../../src/lib/sim/types';
-
-/** Every research-backed config object, keyed by the prefix citations use in usedFor. */
-const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR };
-/** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
-
-function isSourced(v: unknown): v is Sourced<number | null> {
-	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;
-}
-
-function walk(): { sourced: { key: string; value: Sourced<number | null> }[]; bare: string[] } {
-	const sourced: { key: string; value: Sourced<number | null> }[] = [];
-	const bare: string[] = [];
-	for (const [prefix, obj] of Object.entries(CONFIG)) {
-		for (const [k, v] of Object.entries(obj)) {
-			const key = `${prefix}.${k}`;
-			if (PLAIN.has(k)) continue;
-			if (isSourced(v)) sourced.push({ key, value: v });
-			else bare.push(key);
-		}
-	}
-	return { sourced, bare };
-}
+import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
+import { isSourced, walk } from './configWalk';
 
 describe('citations', () => {
 	const ids = new Set(CITATIONS.map((c) => c.id));
@@ -38,6 +15,17 @@ describe('citations', () => {
 
 	it('has no bare numbers in research config', () => {
 		expect(bare).toEqual([]);
+	});
+
+	it('checks every number inside the vaccine lists', () => {
+		const keys = sourced.map((n) => n.key);
+		expect(keys).toContain('polio.vaccines.IPV.full.infection');
+		expect(keys).toContain('polio.vaccines.IPV.partial.severe');
+		expect(keys).toContain('polio.vaccines.IPV.waningDays');
+		// A placeholder still counts as a sourced number, so its sources are checked too.
+		expect(keys).toContain('ebola.vaccines.rVSV-ZEBOV.waningDays');
+		expect(isSourced({ value: 1, sources: ['x'], provisional: 'placeholder' })).toBe(true);
+		expect(keys).toContain('covid19.vaccines.covid-original.deathsPer100kDoses');
 	});
 
 	it('gives every research number at least one source', () => {
@@ -70,6 +58,21 @@ describe('citations', () => {
 				.map((u) => `${c.id} -> ${u}`)
 		);
 		expect(missing).toEqual([]);
+	});
+
+	it('lists every number a source backs in its usedFor', () => {
+		const byId = new Map(CITATIONS.map((c) => [c.id, c]));
+		const missing = sourced.flatMap((n) =>
+			n.value.sources
+				.filter((s) => byId.get(s) && !byId.get(s)!.usedFor.includes(n.key))
+				.map((s) => `${s} -> ${n.key}`)
+		);
+		expect(missing).toEqual([]);
+	});
+
+	it('has no two citations for the same paper', () => {
+		const dois = CITATIONS.filter((c) => c.doi).map((c) => c.doi!.toLowerCase());
+		expect(dois.filter((d, i) => dois.indexOf(d) !== i)).toEqual([]);
 	});
 
 	it('only uses sources that passed verification', () => {

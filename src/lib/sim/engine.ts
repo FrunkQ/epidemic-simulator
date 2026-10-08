@@ -193,7 +193,7 @@ export class Simulation {
 				a.protection[slot] =
 					v < reg.vaccinatedFull
 						? Protection.FULL
-						: v < reg.vaccinatedFull + reg.vaccinatedPartial
+						: this.disease.hasPartialCourse && v < reg.vaccinatedFull + reg.vaccinatedPartial
 							? Protection.PARTIAL
 							: Protection.NONE;
 				const p = a.protection[slot];

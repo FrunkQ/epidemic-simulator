@@ -1,0 +1,11 @@
+// Cloudflare deploy: the site is plain static files (adapter-static writes them to build/),
+// so it deploys as static assets with no Worker code. Without this file, `wrangler deploy`
+// tries to reconfigure the project as a server-rendered SvelteKit app and fails.
+{
+	"$schema": "https://unpkg.com/wrangler/config-schema.json",
+	"name": "epidemic-simulator",
+	"compatibility_date": "2026-10-06",
+	"assets": {
+		"directory": "./build"
+	}
+}
