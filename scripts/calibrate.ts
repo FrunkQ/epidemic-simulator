@@ -130,11 +130,12 @@ function calibrate(id: DiseaseId): DiseaseCalibration {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-	const only = process.argv[2] as DiseaseId | undefined;
-	const ids = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => !only || id === only);
+	// Optional disease ids on the command line limit the run to those; others keep their values.
+	const only = process.argv.slice(2) as DiseaseId[];
+	const ids = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => only.length === 0 || only.includes(id));
 	const out: Record<string, DiseaseCalibration> = { ...CALIBRATION };
 	for (const id of ids) out[id] = calibrate(id);
-	const all = Object.keys(out) as DiseaseId[];
+	const all = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => out[id]);
 	const header = all
 		.map(
 			(id) =>

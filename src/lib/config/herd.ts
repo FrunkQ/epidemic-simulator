@@ -17,3 +17,8 @@ export function herdCoverage(disease: DiseaseConfig): HerdCoverage {
 export function derivedKeys(ids: DiseaseId[]): string[] {
 	return ids.map((id) => `${id}.herdImmunityThreshold`);
 }
+
+/** Facts a source backs that appear only as words on the About page (e.g. why Ebola burns out). */
+export function aboutKeys(ids: DiseaseId[]): string[] {
+	return ids.map((id) => `${id}.about`);
+}

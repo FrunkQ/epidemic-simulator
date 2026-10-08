@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { BEHAVIOUR } from '../../src/lib/config/behaviour';
-import { CITATIONS } from '../../src/lib/config/citations';
-import { DISEASES } from '../../src/lib/config/diseases';
-import { derivedKeys } from '../../src/lib/config/herd';
-import type { DiseaseId, Sourced } from '../../src/lib/sim/types';
+import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
+import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
+import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
+import type { DiseaseConfig, DiseaseId, Sourced } from '../../src/lib/sim/types';
 
 /** Every research-backed config object, keyed by the prefix citations use in usedFor. */
 const CONFIG: Record<string, object> = { ...DISEASES, behaviour: BEHAVIOUR };
 /** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'blurb']);
+const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
 
 function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;
@@ -54,7 +54,8 @@ describe('citations', () => {
 	it('only names config keys that exist in usedFor', () => {
 		const keys = new Set([
 			...sourced.map((n) => n.key),
-			...derivedKeys(Object.keys(DISEASES) as DiseaseId[])
+			...derivedKeys(Object.keys(DISEASES) as DiseaseId[]),
+			...aboutKeys(Object.keys(DISEASES) as DiseaseId[])
 		]);
 		const unknown = CITATIONS.flatMap((c) =>
 			c.usedFor.filter((u) => !keys.has(u)).map((u) => `${c.id} -> ${u}`)
@@ -88,18 +89,56 @@ describe('citations', () => {
 		}
 	});
 
-	it('labels COVID-era sources the same way', () => {
-		const covid = CITATIONS.filter(
-			(c) => /covid/i.test(c.context) || c.usedFor.some((u) => u.startsWith('behaviour.lockdown'))
-		);
-		expect(covid.length).toBeGreaterThan(0);
-		for (const c of covid) expect(c.context, c.id).toBe('COVID-19 era');
+	it('labels the behaviour research from COVID-19 the same way', () => {
+		const behaviour = CITATIONS.filter((c) => c.usedFor.some((u) => u.startsWith('behaviour.lockdown')));
+		expect(behaviour.length).toBeGreaterThan(0);
+		for (const c of behaviour) expect(c.context, c.id).toBe('COVID-19 era');
 	});
 
-	it('uses COVID-era research for behaviour only, never for disease numbers', () => {
+	it('uses COVID-era research for behaviour and COVID-19 itself, never for other diseases', () => {
 		const misused = CITATIONS.filter(
-			(c) => c.context === 'COVID-19 era' && c.usedFor.some((u) => !u.startsWith('behaviour.'))
+			(c) =>
+				c.context === 'COVID-19 era' &&
+				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
 		).map((c) => c.id);
 		expect(misused).toEqual([]);
+	});
+
+	it('uses only peer-reviewed papers and named public bodies (Alex: no random websites)', () => {
+		const ranks = new Set<string>(EVIDENCE_RANK);
+		const publishers = new Set<string>(OFFICIAL_PUBLISHERS);
+		for (const c of CITATIONS) {
+			expect(ranks.has(c.evidence), c.id).toBe(true);
+			if (c.evidence === 'official') {
+				expect(publishers.has(c.publisher ?? ''), c.id).toBe(true);
+				expect(c.url, c.id).toBeTruthy();
+			} else {
+				// Papers are cited by DOI, and never by a preprint server's DOI.
+				expect(c.doi, c.id).toBeTruthy();
+				expect(c.doi, c.id).not.toMatch(/^10\.(1101|21203)\//);
+			}
+			if (c.mirrorUrl) expect(c.url ?? c.doi, `${c.id} has a mirror but no original`).toBeTruthy();
+		}
+	});
+	it('explains every number whose best source is only a review or one study', () => {
+		const byId = new Map(CITATIONS.map((c) => [c.id, c]));
+		const rank = (id: string) => EVIDENCE_RANK.indexOf(byId.get(id)!.evidence);
+		const firstWeak = EVIDENCE_RANK.indexOf('review');
+		for (const { key, value } of sourced) {
+			if (Math.min(...value.sources.map(rank)) < firstWeak) continue;
+			const reasons = value.sources.map((id) => byId.get(id)!.noReviewReason ?? '').filter(Boolean);
+			expect(reasons.length, `${key} rests on a review or one study; add a noReviewReason`).toBeGreaterThan(
+				0
+			);
+		}
+	});
+	it('works out death per case from death per infection, never as a typed copy', () => {
+		for (const d of Object.values(DISEASES) as DiseaseConfig[]) {
+			if (!d.infectionFatalityRate) continue;
+			expect(d.mortality.value, d.id).toBeCloseTo(
+				perSymptomatic(d.infectionFatalityRate, d.asymptomaticFraction),
+				12
+			);
+		}
 	});
 });

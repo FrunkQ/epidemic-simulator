@@ -18,7 +18,7 @@ export interface BehaviourConfig {
 export const BEHAVIOUR: BehaviourConfig = {
 	lockdownFatigueMeanDays: {
 		value: 60,
-		sources: ['joshi2021-lockdown-mobility', 'goldstein2021-lockdown-fatigue']
+		sources: ['joshi2021-lockdown-mobility']
 	},
 	lockdownFatigueSdDays: { value: 20, sources: ['petherick2021-pandemic-fatigue'] },
 	hospitalBedsPerThousand: { value: 5.07, sources: ['eurostat-beds-2024'] },

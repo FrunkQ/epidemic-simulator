@@ -21,12 +21,18 @@ export interface Sourced<T = number> {
 	sources: string[];
 }
 
-export type DiseaseId = 'measles' | 'polio' | 'flu';
+/**
+ * Disease ids and picker groups come from config, so adding a disease never touches the engine.
+ * (Type-only imports: no runtime dependency on config.)
+ */
+export type DiseaseId = keyof typeof import('../config/diseases').DISEASES;
+export type DiseaseGroup = import('../config/diseases').DiseaseGroup;
 
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
-	id: DiseaseId;
+	id: string;
 	name: string;
+	group: DiseaseGroup;
 	/** One plain-language line for the disease picker. */
 	blurb: string;
 	r0: Sourced;
@@ -46,6 +52,16 @@ export interface DiseaseConfig {
 	partialEfficacy: Sourced;
 	/** Share of symptomatic (red) cases who need a hospital bed. */
 	hospitalisedShare: Sourced;
+	/**
+	 * Share vaccinated today, for diseases where that is far from normal coverage
+	 * (smallpox: routine vaccination ended decades ago). New populations start here.
+	 */
+	coverageToday?: Sourced;
+	/**
+	 * Deaths per infection, when the source reports that rather than deaths per case. `mortality`
+	 * is then worked out from it with `perSymptomatic`, so the two can't drift apart.
+	 */
+	infectionFatalityRate?: Sourced;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -65,7 +81,7 @@ export interface DiseaseCalibration {
 
 /** Disease settings converted to ticks, used by the engine. */
 export interface DiseaseRuntime {
-	id: DiseaseId;
+	id: string;
 	r0: number;
 	silentTicks: number;
 	illTicks: number;

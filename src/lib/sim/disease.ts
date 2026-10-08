@@ -10,7 +10,8 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 	return {
 		id: config.id,
 		r0: config.r0.value,
-		silentTicks: days(config.silentDays.value),
+		// Zero is allowed here: some diseases are not contagious before symptoms (see infect).
+		silentTicks: Math.max(0, Math.round(config.silentDays.value * TICKS_PER_DAY)),
 		illTicks: days(config.illDays.value),
 		asymptomaticFraction: config.asymptomaticFraction.value,
 		mortality: config.mortality.value,
@@ -43,6 +44,14 @@ export function infect(
 	agents.infectedBy[i] = source;
 	const asymptomatic = rng.next() < disease.asymptomaticFraction;
 	agents.asymptomatic[i] = asymptomatic ? 1 : 0;
+	// No silent phase (e.g. Ebola): symptoms start at once, so the dot is never mobile and contagious.
+	if (!asymptomatic && disease.silentTicks === 0) {
+		agents.state[i] = State.SYMPTOMATIC;
+		agents.stateTicks[i] = illTicksFor(agents, i, disease);
+		agents.vx[i] = 0;
+		agents.vy[i] = 0;
+		return;
+	}
 	// A case that never shows symptoms stays orange for its whole contagious period.
 	agents.stateTicks[i] = asymptomatic
 		? disease.silentTicks + illTicksFor(agents, i, disease)
