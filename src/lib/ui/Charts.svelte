@@ -71,20 +71,45 @@
 			values: p.bands[0].values
 		}))
 	);
+
+	/** Charts' usual widths, and the gap between them. */
+	const WIDE = 240;
+	const NARROW = 170;
+	/** Below this an age chart's band names ("15-64") run into each other. */
+	const MIN_NARROW = 140;
+	const GAP = 14;
+	let rowWidth = $state(0);
+	/**
+	 * Every chart the row can hold this run, including a death-by-age chart per city before anyone
+	 * has died (held hidden), so the charts keep one size all run and the map never moves.
+	 */
+	const wideCount = $derived(perRegion.length + (perRegion.length > 1 ? 1 : 0) + (hospitalsOn ? 1 : 0));
+	const narrowCount = $derived(telemetry.regions.length);
+	/** On a narrow row every chart shrinks alike, the age charts no further than MIN_NARROW. */
+	const fit = $derived.by(() => {
+		const room = rowWidth - GAP * (wideCount + narrowCount - 1);
+		const total = WIDE * wideCount + NARROW * narrowCount;
+		if (rowWidth <= 0 || room >= total) return { wide: WIDE, narrow: NARROW };
+		const narrow = Math.max(MIN_NARROW, Math.floor((NARROW * room) / total));
+		return { wide: Math.floor((room - narrow * narrowCount) / Math.max(1, wideCount)), narrow };
+	});
+	const wide = $derived(fit.wide);
+	const narrow = $derived(fit.narrow);
 </script>
 
 <div class="charts">
-	<div class="row">
+	<div class="row" bind:clientWidth={rowWidth} style:gap="10px {GAP}px">
 		{#each perRegion as p (p.id)}
 			<StackedAreaChart
 				title="{p.name}: who has caught it so far"
 				days={p.days}
 				bands={p.bands}
 				max={p.max}
+				width={wide}
 			/>
 		{/each}
 		{#if perRegion.length > 1}
-			<LineChart title="Ill right now, in each city" days={perRegion[0].days} lines={illLines} />
+			<LineChart title="Ill right now, in each city" days={perRegion[0].days} lines={illLines} width={wide} />
 		{/if}
 		{#if hospitalsOn && perRegion.length > 0}
 			<LineChart
@@ -92,6 +117,8 @@
 				days={perRegion[0].days}
 				lines={pressureLines}
 				yLabel="% of beds"
+				unit="%"
+				width={wide}
 				references={[
 					{
 						label: `${threshold}%: ${mortalityBasis === 'era' ? 'under pressure' : 'strain starts'}`,
@@ -102,10 +129,12 @@
 				]}
 			/>
 		{/if}
+		<!-- Held in place, hidden, until someone dies, so the row's height never changes mid-run. -->
 		{#each telemetry.regions as r (r.id)}
-			{#if r.deaths > 0}
-				<AgeBarsChart title="{r.name}: who died, by age" values={r.deathsByAge} asShares />
-			{/if}
+			{@const shown = r.deaths > 0}
+			<div class="slot" class:waiting={!shown} aria-hidden={!shown}>
+				<AgeBarsChart title="{r.name}: who died, by age" values={r.deathsByAge} asShares width={narrow} />
+			</div>
 		{/each}
 	</div>
 </div>
@@ -117,8 +146,10 @@
 	}
 	.row {
 		display: flex;
-		gap: 10px 20px;
 		overflow-x: auto;
 		padding-top: 2px;
+	}
+	.waiting {
+		visibility: hidden;
 	}
 </style>

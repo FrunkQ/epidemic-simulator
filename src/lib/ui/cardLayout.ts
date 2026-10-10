@@ -276,3 +276,30 @@ export function frameTries(width: number, height: number, spanX: number, spanY: 
 	const tries = usual.scale > 0 ? [usual, ...others] : others;
 	return tries.length ? tries : [usual];
 }
+
+/** Gap kept between an open card's bottom and a city disc below it. */
+export const OPEN_CLEARANCE = 8;
+
+/**
+ * How tall an open card at `rect` (its top-left and width) may grow before it scrolls inside:
+ * down to the stage bottom, or to just above the first city disc below it that its width
+ * overlaps, whichever comes first, and never shorter than `closedH`, the height it had closed.
+ */
+export function openMaxHeight(
+	rect: { x: number; y: number; w: number },
+	closedH: number,
+	discs: Disc[],
+	stageHeight: number
+): number {
+	let bottom = stageHeight - EDGE;
+	for (const d of discs) {
+		// The disc's highest point within the card's width.
+		const nx = Math.min(Math.max(d.x, rect.x), rect.x + rect.w);
+		const dx = nx - d.x;
+		if (Math.abs(dx) >= d.r) continue;
+		const top = d.y - Math.sqrt(d.r * d.r - dx * dx);
+		if (top < rect.y + closedH) continue;
+		bottom = Math.min(bottom, top - OPEN_CLEARANCE);
+	}
+	return Math.max(closedH, bottom - rect.y);
+}

@@ -5,6 +5,7 @@ import {
 	frameTries,
 	layoutCards,
 	offsetsOf,
+	openMaxHeight,
 	pickFrame,
 	placeInOrder,
 	type Disc,
@@ -152,5 +153,69 @@ describe('framing', () => {
 		// The first with nothing covered wins even when a later one has fewer misplaced cards.
 		expect(pickFrame([0, 1], (t) => [layout(0, 2), layout(0, 1)][t])).toBe(0);
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(10, 2), layout(10, 1)][t])).toBe(2);
+	});
+});
+
+describe('open cards', () => {
+	// Measured in the browser with measles (10 Oct): the stage, the city discs and the closed cards
+	// at each of the four screen sizes, and the tallest panel's full height (Health policy).
+	const TALLEST_PANEL = 627;
+	const screens = {
+		'1400x900': {
+			stage: { width: 1400, height: 576 },
+			discs: [
+				{ x: 613.4, y: 201.4, r: 51.4 },
+				{ x: 786.6, y: 300.4, r: 51.4 },
+				{ x: 675.3, y: 374.6, r: 51.4 }
+			]
+		},
+		'1366x768': {
+			stage: { width: 1366, height: 444 },
+			discs: [
+				{ x: 637.8, y: 176.8, r: 26.8 },
+				{ x: 728.2, y: 228.5, r: 26.8 },
+				{ x: 670.1, y: 267.2, r: 26.8 }
+			]
+		},
+		'1280x720': {
+			stage: { width: 1280, height: 380 },
+			discs: [
+				{ x: 614.9, y: 164.9, r: 14.9 },
+				{ x: 665.1, y: 193.6, r: 14.9 },
+				{ x: 632.8, y: 215.1, r: 14.9 }
+			]
+		},
+		'1920x1080': {
+			stage: { width: 1920, height: 813 },
+			discs: [
+				{ x: 799.1, y: 245.6, r: 95.6 },
+				{ x: 1120.9, y: 429.5, r: 95.6 },
+				{ x: 914, y: 567.4, r: 95.6 }
+			]
+		}
+	};
+	const closed = { w: 210, h: 251 };
+
+	for (const [name, { stage, discs: ds }] of Object.entries(screens)) {
+		it(`opening any card's tallest panel at ${name} covers no city`, () => {
+			const sizes = ds.map(() => closed);
+			const { positions } = layoutCards(ds, sizes, stage);
+			positions.forEach((p) => {
+				const cap = openMaxHeight({ x: p.x, y: p.y, w: closed.w }, closed.h, ds, stage.height);
+				expect(cap).toBeGreaterThanOrEqual(closed.h);
+				const open = { x: p.x, y: p.y, w: closed.w, h: Math.min(TALLEST_PANEL, cap) };
+				for (const d of ds) expect(discCover(open, d)).toBe(0);
+				expect(open.y + open.h).toBeLessThanOrEqual(stage.height);
+			});
+		});
+	}
+
+	it('stops above the first city below the card, by the clearance', () => {
+		const d = { x: 100, y: 500, r: 50 };
+		expect(openMaxHeight({ x: 50, y: 100, w: 210 }, 200, [d], 900)).toBe(500 - 50 - 8 - 100);
+		// A city off to the side of the card's width doesn't limit it.
+		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900)).toBe(900 - 8 - 100);
+		// Never shorter than the closed card, even when it already ends inside the clearance.
+		expect(openMaxHeight({ x: 50, y: 300, w: 210 }, 145, [d], 900)).toBe(145);
 	});
 });

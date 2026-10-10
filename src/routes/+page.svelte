@@ -9,7 +9,14 @@
 	import { DEFAULT_PEOPLE_PER_DOT } from '../lib/sim/constants';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
-	import { frameTries, layoutCards, offsetsOf, pickFrame, type Offset } from '../lib/ui/cardLayout';
+	import {
+		frameTries,
+		layoutCards,
+		offsetsOf,
+		openMaxHeight,
+		pickFrame,
+		type Offset
+	} from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -140,8 +147,8 @@
 	/**
 	 * Each card's tallest size while closed, for this disease and map. Layout and framing use only
 	 * these, so opening a panel moves nothing (the open card grows on top) and a card that grows
-	 * during a run doesn't shuffle the others. Measured only while the card is closed: an open
-	 * card is wider than CARD_W, so a reading at that width is a closed one.
+	 * during a run doesn't shuffle the others. Measured only while the card is closed (an open
+	 * card is the same 210px wide, but taller).
 	 */
 	let closedSizes: ({ w: number; h: number } | undefined)[] = $state([]);
 	const GROW_SLACK = 3;
@@ -149,7 +156,7 @@
 		scenario.regions.forEach((_, i) => {
 			const w = cardWidths[i];
 			const h = cardHeights[i];
-			if (cardOpen[i] || !w || !h || w > CARD_W) return;
+			if (cardOpen[i] || !w || !h) return;
 			const old = untrack(() => closedSizes[i]);
 			// A pixel or two is font rounding (the warning sign's glyph), not a new line.
 			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
@@ -173,7 +180,7 @@
 			const el = cardElements[i];
 			// An open card can't be measured closed: keep its last closed size until it closes.
 			if (cardOpen[i]) return old[i];
-			if (!el || el.offsetWidth > CARD_W) return undefined;
+			if (!el) return undefined;
 			return { w: el.offsetWidth, h: el.offsetHeight };
 		});
 	}
@@ -211,7 +218,9 @@
 		return placed.map((p, i) => {
 			if (!cardOpen[i]) return { ...p, maxHeight: undefined };
 			const w = cardWidths[i] || sizes[i].w;
-			return { x: Math.max(8, Math.min(p.x, size.width - w - 8)), y: p.y, maxHeight: size.height - p.y - 8 };
+			const x = Math.max(8, Math.min(p.x, size.width - w - 8));
+			// Stop above any city below it, so the city stays in view while its settings change.
+			return { x, y: p.y, maxHeight: openMaxHeight({ x, y: p.y, w }, sizes[i].h, discs, size.height) };
 		});
 	});
 </script>

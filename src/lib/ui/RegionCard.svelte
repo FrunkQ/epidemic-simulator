@@ -273,7 +273,6 @@
 		width: 210px;
 	}
 	.card.open {
-		width: 250px;
 		z-index: 2;
 		overflow-y: auto;
 	}

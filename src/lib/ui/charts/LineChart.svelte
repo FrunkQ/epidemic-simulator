@@ -11,6 +11,8 @@
 		/** Top of the y axis; defaults to the highest value or reference. Rounded up to a nice number. */
 		max?: number;
 		yLabel?: string;
+		/** '%' for a chart in percent: ticks and values then read "5,000%", never like a count. */
+		unit?: '%';
 		width?: number;
 		height?: number;
 	}
@@ -21,6 +23,7 @@
 		references = [],
 		max,
 		yLabel = 'People',
+		unit,
 		width = 240,
 		height = 110
 	}: Props = $props();
@@ -30,6 +33,7 @@
 	const top = $derived(
 		niceMax(max ?? Math.max(1, ...lines.flatMap((l) => l.values), ...references.map((r) => r.value)))
 	);
+	const value = (v: number) => (unit === '%' ? `${Math.round(v).toLocaleString()}%` : short(v));
 	const first = $derived(days[0] ?? 0);
 	const span = $derived(Math.max(30, (days[days.length - 1] ?? 0) - first));
 	const xs = (d: number) => MARGIN.left + ((d - first) / span) * plotW;
@@ -64,7 +68,7 @@
 			y2={MARGIN.top + plotH}
 		/>
 		<line class="grid" x1={MARGIN.left} y1={MARGIN.top} x2={MARGIN.left + plotW} y2={MARGIN.top} />
-		<text class="tick" x={MARGIN.left - 4} y={MARGIN.top + 4} text-anchor="end">{short(top)}</text>
+		<text class="tick" x={MARGIN.left - 4} y={MARGIN.top + 4} text-anchor="end">{value(top)}</text>
 		<text class="tick" x={MARGIN.left - 4} y={MARGIN.top + plotH} text-anchor="end">0</text>
 		<text
 			x={8}
@@ -105,7 +109,7 @@
 		<div class="tip" role="status">
 			<b>Day {days[hover]}</b>
 			{#each lines as l (l.key)}
-				<span>{l.label}: {Math.round(l.values[hover] ?? 0).toLocaleString()}</span>
+				<span>{l.label}: {Math.round(l.values[hover] ?? 0).toLocaleString()}{unit ?? ''}</span>
 			{/each}
 		</div>
 	{/if}
