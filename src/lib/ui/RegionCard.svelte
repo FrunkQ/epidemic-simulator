@@ -311,6 +311,15 @@
 		align-items: center;
 		gap: 2px 8px;
 	}
+	/* An open card scrolls inside: its name and toggles stay in view so it can be closed. */
+	.card.open header {
+		position: sticky;
+		top: -8px;
+		z-index: 1;
+		margin-top: -8px;
+		padding: 8px 0 4px;
+		background: rgb(17, 33, 52);
+	}
 	h2 {
 		font-size: 13px;
 		margin: 0 0 4px;
