@@ -21,8 +21,12 @@ describe('card layout', () => {
 		rects.forEach((r, i) => {
 			expect(r.x).toBeGreaterThanOrEqual(0);
 			expect(r.y + r.h).toBeLessThanOrEqual(stage.height);
-			for (const d of discs)
-				expect(overlaps(r, { x: d.x - d.r, y: d.y - d.r, w: 2 * d.r, h: 2 * d.r })).toBe(false);
+			for (const d of discs) {
+				// The point of the card nearest the city's centre is outside its disc.
+				const nx = Math.min(Math.max(d.x, r.x), r.x + r.w);
+				const ny = Math.min(Math.max(d.y, r.y), r.y + r.h);
+				expect(Math.hypot(nx - d.x, ny - d.y)).toBeGreaterThanOrEqual(d.r);
+			}
 			rects.slice(0, i).forEach((o) => expect(overlaps(r, o)).toBe(false));
 		});
 	});

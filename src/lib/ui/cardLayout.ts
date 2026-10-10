@@ -38,9 +38,15 @@ function overlap(a: Rect, b: Rect): number {
 	return w > 0 && h > 0 ? w * h : 0;
 }
 
-/** The square around the disc: a card clear of it is clear of every dot. */
-function discBox(d: Disc): Rect {
-	return { x: d.x - d.r, y: d.y - d.r, w: 2 * d.r, h: 2 * d.r };
+/**
+ * How much of a disc a card covers: the overlap with the disc's square when the card touches the
+ * circle itself, so a card past the square's corner, clear of every dot, covers nothing.
+ */
+function discCover(r: Rect, d: Disc): number {
+	const nx = Math.min(Math.max(d.x, r.x), r.x + r.w);
+	const ny = Math.min(Math.max(d.y, r.y), r.y + r.h);
+	if (Math.hypot(nx - d.x, ny - d.y) >= d.r) return 0;
+	return overlap(r, { x: d.x - d.r, y: d.y - d.r, w: 2 * d.r, h: 2 * d.r });
 }
 
 /**
@@ -56,13 +62,59 @@ export function layoutCards(
 	discs: Disc[],
 	sizes: { w: number; h: number }[],
 	stage: { width: number; height: number }
-): { positions: { x: number; y: number }[]; cover: number; misplaced: number } {
+): Layout {
+	// Cards placed first get first pick, so try every order (a handful of cities) and keep the
+	// best: least covered, then fewest misplaced, then cards closest to their cities.
+	let best: Layout | undefined;
+	for (const order of orders(discs.length)) {
+		const l = placeInOrder(order, discs, sizes, stage);
+		if (
+			!best ||
+			l.cover < best.cover - 0.25 ||
+			(Math.abs(l.cover - best.cover) <= 0.25 &&
+				(l.misplaced < best.misplaced || (l.misplaced === best.misplaced && l.spread < best.spread - 1)))
+		)
+			best = l;
+	}
+	return best!;
+}
+
+export interface Layout {
+	positions: { x: number; y: number }[];
+	cover: number;
+	misplaced: number;
+	/** Total distance from each card's centre to its city's centre. */
+	spread: number;
+}
+
+/** Every order of 0..n-1 (n is the number of cities, so small); one order beyond 5 cities. */
+function orders(n: number): number[][] {
+	const ids = Array.from({ length: n }, (_, k) => k);
+	if (n > 5) return [ids];
+	const out: number[][] = [];
+	const go = (done: number[], left: number[]) => {
+		if (!left.length) out.push(done);
+		left.forEach((k, j) => go([...done, k], [...left.slice(0, j), ...left.slice(j + 1)]));
+	};
+	go([], ids);
+	return out;
+}
+
+function placeInOrder(
+	order: number[],
+	discs: Disc[],
+	sizes: { w: number; h: number }[],
+	stage: { width: number; height: number }
+): Layout {
 	const cx = discs.reduce((a, d) => a + d.x, 0) / discs.length;
 	const cy = discs.reduce((a, d) => a + d.y, 0) / discs.length;
 	const placed: Rect[] = [];
 	let cover = 0;
 	let misplaced = 0;
-	const positions = discs.map((d, i) => {
+	let spread = 0;
+	const positions: { x: number; y: number }[] = [];
+	for (const i of order) {
+		const d = discs[i];
 		const { w, h } = sizes[i];
 		let dx = d.x - cx;
 		let dy = d.y - cy;
@@ -91,7 +143,7 @@ export function layoutCards(
 					h
 				};
 				const covers =
-					discs.reduce((c, o) => c + overlap(rect, discBox(o)), 0) +
+					discs.reduce((c, o) => c + discCover(rect, o), 0) +
 					placed.reduce((c, p) => c + overlap(rect, p), 0);
 				// Among spots covering the same, prefer one nearer its own city than any other, so it
 				// doesn't read as another city's card. Covered areas are whole-pixel scale, so the
@@ -109,7 +161,8 @@ export function layoutCards(
 		placed.push(best!);
 		cover += bestCovers;
 		if (bestCost !== bestCovers) misplaced++;
-		return { x: best!.x, y: best!.y };
-	});
-	return { positions, cover, misplaced };
+		spread += Math.hypot(best!.x + w / 2 - d.x, best!.y + h / 2 - d.y);
+		positions[i] = { x: best!.x, y: best!.y };
+	}
+	return { positions, cover, misplaced, spread };
 }
