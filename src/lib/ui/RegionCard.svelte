@@ -38,7 +38,7 @@
 		x,
 		y,
 		docked = false,
-		height = $bindable(0),
+		height = $bindable(),
 		onvaccination,
 		onvaccine,
 		onpolicy,
