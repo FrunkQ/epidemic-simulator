@@ -269,7 +269,7 @@ export function transmit(
 	silentSpread: boolean,
 	rules: IllnessRules
 ): void {
-	const { x, y, state, infectedTick, region, vaccineWorks, dead } = agents;
+	const { x, y, state, stateTicks, asymptomatic, infectedTick, region, vaccineWorks, dead } = agents;
 	const { cellStart, cellItems } = grid;
 	const o = agents.offset(slot);
 	const n = agents.activeCount;
@@ -281,8 +281,13 @@ export function transmit(
 		if (s !== State.SYMPTOMATIC && (s !== State.SILENT || !silentSpread)) continue;
 		const reg = region[i];
 		if (infectedTick[o + i] >= tick || reg < 0 || dead[i] === 1) continue;
-		// Still incubating: infected, but not yet contagious (6.1).
-		if (s === State.SILENT && tick - infectedTick[o + i] < disease.latentTicks) continue;
+		// Still incubating: infected, but not yet contagious (6.1). Timed on the clock that brings on
+		// symptoms (ticks of silent phase gone by), so index cases follow the same rule as any other.
+		if (s === State.SILENT && disease.latentTicks > 0) {
+			const silentStart =
+				asymptomatic[o + i] === 1 ? disease.silentTicks + disease.illTicks : disease.silentTicks;
+			if (silentStart - stateTicks[o + i] < disease.latentTicks) continue;
+		}
 		const xi = x[i];
 		const yi = y[i];
 		const cols = grid.cols[reg];

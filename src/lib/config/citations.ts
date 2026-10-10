@@ -73,6 +73,9 @@ import {
 	PLAGUE_MORTALITY,
 	PLAGUE_MORTALITY_BANDS,
 	PLAGUE_R0,
+	PLAGUE_BAND_CUTS,
+	PLAGUE_INCUBATION_RANGE,
+	plagueR0Extremes,
 	per100kFromPerMillion
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
@@ -4028,11 +4031,17 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No meta-analysis or systematic review estimates R0 or contagious periods for historical plague; this is the broadest published model comparison, fitted to nine outbreaks on the same footing.',
 		doi: '10.1073/pnas.1715640115',
-		usedFor: ['plague.r0', 'plague.latentDays', 'plague.illDays', 'plague.about'],
+		usedFor: [
+			'plague.r0',
+			'plague.latentDays',
+			'plague.illDays',
+			'plague.asymptomaticFraction',
+			'plague.about'
+		],
 		quote: 'the estimated R0 was 1.48–1.91 for all pre-Industrial outbreaks.',
 		location:
 			'Results, "Basic Reproduction Number R0"; the nine values are Table 3, EP rows. Contagious periods: Methods, "Human Ectoparasite Model". Infection while ill: Discussion.',
-		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (Eyam 1.48, Barcelona 1.91). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models.`,
+		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (${plagueR0Extremes().join(', ')}). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models.`,
 		context: 'Nine pre-industrial European plague outbreaks, 1348-1813 (Second Pandemic).',
 		verified: {
 			by: 'independent verification pass',
@@ -4059,10 +4068,10 @@ export const CITATIONS: Citation[] = [
 		why: 'The About page says the route is still argued over. This letter argues that a mix of rat-flea and lung-to-lung spread is not ruled out by Dean 2018, and that its R0 estimates look too precise.',
 		context: 'Comment on Dean 2018 (nine European outbreaks, 1348-1813).',
 		verified: {
-			by: 'build thread, full text via Consensus',
+			by: 'independent verification pass',
 			on: '2026-10-10',
 			ok: true,
-			note: 'Full text read: authors, pages E7892-E7893 (from the reply’s reference list) and the quoted sentence confirmed; published online 3 August 2018.'
+			note: 'Independent pass, 10 Oct 2026: authors’ reprint of the published letter; authors, 115(34):E7892-E7893, the quote and its location confirmed.'
 		}
 	},
 	{
@@ -4070,7 +4079,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Dean KR, Krauer F, Walløe L, Lingjærde OC, Bramanti B, Stenseth NC, Schmid BV',
 		title:
 			'Reply to Park et al.: Human ectoparasite transmission of plague during the Second Pandemic is still plausible',
-		journal: 'Proceedings of the National Academy of Sciences (reply)',
+		journal: 'Proceedings of the National Academy of Sciences 115(34):E7894-E7895 (reply)',
 		year: 2018,
 		evidence: 'study',
 		noReviewReason: 'The authors’ published reply to Park 2018; cited only for the other side of the debate.',
@@ -4082,10 +4091,10 @@ export const CITATIONS: Citation[] = [
 		why: 'The other side of the debate on the About page. The reply also concedes the point that matters for the tool: "We would like to emphasize that we do not provide evidence against rat-borne plague transmission".',
 		context: 'Reply on Dean 2018 (nine European outbreaks, 1348-1813).',
 		verified: {
-			by: 'build thread, full text via Consensus',
+			by: 'independent verification pass',
 			on: '2026-10-10',
 			ok: true,
-			note: 'Full text read: author initials (K.R.D., F.K., L.W., O.C.L., B.B., N.C.S., B.V.S.) and both quoted sentences confirmed; published online 3 August 2018.'
+			note: 'Independent pass, 10 Oct 2026: PMC copy (PMC6112737); both quoted sentences and their locations confirmed; 115(34):E7894-E7895.'
 		}
 	},
 	{
@@ -4097,7 +4106,7 @@ export const CITATIONS: Citation[] = [
 		year: 2024,
 		evidence: 'study',
 		noReviewReason:
-			'No systematic review or meta-analysis of plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. This is the only case-by-case dataset of bubonic plague with ages.',
+			'No systematic review or meta-analysis of bubonic plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. The closest, Fleck-Derderian 2020, pools untreated plague in pregnancy only (136 cases, all forms), so it can’t stand for a whole population. This is the only case-by-case dataset of bubonic plague with ages.',
 		doi: '10.1098/rspb.2024.0724',
 		usedFor: [
 			'plague.mortality',
@@ -4110,7 +4119,7 @@ export const CITATIONS: Citation[] = [
 			'From this reduced dataset of 1100 cases of bubonic plague, with known sex, we further selected only those patients whose individual age was also known (967 individuals). Doing so, the total CFR ratio does not change (50.4% in males and 54.7% in females; table 2)',
 		location:
 			'Table 2 (cases and deaths by sex and ten-year age class) and the Results text; Table 1 for the European Second Pandemic subset',
-		why: `mortality=${fmt(PLAGUE_MORTALITY, 3)} is ${PLAGUE_ALL.deaths} deaths in ${PLAGUE_ALL.cases} cases, Table 2's total row. The age bands come from the same counts (${PLAGUE_MORTALITY_BANDS.map((v) => fmt(v, 3)).join(' / ')}), so the bands and the overall figure can't disagree: 0-14 takes the 0-9 and 10-19 classes, and 65+ takes the 50+ class, because the source has no 65+ cut. "Data not disaggregated by sex showcase slight differences in lethality among age classes, but for the older adults (50+), who have the highest CFR (61.4%), and for the 10-19 age class, who showed the lowest value of CFR (45.2%)." These are hospital records from before antibiotics, and some Australian patients had the serum of their day, so it is a before-antibiotics rate, not a nobody-treated one, and if anything slightly low for 1347; the European Second Pandemic subset, closest to the Black Death, is ${fmt(PLAGUE_EUROPE_SECOND_PANDEMIC_CFR * 100, 1)}% (Table 1). The hospital share is set equal to deaths, a lower bound: everyone who died needed care.`,
+		why: `mortality=${fmt(PLAGUE_MORTALITY, 3)} is ${PLAGUE_ALL.deaths} deaths in ${PLAGUE_ALL.cases} cases, Table 2's total row. The age bands come from the same counts (${PLAGUE_MORTALITY_BANDS.map((v) => fmt(v, 3)).join(' / ')}), so the bands and the overall figure can't disagree: 0-14 takes the classes below ${PLAGUE_BAND_CUTS[0]}, 15-64 the classes from ${PLAGUE_BAND_CUTS[0]} to ${PLAGUE_BAND_CUTS[1] - 1}, and 65+ the ${PLAGUE_BAND_CUTS[1]}+ class, because the source has no 65+ cut. "Data not disaggregated by sex showcase slight differences in lethality among age classes, but for the older adults (50+), who have the highest CFR (61.4%), and for the 10-19 age class, who showed the lowest value of CFR (45.2%)." These are hospital records from before antibiotics, and some Australian patients had the serum of their day, so it is a before-antibiotics rate, not a nobody-treated one, and if anything slightly low for 1347; the European Second Pandemic subset, closest to the Black Death, is ${fmt(PLAGUE_EUROPE_SECOND_PANDEMIC_CFR * 100, 1)}% (Table 1). The hospital share is set equal to deaths, a lower bound: everyone who died needed care.`,
 		context:
 			'Hospital records of bubonic plague from 17 countries, 1720-1945, Second and Third Pandemics merged.',
 		verified: {
@@ -4138,14 +4147,14 @@ export const CITATIONS: Citation[] = [
 		],
 		quote:
 			'People infected with Y. pestis often develop symptoms after an incubation period of one to seven days.',
-		location: 'Key facts; Overview; Vaccination',
-		why: `silentDays=latentDays=${PLAGUE_INCUBATION_DAYS} is the middle of the one-to-seven-day incubation period; the About page gives the whole range. The death rate sits inside WHO's figure for bubonic plague: "Plague can be a very severe disease in people, with a case-fatality ratio of 30% to 60% for the bubonic type, and it is always fatal for the pneumonic and septicaemic kinds when left untreated." fullEfficacy is 0 and nobody is vaccinated: "WHO does not recommend vaccination, except for high-risk groups (such as laboratory personnel who are constantly exposed to the risk of contamination, and health-care workers)." The page's "Human-to-human transmission of bubonic plague is rare." is why the About page says the dots stand for people living closely enough to share lice and fleas, not for coughs.`,
+		location: 'Key facts; Types of plague; Vaccination',
+		why: `silentDays=latentDays=${PLAGUE_INCUBATION_DAYS} is the middle of the ${PLAGUE_INCUBATION_RANGE[0]}-to-${PLAGUE_INCUBATION_RANGE[1]}-day incubation period; the About page gives the whole range. The death rate sits inside WHO's figure for bubonic plague: "Plague can be a very severe disease in people, with a case-fatality ratio of 30% to 60% for the bubonic type, and it is always fatal for the pneumonic and septicaemic kinds when left untreated." fullEfficacy is 0 and nobody is vaccinated: "WHO does not recommend vaccination, except for high-risk groups (such as laboratory personnel who are constantly exposed to the risk of contamination, and health-care workers)." The page's "Human-to-human transmission of bubonic plague is rare." is why the About page says the dots stand for people living closely enough to share lice and fleas, not for coughs.`,
 		context: "WHO's official fact sheet, dated 29 September 2026.",
 		verified: {
-			by: 'build thread, re-pulled the fact sheet',
+			by: 'independent verification pass',
 			on: '2026-10-10',
 			ok: true,
-			note: 'Fetched 10 Oct 2026 (dated 29 September 2026). The incubation and human-to-human sentences were confirmed whole; the bubonic 30%-60% sentence and the vaccination sentence were re-pulled in full in pieces, closing the 8 Oct pass’s note that they were held only as fragments.'
+			note: 'Independent pass, 10 Oct 2026: fact sheet dated 29 September 2026; all four sentences verbatim, in Key facts, Types of plague and Vaccination.'
 		}
 	},
 	{
@@ -4182,11 +4191,11 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No study or review gives the share of plague infections without symptoms; this one shows that they happen.',
 		doi: '10.1046/j.1365-3156.2000.00521.x',
-		usedFor: ['plague.about'],
+		usedFor: ['plague.about', 'plague.asymptomaticFraction'],
 		quote:
 			'We also confirm that Yersinia pestis infections may occur without marked clinical manifestations and patients may recover without treatment, in accordance with old observations of pestis minor.',
 		location: 'Abstract; Discussion',
-		why: 'Why the share of infections with no symptoms is marked "not yet sourced" rather than set to a guess: such infections are real, but no study gives a fraction, and a modern treated population cannot supply one for an untreated epidemic.',
+		why: 'asymptomaticFraction=0, as for Ebola and Marburg. Symptom-free infection happens, but people are not thought to pass plague on until late in their illness (Kool 2005; Dean 2018 finds most spread came at the stage of high infectivity). In the engine a symptom-free dot spreads once its latent days end, so any share above 0 would claim spread the sources argue against. No study gives the share either, and a modern population where plague is treated could not supply one for an epidemic before antibiotics.',
 		context: 'Madagascar highlands, a modern population where plague is treated.',
 		verified: {
 			by: 'independent verification pass',
@@ -4482,6 +4491,194 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-08',
 			ok: true,
 			note: 'Two passes: the quote confirmed verbatim in the full text via Consensus; DOI matches the title. Not a preprint.'
+		}
+	},
+	{
+		id: 'jefferson-1998-cochrane-plague-vaccines',
+		authors: 'Jefferson T, Demicheli V, Pratt M',
+		title: 'Vaccines for preventing plague',
+		journal: 'Cochrane Database of Systematic Reviews 1998, Issue 1, CD000976',
+		year: 1998,
+		evidence: 'systematic-review',
+		doi: '10.1002/14651858.CD000976',
+		mirrorUrl: 'https://www.cochrane.org/evidence/CD000976_vaccines-preventing-plague',
+		usedFor: ['plague.fullEfficacy'],
+		quote:
+			'No trials were included. … There is not enough evidence to evaluate the effectiveness of any plague vaccine',
+		location: "Main results; opening of the Authors' conclusions",
+		why: 'fullEfficacy=0 and no vaccine: the Cochrane review found no trial of any plague vaccine that met its criteria.',
+		context:
+			'Searches of MEDLINE and EMBASE to February 2011 (updated 2006, 2009 and 2011, so later papers cite it as 2011).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Read on Cochrane’s free abstract page; the full review could not be opened, so only the abstract and conclusions were checked.'
+		}
+	},
+	{
+		id: 'hartley-2023-plague-vaccines-review',
+		authors: 'Hartley L, Harold S, Hawe E',
+		title: 'The efficacy, safety, and immunogenicity of plague vaccines: A systematic literature review',
+		journal: 'Current Research in Immunology 4:100072',
+		year: 2023,
+		evidence: 'systematic-review',
+		doi: '10.1016/j.crimmu.2023.100072',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10637890/',
+		usedFor: ['plague.fullEfficacy'],
+		quote:
+			'Only 2 RCTs, both on subunit vaccines, were included out of the 75 screened articles. … we are unable to quantify the efficacy of vaccines to prevent plague, as well as their long-term safety and immunogenicity.',
+		location: 'Abstract; Results (efficacy) and Discussion',
+		why: 'The two trials it found were early-phase studies of antibody response with no efficacy outcome, so no trial has measured protection. It notes older observational work suggesting killed vaccines may do better than live ones, so the About line claims no trial evidence, not no evidence at all.',
+		context: 'Trials Chu 2016 (China, 240 people) and Frey 2017 (US, 60 people), both F1/V subunit vaccines.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket (PMC10637890), is_retracted false; all quoted sentences verbatim.'
+		}
+	},
+	{
+		id: 'sagiyev-2019-ev-vaccine-kazakhstan',
+		authors: 'Sagiyev Z, Berdibekov A, Bolger T, Merekenova A, Ashirova S, Nurgozhin Z, Dalibayev Z',
+		title: 'Human response to live plague vaccine EV, Almaty region, Kazakhstan, 2014–2015',
+		journal: 'PLoS ONE 14(6):e0218366',
+		year: 2019,
+		evidence: 'study',
+		noReviewReason:
+			'Cited only to show the live vaccine is in routine use and measured by antibodies; the claim that no trial measured protection rests on Jefferson 1998 and Hartley 2023.',
+		doi: '10.1371/journal.pone.0218366',
+		usedFor: ['plague.fullEfficacy'],
+		quote:
+			'In Kazakhstan, a live plague vaccine EV 76 NIIEG has been used for plague prophylaxis since the mid-1930s. … Yet, to this day, the effectiveness period of the vaccine is unknown.',
+		location: 'Abstract, Background',
+		why: 'The live vaccine given yearly in Kazakhstan since the 1930s; this study measured antibody levels, not plague cases or deaths.',
+		context:
+			'Almaty region, Kazakhstan, 2014-2015; the same practice is used in other former Soviet countries.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'PLOS article page; all quoted sentences verbatim. "Not licensed in Europe and the USA" in the Introduction is about the live vaccine, not the killed one.'
+		}
+	},
+	{
+		id: 'anisimov-2025-live-plague-vaccine',
+		authors: 'Anisimov AP, Vagaiskaya AS, Trunyakova AS, Dentovskaya SV',
+		title: 'Live Plague Vaccine Development: Past, Present, and Future',
+		journal: 'Vaccines 13(1):66',
+		year: 2025,
+		evidence: 'review',
+		noReviewReason:
+			'A narrative review cited for current use of the live vaccine in Russia and Kazakhstan; the absence of trial evidence rests on Jefferson 1998 and Hartley 2023.',
+		doi: '10.3390/vaccines13010066',
+		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11768842/',
+		usedFor: ['plague.fullEfficacy'],
+		quote:
+			'Vaccination against plague remains a challenging issue not only due to the lack of globally accepted licensed vaccines but also due to the absence of generally accepted methods for comparing their safety and efficacy.',
+		location: 'Conclusions; Section 5 for use in Russia and Kazakhstan',
+		why: 'The live EV vaccine is still given to tens of thousands a year in Russia and Kazakhstan, with no accepted way of measuring how well it works. It reports old, uncontrolled field observations that disagree with each other (a large fall in cases in Inner Mongolia in 1945, little effect on cases in South Vietnam), so the About page says no trial has measured its protection, not that nobody ever looked.',
+		context:
+			'Review from the State Research Center for Applied Microbiology and Biotechnology, Obolensk, Russia.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'PMC open-access copy (PMC11768842), is_retracted false; the publisher page could not be fetched.'
+		}
+	},
+	{
+		id: 'kool-2005-pneumonic-transmission',
+		authors: 'Kool JL',
+		title: 'Risk of Person-to-Person Transmission of Pneumonic Plague',
+		journal: 'Clinical Infectious Diseases 40(8):1166-1172',
+		year: 2005,
+		evidence: 'study',
+		noReviewReason:
+			'No systematic review of when people with plague pass it on was found; this invited analysis of outbreak records is the standard reference.',
+		doi: '10.1086/428617',
+		usedFor: ['plague.asymptomaticFraction'],
+		quote:
+			'Persons with plague usually only transmit the infection when the disease is in the endstage, when infected persons cough copious amounts of bloody sputum, and only by means of close contact.',
+		location: 'Abstract',
+		why: 'asymptomaticFraction=0: people pass plague on only late in their illness, so a symptom-free infection is not a source, and a share above 0 would claim spread the sources argue against.',
+		context: 'Outbreak records of pneumonic plague, 20th century; CDC author.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Checked against the publisher’s free abstract; full text paywalled. Robert A. Weinstein is the section editor, not an author.'
+		}
+	},
+	{
+		id: 'bourner-2023-bubonic-plague-clinical-review',
+		authors: 'Bourner J, Andriamarohasina L, Salam A, Kayem ND, Randremanana R, Olliaro P',
+		title:
+			'A systematic review of the clinical profile of patients with bubonic plague and the outcome measures used in research settings',
+		journal: 'PLoS Neglected Tropical Diseases 17(11):e0011509',
+		year: 2023,
+		evidence: 'systematic-review',
+		doi: '10.1371/journal.pntd.0011509',
+		usedFor: ['plague.about'],
+		quote:
+			'Of those who received a high-efficacy antimicrobial at any time following initial presentation, 15/271 (6%) died',
+		location: 'Results (Treatment)',
+		why: 'About only: beside the "treated today" line, deaths among bubonic plague patients given a high-efficacy antibiotic at any point.',
+		context:
+			'1,343 bubonic plague patients across the review, 15% of whom died; the 6% is the 271 given a high-efficacy antibiotic.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'PLOS article page; the quote and the 15% review-wide figure verbatim.'
+		}
+	},
+	{
+		id: 'kugeler-2020-us-plague-treatment-outcomes',
+		authors: 'Kugeler KJ, Mead PS, Campbell SB, Nelson CA',
+		title:
+			'Antimicrobial Treatment Patterns and Illness Outcome Among United States Patients With Plague, 1942–2018',
+		journal: 'Clinical Infectious Diseases 70(Supplement_1):S20-S26',
+		year: 2020,
+		evidence: 'study',
+		noReviewReason:
+			'About only, beside the systematic reviews (Bourner 2023, Godfred-Cato 2020): US surveillance of every reported case since antibiotics were first used.',
+		doi: '10.1093/cid/ciz1227',
+		mirrorUrl: 'https://stacks.cdc.gov/view/cdc/150394',
+		usedFor: ['plague.about'],
+		quote:
+			'Mortality differed significantly among those receiving high-efficacy therapy (9%) and only limited-efficacy therapy (51%).',
+		location: 'Abstract, Results',
+		why: 'About only: deaths among US plague patients given a high-efficacy antibiotic, 1942-2018.',
+		context:
+			'US plague surveillance, 1942-2018, all forms; overall deaths fell from 28% before 1970 to 8% in 2000-2018.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'CDC Stacks copy of the article; quote verbatim (that copy prints "highefficacy" across a line break).'
+		}
+	},
+	{
+		id: 'fleck-derderian-2020-plague-pregnancy',
+		authors:
+			'Fleck-Derderian S, Nelson CA, Cooley KM, Russell Z, Godfred-Cato S, Oussayef NL, Oduyebo T, Rasmussen SA, Jamieson DJ, Meaney-Delman D',
+		title: 'Plague During Pregnancy: A Systematic Review',
+		journal: 'Clinical Infectious Diseases 70(Supplement_1):S30-S36',
+		year: 2020,
+		evidence: 'systematic-review',
+		doi: '10.1093/cid/ciz1228',
+		usedFor: ['plague.about'],
+		quote:
+			'Among cases treated with antimicrobials, maternal mortality and fetal fatality were 29% and 62%, respectively; for untreated cases, maternal mortality and fetal fatality were 67% and 74%, respectively.',
+		location: 'Abstract, Results',
+		why: 'The closest pooled figure for plague deaths without treatment in any systematic review, and why it is not used for the Black Death: it covers pregnant women only, mixes forms of plague, and rests on 136 untreated cases against Mongillo’s 967 bubonic cases with ages.',
+		context: '160 cases of plague in pregnancy, 1897-2002, mostly before antibiotics.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'OUP article page (abstract and Results), cross-checked against the University of Iowa repository copy.'
 		}
 	}
 ];

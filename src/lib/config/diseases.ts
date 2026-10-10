@@ -905,11 +905,14 @@ export const DISEASES = {
 			sources: ['who-plague-factsheet', 'dean-2018-second-pandemic-ectoparasites']
 		},
 		illDays: { value: PLAGUE_ILL_DAYS, sources: ['dean-2018-second-pandemic-ectoparasites'] },
+		// 0 as for Ebola and Marburg: symptom-free plague infections happen but aren't thought to spread it.
 		asymptomaticFraction: {
 			value: 0,
-			sources: [],
-			provisional:
-				'Symptom-free and mild plague infections are documented, but no study gives their share, and a modern treated population cannot supply one for an untreated epidemic.'
+			sources: [
+				'kool-2005-pneumonic-transmission',
+				'ratsitorahina-2000-madagascar-seroprevalence',
+				'dean-2018-second-pandemic-ectoparasites'
+			]
 		},
 		// Before antibiotics, from hospital records of 1720-1945 (6.6): an era rate.
 		mortalityBasis: 'era',
@@ -918,7 +921,17 @@ export const DISEASES = {
 			sources: ['mongillo-2024-bubonic-plague-by-age', 'who-plague-factsheet']
 		},
 		waningDays: { value: null, sources: ['andrianaivoarimanana-2020-plague-antibody-persistence'] },
-		fullEfficacy: { value: 0, sources: ['who-plague-factsheet'] },
+		// No plague vaccine has established human efficacy (no trial has measured it).
+		fullEfficacy: {
+			value: 0,
+			sources: [
+				'jefferson-1998-cochrane-plague-vaccines',
+				'hartley-2023-plague-vaccines-review',
+				'sagiyev-2019-ev-vaccine-kazakhstan',
+				'anisimov-2025-live-plague-vaccine',
+				'who-plague-factsheet'
+			]
+		},
 		// Lower bound, as for 1918 flu: everyone who died needed care, and no source gives the share
 		// of plague cases needing a bed.
 		hospitalisedShare: { value: PLAGUE_MORTALITY, sources: ['mongillo-2024-bubonic-plague-by-age'] },

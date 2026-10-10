@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DISEASES } from '../config/diseases';
+	import { DISEASES, DISEASE_GROUPS } from '../config/diseases';
 	import type { DiseaseId, Speed } from '../sim/types';
 
 	interface Props {
@@ -13,6 +13,8 @@
 	}
 	let { diseaseId, speed, day, ondisease, onspeed, onrestart, onnewmap }: Props = $props();
 
+	/** The picker's headings, in DISEASE_GROUPS order. */
+	const groups = Object.entries(DISEASE_GROUPS);
 	const speeds: { value: Speed; label: string }[] = [
 		{ value: 0, label: 'Paused' },
 		{ value: 0.5, label: 'Slow' },
@@ -27,8 +29,12 @@
 	<label class="disease">
 		<span>Disease</span>
 		<select value={diseaseId} onchange={(e) => ondisease(e.currentTarget.value as DiseaseId)}>
-			{#each Object.values(DISEASES) as d (d.id)}
-				<option value={d.id}>{d.name}</option>
+			{#each groups as [group, label] (group)}
+				<optgroup {label}>
+					{#each Object.values(DISEASES).filter((d) => d.group === group) as d (d.id)}
+						<option value={d.id}>{d.name}</option>
+					{/each}
+				</optgroup>
 			{/each}
 		</select>
 	</label>

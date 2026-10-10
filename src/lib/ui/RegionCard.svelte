@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
-	import { ERA_DEATH_RATE } from '../config/careBasis';
+	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
 	import { waningWords } from '../config/waning';
@@ -20,6 +20,8 @@
 		y: number;
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
+		/** The card's rendered height, so the page can keep the whole card on screen. */
+		height?: number;
 		onvaccination: (full: number, partial: number) => void;
 		/** A different vaccine version was picked (restarts the run). */
 		onvaccine: (key: string) => void;
@@ -36,6 +38,7 @@
 		x,
 		y,
 		docked = false,
+		height = $bindable(0),
 		onvaccination,
 		onvaccine,
 		onpolicy,
@@ -54,8 +57,15 @@
 	let vaccine = $derived(vaccineFor(runtime, region.vaccine));
 	/** The same vaccine's config entry, for its half-life and any card note. */
 	let vaccineConfig = $derived(disease.vaccines?.find((v) => vaccineKey(v) === vaccine.key));
-	/** A disease whose whole silent phase is incubation (6.1): silent dots spread nothing. */
-	let incubatingOnly = $derived(runtime.latentTicks >= runtime.silentTicks && runtime.silentTicks > 0);
+	/**
+	 * A disease whose whole silent phase is incubation (6.1) and where everyone falls ill: silent
+	 * dots spread nothing. A symptom-free case would spread once its latent days end.
+	 */
+	let incubatingOnly = $derived(
+		runtime.latentTicks >= runtime.silentTicks &&
+			runtime.silentTicks > 0 &&
+			runtime.asymptomaticFraction === 0
+	);
 	/** One-dose vaccines have no "partly vaccinated". */
 	let partialEfficacy = $derived(vaccine.hasPartialCourse ? vaccine.partialInfection : undefined);
 	const threshold = BEHAVIOUR.strainThreshold.value;
@@ -73,6 +83,7 @@
 </script>
 
 <section
+	bind:offsetHeight={height}
 	class="card"
 	class:open
 	class:docked
@@ -200,7 +211,7 @@
 			width={180}
 		/>
 		{#if disease.mortalityBasis === 'era'}
-			<p class="note">{ERA_DEATH_RATE}</p>
+			<p class="note" title={ERA_DEATH_RATE}>{ERA_DEATH_RATE_SHORT}</p>
 		{/if}
 	{/if}
 	{#if t}
