@@ -36,7 +36,7 @@ export const CONFIG: Record<string, object> = {
  * Fields that are not research numbers (names, labels, and the care basis, a label whose evidence
  * is the death rate's own source).
  */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb', 'mortalityBasis']);
+const PLAIN = new Set(['id', 'name', 'proseName', 'group', 'blurb', 'mortalityBasis']);
 
 export function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;

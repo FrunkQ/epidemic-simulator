@@ -120,6 +120,8 @@ export type MortalityBasis = 'modern-care' | 'era';
 export interface DiseaseConfig {
 	id: string;
 	name: string;
+	/** The name as it reads mid-sentence, e.g. "the Black Death" or "measles". */
+	proseName: string;
 	group: DiseaseGroup;
 	/** One plain-language line for the disease picker. */
 	blurb: string;

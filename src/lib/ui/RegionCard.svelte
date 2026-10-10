@@ -18,10 +18,17 @@
 		/** Screen position of the card's top-left corner. */
 		x: number;
 		y: number;
+		/** Tallest the card may be before it scrolls inside (an open card near the stage bottom). */
+		maxHeight?: number;
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
-		/** The card's rendered height, so the page can keep the whole card on screen. */
+		/** The card's rendered size, so the page can keep the whole card on screen. */
+		width?: number;
 		height?: number;
+		/** The card's element, so the page can measure it at once. */
+		element?: HTMLElement;
+		/** Whether a settings panel is open (the card is then taller and sits on top). */
+		open?: boolean;
 		onvaccination: (full: number, partial: number) => void;
 		/** A different vaccine version was picked (restarts the run). */
 		onvaccine: (key: string) => void;
@@ -37,8 +44,12 @@
 		peoplePerDot,
 		x,
 		y,
+		maxHeight,
 		docked = false,
+		element = $bindable(),
+		width = $bindable(),
 		height = $bindable(),
+		open = $bindable(),
 		onvaccination,
 		onvaccine,
 		onpolicy,
@@ -46,9 +57,24 @@
 	}: Props = $props();
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
-	let open = $derived(panel !== null);
+	$effect(() => {
+		open = panel !== null;
+	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
+	/** The seed button brings in one dot, so it says how many people that is. */
+	let seedLabel = $derived(
+		peoplePerDot === 1
+			? 'Bring in 1 infected person'
+			: `Bring in ${peoplePerDot.toLocaleString('en-GB')} infected people`
+	);
+	let seedHover = $derived(
+		peoplePerDot === 1
+			? 'Each dot is one person.'
+			: `This brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${peoplePerDot.toLocaleString('en-GB')} people.`
+	);
+	/** The population when the run starts, in people, to two significant figures so it reads easily. */
+	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
 	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
 	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
@@ -83,12 +109,15 @@
 </script>
 
 <section
+	bind:this={element}
+	bind:offsetWidth={width}
 	bind:offsetHeight={height}
 	class="card"
 	class:open
 	class:docked
 	style:left={docked ? null : `${x}px`}
 	style:top={docked ? null : `${y}px`}
+	style:max-height={docked || maxHeight === undefined ? null : `${maxHeight}px`}
 >
 	<header>
 		<h2>{region.name}</h2>
@@ -107,6 +136,12 @@
 			>
 		</div>
 	</header>
+	<p
+		class="population"
+		title={`Each dot stands for ${peoplePerDot.toLocaleString('en-GB')} ${peoplePerDot === 1 ? 'person' : 'people'}.`}
+	>
+		{startingPeople} people at the start
+	</p>
 	<p class="summary">
 		{#if !vaccine.exists}
 			No vaccine
@@ -209,6 +244,7 @@
 			warn={t.pressureBand !== 'coping'}
 			format={pctOf}
 			width={180}
+			lines={2}
 		/>
 		{#if disease.mortalityBasis === 'era'}
 			<p class="note" title={ERA_DEATH_RATE}>{ERA_DEATH_RATE_SHORT}</p>
@@ -224,7 +260,7 @@
 			<span><i style:background={COLOURS.deceased}></i>{Math.round(t.deaths).toLocaleString()} died</span>
 		</p>
 	{/if}
-	<button class="seed" onclick={onseed}>Bring in one infected person</button>
+	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
 </section>
 
 <style>
@@ -246,11 +282,16 @@
 	.card.open {
 		width: 250px;
 		z-index: 2;
+		overflow-y: auto;
 	}
 	.card.docked {
 		position: static;
 		flex: 0 0 200px;
 		box-shadow: none;
+	}
+	.population {
+		margin: 0 0 2px;
+		color: #9fb3c8;
 	}
 	.summary {
 		margin: 0 0 4px;

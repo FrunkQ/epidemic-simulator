@@ -430,7 +430,12 @@ export const DTAP_SERIOUS_DOSES = 10_000;
  */
 export const PERTUSSIS_VACCINE = { full: 0.84, fullSevere: 0.93, partialSevere: 0.5 };
 /** Fulton 2016, Table 1: the two pooled trials followed children for 17.2 and 21-23.5 months. */
-export const PERTUSSIS_TRIAL_MONTHS = [17.2, 23.5] as const;
+export const PERTUSSIS_TRIALS = { firstMonths: 17.2, secondMonths: [21, 23.5] } as const;
+/** The shortest and longest follow-up across both trials. */
+export const PERTUSSIS_TRIAL_MONTHS = [
+	PERTUSSIS_TRIALS.firstMonths,
+	PERTUSSIS_TRIALS.secondMonths[1]
+] as const;
 /** CDC: smallpox vaccination gives full protection "for about 3 to 5 years" (prose only: not a half-life). */
 export const SMALLPOX_VACCINE_YEARS = [3, 5] as const;
 /**
@@ -510,16 +515,18 @@ export const PLAGUE_ILL_DAYS = PLAGUE_MILD_INFECTIOUS_DAYS + PLAGUE_HIGH_INFECTI
 export const PLAGUE_INCUBATION_RANGE = [1, 7] as const;
 export const PLAGUE_INCUBATION_DAYS = midpoint(...PLAGUE_INCUBATION_RANGE);
 
-/**
- * Mongillo 2024 Table 2: bubonic plague cases and deaths by ten-year age class, 1720-1945, before
- * antibiotics. The 0-14 band takes the 0-9 and 10-19 classes and 65+ takes the 50+ class (the
- * source has no 65+ cut); both are stated on the About page.
- */
 /** The years Mongillo's hospital records cover. */
 export const PLAGUE_RECORD_YEARS = [1720, 1945] as const;
 /** Mongillo's classes are ten years wide; the model's middle band starts at the 20s and its oldest at the 50s. */
 export const PLAGUE_CLASS_YEARS = 10;
 export const PLAGUE_BAND_CUTS = [20, 50] as const;
+/** The model's middle age band starts at 15 (World Bank bands 0-14, 15-64, 65+). */
+export const MODEL_ADULT_FROM = 15;
+/**
+ * Mongillo 2024 Table 2: bubonic plague cases and deaths by ten-year age class, 1720-1945, before
+ * antibiotics. The 0-14 band takes the 0-9 and 10-19 classes and 65+ takes the 50+ class (the
+ * source has no 65+ cut); both are stated on the About page.
+ */
 export const PLAGUE_AGE_CLASSES = [
 	{ from: 0, cases: 73, deaths: 40 },
 	{ from: 10, cases: 263, deaths: 119 },
@@ -558,7 +565,11 @@ export const KUGELER_PRE_ANTIBIOTIC = { deaths: 336, cases: 511 };
 export const PLAGUE_FIRST_ANTIBIOTICS_YEAR = 1942;
 /** Bourner 2023: 15 of 271 bubonic plague patients given a high-efficacy antibiotic at any time died (About only). */
 export const BOURNER_HIGH_EFFICACY = { deaths: 15, patients: 271 };
-/** Kugeler 2020: US plague deaths 1942-2018, 9% on high-efficacy therapy, 51% on limited-efficacy (About only). */
+/** Kugeler 2020: US plague deaths 1942-2018, all forms, 9% on high-efficacy therapy, 51% on limited-efficacy (About only). */
 export const KUGELER_2020_TREATED = { highEfficacy: 0.09, limitedEfficacy: 0.51, from: 1942, to: 2018 };
+/** Fleck-Derderian 2020: untreated plague cases in pregnancy, all forms (the closest pooled figure). */
+export const FLECK_DERDERIAN_UNTREATED_CASES = 136;
+/** Hartley 2023: the review year, and the trials it found (immune response only, no protection). */
+export const HARTLEY_2023 = { year: 2023, trials: 2 };
 /** Godfred-Cato 2020: deaths among treated bubonic plague cases, for the "curable today" line. */
 export const PLAGUE_BUBONIC_TREATED_CFR = 0.142;

@@ -1,12 +1,15 @@
 <script lang="ts">
+	import { tick, untrack } from 'svelte';
 	import { DISEASES } from '../lib/config/diseases';
 	import { withValue, type LivePolicyKey } from '../lib/config/healthPolicy';
 	import { microcosm } from '../lib/config/scenarios';
 	import { START_MAPS } from '../lib/config/startMaps.generated';
 	import { loadDisease } from '../lib/config';
 	import { vaccineFor } from '../lib/sim/disease';
+	import { DEFAULT_PEOPLE_PER_DOT } from '../lib/sim/constants';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
+	import { frameTries, layoutCards, offsetsOf, pickFrame, type Offset } from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -42,8 +45,17 @@
 	let viewVersion = $state(0);
 	let compact = $derived(size.width < 760);
 
-	/** Frame the populations, leaving room around them for their cards. */
+	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
+	let userMoved = false;
+
+	/**
+	 * Frame the populations, leaving room around them for their cards. If the closed cards would
+	 * cover a city's dots or sit nearer another city, try other side and top margins, largest map
+	 * first, until none does (or pick the one that does least), so on a short screen the cards
+	 * move beside the cities.
+	 */
 	function frame() {
+		userMoved = false;
 		let minX = Infinity;
 		let minY = Infinity;
 		let maxX = -Infinity;
@@ -55,8 +67,23 @@
 			maxX = Math.max(maxX, r.cx + rad);
 			maxY = Math.max(maxY, r.cy + rad);
 		});
-		const margin = compact ? 40 : 150;
-		sim.view.fit(minX, minY, maxX, maxY, size.width, size.height, margin);
+		const { width, height } = size;
+		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
+		if (compact) {
+			fit(40, 40);
+			viewVersion++;
+			return;
+		}
+		const tries = frameTries(width, height, maxX - minX, maxY - minY);
+		// The first (biggest) frame with nothing covered and every card by its own city; else the
+		// first with nothing covered, accepting a card nearer another city; else the one covering
+		// least, then with fewest cards nearer another city.
+		const best = pickFrame(tries, (t) => {
+			fit(t.mx, t.my);
+			return layoutCards(discsOnScreen(), layoutSizes(), size);
+		});
+		fit(best.mx, best.my);
+		lastPositions = undefined;
 		viewVersion++;
 	}
 
@@ -97,50 +124,93 @@
 			r.vaccine = kept[i].vaccine;
 			r.policy = kept[i].policy;
 		});
+		forgetCardSizes();
 		restart();
 		frame();
 	}
 
-	const CARD_W = 200;
 	/** Until a card has been measured. */
+	const CARD_W = 210;
 	const CARD_H = 120;
-	/** Each card's measured height, so the layout keeps the whole card on the stage. */
+	/** Each card's measured size (bigger while a panel is open). */
+	let cardWidths: number[] = $state([]);
 	let cardHeights: number[] = $state([]);
-
+	/** Which cards have a settings panel open. */
+	let cardOpen: boolean[] = $state([]);
 	/**
-	 * Cards sit just outside their city's disc, on the side facing away from the other cities,
-	 * so they don't cover the dots or each other.
+	 * Each card's tallest size while closed, for this disease and map. Layout and framing use only
+	 * these, so opening a panel moves nothing (the open card grows on top) and a card that grows
+	 * during a run doesn't shuffle the others. Measured only while the card is closed: an open
+	 * card is wider than CARD_W, so a reading at that width is a closed one.
 	 */
-	function cardPosition(region: number): { x: number; y: number } {
-		void viewVersion;
-		const regions = scenario.regions;
-		const cx = regions.reduce((a, r) => a + r.cx, 0) / regions.length;
-		const cy = regions.reduce((a, r) => a + r.cy, 0) / regions.length;
-		const r = regions[region];
-		const p = sim.view.worldToScreen(r.cx, r.cy);
-		const c = sim.view.worldToScreen(cx, cy);
-		let dx = p.x - c.x;
-		let dy = p.y - c.y;
-		const d = Math.hypot(dx, dy);
-		if (d < 1) {
-			dx = 0;
-			dy = -1;
-		} else {
-			dx /= d;
-			dy /= d;
-		}
-		const reach = sim.radiusOf(region) * sim.view.scale + 14;
-		const w = CARD_W;
-		const h = cardHeights[region] || CARD_H;
-		// Distance from the card's centre to its edge in direction (dx, dy).
-		const edge = Math.min(w / 2 / Math.max(Math.abs(dx), 1e-6), h / 2 / Math.max(Math.abs(dy), 1e-6));
-		const x = p.x + dx * (reach + edge) - w / 2;
-		const y = p.y + dy * (reach + edge) - h / 2;
-		return {
-			x: Math.min(Math.max(x, 8), size.width - w - 8),
-			y: Math.min(Math.max(y, 8), size.height - h - 8)
-		};
+	let closedSizes: ({ w: number; h: number } | undefined)[] = $state([]);
+	const GROW_SLACK = 3;
+	$effect(() => {
+		scenario.regions.forEach((_, i) => {
+			const w = cardWidths[i];
+			const h = cardHeights[i];
+			if (cardOpen[i] || !w || !h || w > CARD_W) return;
+			const old = untrack(() => closedSizes[i]);
+			// A pixel or two is font rounding (the warning sign's glyph), not a new line.
+			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
+		});
+	});
+	/** Each floating card's element, to measure it straight after a disease or map change. */
+	let cardElements: (HTMLElement | undefined)[] = $state([]);
+	/**
+	 * Another disease or map: once the cards show it, measure them afresh (a card the same height
+	 * as before fires no resize, and a stale bound height would be kept as the tallest) and frame
+	 * the map for them.
+	 */
+	async function forgetCardSizes() {
+		userMoved = false;
+		lastPositions = undefined;
+		await tick();
+		// Wait for the next paint too: some of a card's lines follow the new run's first telemetry.
+		await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+		closedSizes = scenario.regions.map((_, i) => {
+			const el = cardElements[i];
+			if (!el || cardOpen[i] || el.offsetWidth > CARD_W) return undefined;
+			return { w: el.offsetWidth, h: el.offsetHeight };
+		});
 	}
+	/** Frame again when a card first measures taller than before, unless the user has moved the map. */
+	$effect(() => {
+		void closedSizes.map((c) => c?.h);
+		untrack(() => {
+			if (size.width > 0 && !userMoved) frame();
+		});
+	});
+
+	function layoutSizes() {
+		return scenario.regions.map((_, i) => closedSizes[i] ?? { w: CARD_W, h: CARD_H });
+	}
+
+	function discsOnScreen() {
+		return scenario.regions.map((r, i) => {
+			const p = sim.view.worldToScreen(r.cx, r.cy);
+			return { x: p.x, y: p.y, r: sim.radiusOf(i) * sim.view.scale };
+		});
+	}
+
+	/** The last layout, as offsets from each city, kept while it is still clear so cards don't move without need. */
+	let lastPositions: Offset[] | undefined;
+	/** Card positions, kept off every city's dots and off each other (see layoutCards). */
+	let cardPositions = $derived.by(() => {
+		void viewVersion;
+		const sizes = layoutSizes();
+		const discs = discsOnScreen();
+		const layout = layoutCards(discs, sizes, size, lastPositions);
+		lastPositions = offsetsOf(layout, discs);
+		const placed = layout.positions;
+		// An open card stays where it was and grows on top (scrolling inside if it would run past the
+		// stage), so its buttons stay under the pointer; pulled left only if it would leave the stage.
+		return placed.map((p, i) => {
+			if (!cardOpen[i]) return { ...p, maxHeight: undefined };
+			const w = cardWidths[i] || sizes[i].w;
+			return { x: Math.max(8, Math.min(p.x, size.width - w - 8)), y: p.y, maxHeight: size.height - p.y - 8 };
+		});
+	});
 </script>
 
 <svelte:head>
@@ -158,6 +228,7 @@
 		day={telemetry?.day ?? 0}
 		ondisease={(id) => {
 			diseaseId = id;
+			forgetCardSizes();
 			restart();
 		}}
 		onspeed={(s) => {
@@ -179,19 +250,26 @@
 				size = { width: w, height: h };
 				frame();
 			}}
-			onview={() => viewVersion++}
+			onview={() => {
+				userMoved = true;
+				viewVersion++;
+			}}
 		/>
 		{#if !compact}
 			{#each scenario.regions as region, i (region.id)}
-				{@const pos = cardPosition(i)}
+				{@const pos = cardPositions[i]}
 				<RegionCard
 					{region}
 					telemetry={telemetry?.regions[i]}
 					disease={DISEASES[diseaseId]}
-					peoplePerDot={telemetry?.peoplePerDot ?? 100}
+					peoplePerDot={telemetry?.peoplePerDot ?? DEFAULT_PEOPLE_PER_DOT}
 					x={pos.x}
 					y={pos.y}
+					maxHeight={pos.maxHeight}
+					bind:element={cardElements[i]}
+					bind:width={cardWidths[i]}
 					bind:height={cardHeights[i]}
+					bind:open={cardOpen[i]}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
@@ -204,6 +282,7 @@
 				aria-label="Zoom in"
 				onclick={() => {
 					sim.view.zoomAt(1.25, size.width / 2, size.height / 2);
+					userMoved = true;
 					viewVersion++;
 				}}>+</button
 			>
@@ -211,6 +290,7 @@
 				aria-label="Zoom out"
 				onclick={() => {
 					sim.view.zoomAt(0.8, size.width / 2, size.height / 2);
+					userMoved = true;
 					viewVersion++;
 				}}>−</button
 			>
@@ -225,7 +305,7 @@
 					{region}
 					telemetry={telemetry?.regions[i]}
 					disease={DISEASES[diseaseId]}
-					peoplePerDot={telemetry?.peoplePerDot ?? 100}
+					peoplePerDot={telemetry?.peoplePerDot ?? DEFAULT_PEOPLE_PER_DOT}
 					x={0}
 					y={0}
 					docked

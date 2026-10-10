@@ -28,10 +28,13 @@ import {
 	PLAGUE_MORTALITY_BANDS,
 	PLAGUE_RECORD_YEARS,
 	BOURNER_HIGH_EFFICACY,
-	KUGELER_2020_TREATED
+	KUGELER_2020_TREATED,
+	MODEL_ADULT_FROM,
+	HARTLEY_2023
 } from './derived';
 import { POPULATION } from './population';
 import { TRAVEL_DAYS } from '../sim/routes';
+import { DEFAULT_PEOPLE_PER_DOT } from '../sim/constants';
 
 const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 /** "A, B and C" */
@@ -43,7 +46,9 @@ function list(items: readonly string[]): string {
 const words = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 /** The era diseases by name, from the config (6.6). */
 const eraNames = list(
-	(Object.values(DISEASES) as DiseaseConfig[]).filter((d) => d.mortalityBasis === 'era').map((d) => d.name)
+	(Object.values(DISEASES) as DiseaseConfig[])
+		.filter((d) => d.mortalityBasis === 'era')
+		.map((d) => d.proseName)
 );
 /** The Black Death's overall death share with the default population's ages. */
 const plagueDefaultMix = PLAGUE_MORTALITY_BANDS.reduce((a, d, b) => a + d * POPULATION.ageMix.value[b], 0);
@@ -70,20 +75,20 @@ export const ASSUMPTIONS = {
 	opvType2:
 		'The oral polio vaccine’s protection against catching polio was measured as no virus in the gut after a type 2 test dose; protection against types 1 and 3 may be lower. Its protection against paralysis is the figure for children in industrialised countries.',
 	ebolaVaccineDeaths: `The Ebola vaccine’s protection against death rests on ${EBOLA_VACCINE.patients} vaccinated patients, ${EBOLA_VACCINE.deaths} of whom died.`,
-	pertussisVaccine: `The whooping cough vaccine starts at ${Math.round(PERTUSSIS_VACCINE.full * 100)} in 100, measured in trials that followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${Math.round(PERTUSSIS_TRIAL_MONTHS[1])} months, so it is slightly low just after the course. How fast it fades (${Math.round(CHIT.decayPerYear * 1000) / 10}% a year) comes from a study funded by Sanofi Pasteur, which makes the vaccine; eight of its nine authors worked there.`,
+	pertussisVaccine: `The whooping cough vaccine starts at ${Math.round(PERTUSSIS_VACCINE.full * 100)} in 100, measured in trials that followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${PERTUSSIS_TRIAL_MONTHS[1]} months, so it is slightly low just after the course. How fast it fades (${Math.round(CHIT.decayPerYear * 1000) / 10}% a year) comes from a study funded by Sanofi Pasteur, which makes the vaccine; eight of its nine authors worked there.`,
 	smallpoxVaccineWaning: `Smallpox vaccination protects for decades: half of people have lost protection against catching it after about ${Math.round(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR)} years, and protection against dying lasts far longer. Official advice of “${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years” is how long full protection lasts.`,
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
 	deathsTally: `Each dot stands for a group of people. ${DEATHS_TALLY} Where a dot is one person, the count is the dots that died.`,
+	seedDot: `The button on each card brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people.`,
 	eraDeathRate: `${ERA_DEATH_RATE} This applies to ${eraNames}. Their patients still fill beds and show on the hospital gauge.`,
 	plagueSpread: `The Black Death spread between people living closely together, through the lice and fleas people carried, not through the air; the dots stand in for that closeness. In the source most onward spread happens in the last ${words[PLAGUE_HIGH_INFECTIOUS_DAYS]} days of illness, which the model spreads evenly over the whole illness.`,
 	plagueRoute:
 		'How plague spread is still argued over. Dean and colleagues (2018) found that people’s own lice and fleas fitted the European epidemics best; Park and colleagues (2018) replied that a mix of rats’ fleas and spread from people’s lungs can’t be ruled out.',
-	plagueDeathRate: `The Black Death’s death rate is from before antibiotics: ${PLAGUE_ALL.deaths} deaths in ${PLAGUE_ALL.cases.toLocaleString('en-GB')} hospital cases of bubonic plague, ${PLAGUE_RECORD_YEARS[0]} to ${PLAGUE_RECORD_YEARS[1]}, ${fmt(PLAGUE_MORTALITY * 100, 1)}%. Some of those patients got the care of their day, including an early serum, so it is if anything a little low for 1347: in the European epidemics of the Black Death’s own era it was ${fmt(PLAGUE_EUROPE_SECOND_PANDEMIC_CFR * 100, 1)}%. Older people died more often, so the share who die depends on a city’s ages: about ${fmt(plagueDefaultMix * 100, 1)}% with the default population’s ages. Antibiotics were first used against plague in ${PLAGUE_FIRST_ANTIBIOTICS_YEAR}. Plague is curable with ordinary antibiotics today: treated, bubonic plague kills about ${fmt(PLAGUE_BUBONIC_TREATED_CFR * 100)} in 100. With a strong antibiotic it is fewer: ${Math.round((BOURNER_HIGH_EFFICACY.deaths / BOURNER_HIGH_EFFICACY.patients) * 100)}% died among patients given one at any point (${BOURNER_HIGH_EFFICACY.deaths} of ${BOURNER_HIGH_EFFICACY.patients}, Bourner 2023), and in the United States ${Math.round(KUGELER_2020_TREATED.highEfficacy * 100)}% of those on such a drug died from ${KUGELER_2020_TREATED.from} to ${KUGELER_2020_TREATED.to}, against ${Math.round(KUGELER_2020_TREATED.limitedEfficacy * 100)}% on weaker ones (Kugeler 2020).`,
-	plagueAgeBands: `The Black Death’s three age bands come from ${words[PLAGUE_CLASS_YEARS]}-year age groups that don’t line up with the model’s: 15 to ${PLAGUE_BAND_CUTS[0] - 1} year olds are counted with children, and the oldest band really means ${PLAGUE_BAND_CUTS[1]} and over. Who died turned far more on how crowded a household was than on age.`,
-	plagueVaccine:
-		'No plague vaccine has been shown to work in people. A review found no trials, a 2023 review found only two small trials that measured immune response and not protection, and the live vaccine used in Russia and Kazakhstan has never been tested in a trial. So the Black Death has no vaccine here.',
+	plagueDeathRate: `The Black Death’s death rate is from before antibiotics: ${PLAGUE_ALL.deaths} deaths in ${PLAGUE_ALL.cases.toLocaleString('en-GB')} hospital cases of bubonic plague, ${PLAGUE_RECORD_YEARS[0]} to ${PLAGUE_RECORD_YEARS[1]}, ${fmt(PLAGUE_MORTALITY * 100, 1)}%. Some of those patients got the care of their day, including an early serum, so it is if anything a little low for 1347: in the European epidemics of the Black Death’s own era it was ${fmt(PLAGUE_EUROPE_SECOND_PANDEMIC_CFR * 100, 1)}%. Older people died more often, so the share who die depends on a city’s ages: about ${fmt(plagueDefaultMix * 100, 1)}% with the default population’s ages. Antibiotics were first used against plague in ${PLAGUE_FIRST_ANTIBIOTICS_YEAR}. Plague is curable with ordinary antibiotics today: treated, bubonic plague kills about ${fmt(PLAGUE_BUBONIC_TREATED_CFR * 100)} in 100. With a strong antibiotic it is fewer: ${Math.round((BOURNER_HIGH_EFFICACY.deaths / BOURNER_HIGH_EFFICACY.patients) * 100)}% died among patients given one at any point (${BOURNER_HIGH_EFFICACY.deaths} of ${BOURNER_HIGH_EFFICACY.patients}, Bourner 2023), and in the United States, across all forms of plague, ${Math.round(KUGELER_2020_TREATED.highEfficacy * 100)}% of those on such a drug died from ${KUGELER_2020_TREATED.from} to ${KUGELER_2020_TREATED.to}, against ${Math.round(KUGELER_2020_TREATED.limitedEfficacy * 100)}% on weaker ones (Kugeler 2020).`,
+	plagueAgeBands: `The Black Death’s three age bands come from ${words[PLAGUE_CLASS_YEARS]}-year age groups that don’t line up with the model’s: ${MODEL_ADULT_FROM} to ${PLAGUE_BAND_CUTS[0] - 1} year olds are counted with children, and the oldest band really means ${PLAGUE_BAND_CUTS[1]} and over. Who died turned far more on how crowded a household was than on age.`,
+	plagueVaccine: `No plague vaccine has been shown to work in people. A Cochrane review found no trials, a ${HARTLEY_2023.year} review found only ${words[HARTLEY_2023.trials]} small trials that measured immune response and not protection, and the live vaccine used in Russia and Kazakhstan has never been tested in a trial. So the Black Death has no vaccine here.`,
 	plagueImmunity:
 		'Whether surviving plague protected people from catching it again has never been measured; the model assumes the protection does not fade.',
 	plagueSilent:

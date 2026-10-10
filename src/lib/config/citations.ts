@@ -76,7 +76,12 @@ import {
 	PLAGUE_BAND_CUTS,
 	PLAGUE_INCUBATION_RANGE,
 	plagueR0Extremes,
-	per100kFromPerMillion
+	per100kFromPerMillion,
+	BOURNER_HIGH_EFFICACY,
+	KUGELER_2020_TREATED,
+	FLECK_DERDERIAN_UNTREATED_CASES,
+	PERTUSSIS_TRIALS,
+	HARTLEY_2023
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
@@ -1589,8 +1594,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
 		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
-		context:
-			'Official US reference text; the 78%/88% figures are pooled post-licensure effectiveness estimates.',
+		context: 'Official US reference text.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -1874,7 +1878,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: ['ebola.about'],
 		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
 		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
-		why: "The ring-vaccination trial found no cases, which is not a real-world figure, so protection comes from Meakin 2024 (84%). There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why the Ebola vaccine must not be reused for the Marburg preset.",
+		why: `The ring-vaccination trial found no cases, which is not a real-world figure, so protection comes from Meakin 2024 (${Math.round(EBOLA_VACCINE.infection * 100)}%). There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why the Ebola vaccine must not be reused for the Marburg preset.`,
 		context: 'CDC clinician page on the licensed Zaire ebolavirus vaccine; last reviewed 30 January 2025.',
 		verified: {
 			by: 'independent verification pass',
@@ -3493,14 +3497,14 @@ export const CITATIONS: Citation[] = [
 			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron. … We estimated that the VE against laboratory-confirmed Omicron infection was 44.4% (95% CI, 37.7%-51.1%) at 1 month after completion of any primary vaccination cycle, 20.7% (95% CI, 15.1%-26.4%) at 6 months, and 13.4% (95% CI, 7.8%-18.9%) at 9 months (Figure 3 and eFigure 8 in Supplement 1).',
 		location:
 			"Results, laboratory-confirmed infection paragraph (half-life) and 'VE Against Laboratory-Confirmed Infection' (the 1-, 6- and 9-month figures); model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
-		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found. The same sentence gives the start the sim uses for the original vaccine against infection: ${OMICRON_VACCINE.originalInfection} one month after the course, on the same footing as the half-life.`,
+		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found. The second sentence gives the start the sim uses for the original vaccine against infection: ${OMICRON_VACCINE.originalInfection} one month after the course, on the same footing as the half-life.`,
 		context:
 			'40 studies of original (ancestral) vaccines; Omicron BA.1/BA.2. Pooled VE against laboratory-confirmed Omicron infection 44.4% at 1 month, 20.7% at 6 months and 13.4% at 9 months after the primary course. Laboratory-confirmed infection mixes symptomatic and under-counted symptomless infections. No severe-disease analysis.',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: "DOI matches in the PMC open-data metadata (PMC10157431) and OpenAlex; title, authors, JAMA Netw Open 2023;6(5):e2310650 match. Quote and the exponential model found in the full text, including the half-life definition 'log(2)/w + 14 days'. is_retracted false; no correction notice."
+			note: "DOI matches in the PMC open-data metadata (PMC10157431) and OpenAlex; title, authors, JAMA Netw Open 2023;6(5):e2310650 match. Quote and the exponential model found in the full text, including the half-life definition 'log(2)/w + 14 days'. The month-1 sentence (44.4% at 1 month, 20.7% at 6 months) confirmed verbatim in Results, 'VE Against Laboratory-Confirmed Infection' (second pass, 8 Oct). is_retracted false; no correction notice."
 		}
 	},
 	{
@@ -4041,7 +4045,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'the estimated R0 was 1.48–1.91 for all pre-Industrial outbreaks.',
 		location:
 			'Results, "Basic Reproduction Number R0"; the nine values are Table 3, EP rows. Contagious periods: Methods, "Human Ectoparasite Model". Infection while ill: Discussion.',
-		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (${plagueR0Extremes().join(', ')}). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models.`,
+		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (${plagueR0Extremes().join(', ')}). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models. It also backs asymptomaticFraction=0: most spread in its model comes at the late stage of high infectivity, so a symptom-free case would not pass plague on.`,
 		context: 'Nine pre-industrial European plague outbreaks, 1348-1813 (Second Pandemic).',
 		verified: {
 			by: 'independent verification pass',
@@ -4105,8 +4109,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'Proceedings of the Royal Society B 291',
 		year: 2024,
 		evidence: 'study',
-		noReviewReason:
-			'No systematic review or meta-analysis of bubonic plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. The closest, Fleck-Derderian 2020, pools untreated plague in pregnancy only (136 cases, all forms), so it can’t stand for a whole population. This is the only case-by-case dataset of bubonic plague with ages.',
+		noReviewReason: `No systematic review or meta-analysis of bubonic plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. The closest, Fleck-Derderian 2020, pools untreated plague in pregnancy only (${FLECK_DERDERIAN_UNTREATED_CASES} cases, all forms), so it can’t stand for a whole population. This is the only case-by-case dataset of bubonic plague with ages.`,
 		doi: '10.1098/rspb.2024.0724',
 		usedFor: [
 			'plague.mortality',
@@ -4366,7 +4369,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Meta-analysis of 2 aP vaccine efficacy studies (assessing the 3-component GlaxoSmithKline and 5-component Sanofi-Pasteur formulations) yielded an overall aP vaccine efficacy of 84% (95% confidence interval [CI], 81%-87%).',
 		location: 'Abstract, Results',
-		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's 91%, a fitted starting point from a study its maker funded. The two trials followed children for about 17 and 21 to 23.5 months, so the figure is slightly low just after the course.`,
+		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's ${Math.round(CHIT.start * 100)}%, a fitted starting point from a study its maker funded. The two trials followed children for about ${Math.round(PERTUSSIS_TRIALS.firstMonths)} and ${PERTUSSIS_TRIALS.secondMonths[0]} to ${PERTUSSIS_TRIALS.secondMonths[1]} months, so the figure is slightly low just after the course.`,
 		context:
 			'Two randomised trials, Italy and Sweden, 1990s, WHO case definition (21 days or more of cough with confirmed infection). Measures illness, not infection: acellular vaccines block infection less well.',
 		verified: {
@@ -4521,7 +4524,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Hartley L, Harold S, Hawe E',
 		title: 'The efficacy, safety, and immunogenicity of plague vaccines: A systematic literature review',
 		journal: 'Current Research in Immunology 4:100072',
-		year: 2023,
+		year: HARTLEY_2023.year,
 		evidence: 'systematic-review',
 		doi: '10.1016/j.crimmu.2023.100072',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10637890/',
@@ -4624,8 +4627,7 @@ export const CITATIONS: Citation[] = [
 			'Of those who received a high-efficacy antimicrobial at any time following initial presentation, 15/271 (6%) died',
 		location: 'Results (Treatment)',
 		why: 'About only: beside the "treated today" line, deaths among bubonic plague patients given a high-efficacy antibiotic at any point.',
-		context:
-			'1,343 bubonic plague patients across the review, 15% of whom died; the 6% is the 271 given a high-efficacy antibiotic.',
+		context: `1,343 bubonic plague patients across the review, 15% of whom died; the ${Math.round((BOURNER_HIGH_EFFICACY.deaths / BOURNER_HIGH_EFFICACY.patients) * 100)}% is the ${BOURNER_HIGH_EFFICACY.patients} given a high-efficacy antibiotic.`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-10',
@@ -4649,9 +4651,8 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Mortality differed significantly among those receiving high-efficacy therapy (9%) and only limited-efficacy therapy (51%).',
 		location: 'Abstract, Results',
-		why: 'About only: deaths among US plague patients given a high-efficacy antibiotic, 1942-2018.',
-		context:
-			'US plague surveillance, 1942-2018, all forms; overall deaths fell from 28% before 1970 to 8% in 2000-2018.',
+		why: `About only: deaths among US plague patients given a high-efficacy antibiotic, ${KUGELER_2020_TREATED.from}-${KUGELER_2020_TREATED.to}, all forms of plague.`,
+		context: `US plague surveillance, ${KUGELER_2020_TREATED.from}-${KUGELER_2020_TREATED.to}, all forms; overall deaths fell from 28% before 1970 to 8% in 2000-2018.`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-10',
@@ -4672,7 +4673,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Among cases treated with antimicrobials, maternal mortality and fetal fatality were 29% and 62%, respectively; for untreated cases, maternal mortality and fetal fatality were 67% and 74%, respectively.',
 		location: 'Abstract, Results',
-		why: 'The closest pooled figure for plague deaths without treatment in any systematic review, and why it is not used for the Black Death: it covers pregnant women only, mixes forms of plague, and rests on 136 untreated cases against Mongillo’s 967 bubonic cases with ages.',
+		why: `The closest pooled figure for plague deaths without treatment in any systematic review, and why it is not used for the Black Death: it covers pregnant women only, mixes forms of plague, and rests on ${FLECK_DERDERIAN_UNTREATED_CASES} untreated cases against Mongillo’s ${PLAGUE_ALL.cases} bubonic cases with ages.`,
 		context: '160 cases of plague in pregnancy, 1897-2002, mostly before antibiotics.',
 		verified: {
 			by: 'independent verification pass',

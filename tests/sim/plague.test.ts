@@ -89,22 +89,28 @@ describe('Black Death travel (6.8)', () => {
 			const sim = createSimulation(travelWorld(true), { seed, diseaseId: 'plague' });
 			sim.send({ type: 'seed', region: 1, count: 50 });
 			const a = sim.agents;
-			/** Dots that were on a flight while still incubating (they may fall ill before landing). */
-			const flewIncubating = new Uint8Array(a.capacity);
+			/**
+			 * Dots that boarded a flight still incubating. Ill dots can't board, so this is the state
+			 * that matters; some fall ill during the flight and land ill.
+			 */
+			const boardedIncubating = new Uint8Array(a.capacity);
+			const lastRoute = new Int32Array(a.capacity).fill(-1);
 			let firstSource = -2;
 			for (let t = 0; t < 120 * TICKS_PER_DAY && firstSource === -2; t++) {
 				sim.step(1);
 				const tick = sim.snapshot().tick;
 				for (let i = 0; i < a.activeCount; i++) {
 					const r = a.route[i];
-					if (r >= 0 && sim.routes[r].kind === 'air' && a.state[i] === State.SILENT) flewIncubating[i] = 1;
+					if (r >= 0 && lastRoute[i] < 0 && sim.routes[r].kind === 'air')
+						boardedIncubating[i] = a.state[i] === State.SILENT ? 1 : 0;
+					lastRoute[i] = r;
 				}
 				// The first case caught in another city: who gave it to them?
 				for (let j = 0; j < a.activeCount && firstSource === -2; j++)
 					if (a.infectedTick[j] === tick && a.region[j] >= 0 && a.region[j] !== 1)
 						firstSource = a.infectedBy[j];
 			}
-			if (firstSource >= 0 && flewIncubating[firstSource] === 1 && a.region[firstSource] !== 1) seeded++;
+			if (firstSource >= 0 && boardedIncubating[firstSource] === 1 && a.region[firstSource] !== 1) seeded++;
 		}
 		expect(seeded).toBeGreaterThanOrEqual(2);
 	});
