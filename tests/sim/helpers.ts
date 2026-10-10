@@ -27,16 +27,23 @@ export function shareOf(seeds: number, pass: (seed: number) => boolean): number 
 }
 
 /**
- * Share of the people the vaccine does not protect who caught it from someone else (the
- * imported case itself is not counted). "Not protected" is counted person by person: everyone
- * whose vaccine did not take, including the fully vaccinated few it fails for.
- * A large city (500,000 people) with one imported case keeps chance small.
+ * People lesson 1 brings in, each in their own dot, as the button places them. The lesson is
+ * about coverage, not the luck of one introduction: one person fizzles by chance in 4 of 20 seeds
+ * at 85%, while 3, 5 and 10 all pass both arms in 20 of 20 (10). A setup choice, not a model figure.
+ */
+export const LESSON1_IMPORTED_PEOPLE = 10;
+
+/**
+ * Share of the people the vaccine does not protect who caught it from someone else (the people
+ * brought in are not counted). "Not protected" is counted person by person: everyone whose
+ * vaccine did not take, including the fully vaccinated few it fails for.
+ * A large city (500,000 people) keeps chance small.
  */
 export function attackRate(full: number, seed: number): number {
 	const sim = cityRun('measles', seed, { vaccinatedFull: full, population: 500_000 });
-	sim.send({ type: 'seed', region: 0, count: 1 });
+	sim.send({ type: 'seed', region: 0, count: LESSON1_IMPORTED_PEOPLE });
 	runOut(sim, 400);
 	const unprotected = sim.unprotectedPeople(0);
 	const r = sim.snapshot().regions[0];
-	return (r.counts.everInfected - 1) / (unprotected - 1);
+	return (r.counts.everInfected - LESSON1_IMPORTED_PEOPLE) / (unprotected - LESSON1_IMPORTED_PEOPLE);
 }

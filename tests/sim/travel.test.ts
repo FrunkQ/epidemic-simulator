@@ -11,8 +11,9 @@ import { loadDisease } from '../../src/lib/config';
 
 /**
  * Follow every traveller who sets off while silently infected and record, person by person, how
- * many are still infectious when they arrive, per kind of route. Nobody catches it on the way, so
- * the infected people who arrive are the ones who set off.
+ * many are still infectious when they arrive, per kind of route. Nobody catches it on the way, and
+ * people caught on the arrival tick are left out, so the infected people counted are the ones
+ * who set off.
  */
 function arrivals(seed: number) {
 	const scenario = microcosm(0);
@@ -32,6 +33,15 @@ function arrivals(seed: number) {
 		if (ok) expect(p.ill[dot], 'an ill person boarded').toBe(0);
 		return ok;
 	};
+	// People caught this tick, per dot: an arriving dot can catch it on its arrival tick, and those
+	// people didn't set off infected.
+	const caughtNow = new Map<number, number>();
+	const infect = p.infect.bind(p);
+	p.infect = (dot, k, tick, rng, hooks, setAside) => {
+		const before = p.catchable(dot);
+		infect(dot, k, tick, rng, hooks, setAside);
+		caughtNow.set(dot, (caughtNow.get(dot) ?? 0) + before - p.catchable(dot));
+	};
 	const leftSilent = new Map<number, { kind: string; silent: number }>();
 	const result: Record<string, { infectious: number; total: number }> = {
 		air: { infectious: 0, total: 0 },
@@ -40,6 +50,7 @@ function arrivals(seed: number) {
 	};
 	const wasOnRoute = new Int16Array(a.capacity).fill(-1);
 	for (let t = 0; t < 60 * TICKS_PER_DAY; t++) {
+		caughtNow.clear();
 		sim.step(1);
 		for (let i = 0; i < a.activeCount; i++) {
 			const r = a.route[i];
@@ -50,8 +61,7 @@ function arrivals(seed: number) {
 			if (r < 0 && wasOnRoute[i] >= 0 && leftSilent.has(i)) {
 				const left = leftSilent.get(i)!;
 				result[left.kind].total += left.silent;
-				// The arrival tick's spread can infect more of the dot; count only up to those who set off.
-				result[left.kind].infectious += Math.min(left.silent, silent + p.ill[i]);
+				result[left.kind].infectious += silent + p.ill[i] - (caughtNow.get(i) ?? 0);
 				leftSilent.delete(i);
 			}
 			wasOnRoute[i] = r;
