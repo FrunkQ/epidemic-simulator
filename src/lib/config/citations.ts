@@ -79,7 +79,8 @@ import {
 	per100kFromPerMillion,
 	BOURNER_HIGH_EFFICACY,
 	KUGELER_2020_TREATED,
-	FLECK_DERDERIAN_UNTREATED_CASES
+	FLECK_DERDERIAN_UNTREATED_CASES,
+	PERTUSSIS_TRIAL_MONTHS
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
@@ -1592,8 +1593,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
 		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
-		context:
-			'Official US reference text; the 78%/88% figures are pooled post-licensure effectiveness estimates.',
+		context: 'Official US reference text.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
@@ -1877,7 +1877,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: ['ebola.about'],
 		quote: 'No one who was vaccinated immediately developed Ebola disease 10 or more days after vaccination.',
 		location: 'Vaccine effectiveness / Guinea ring vaccination trial section',
-		why: "The ring-vaccination trial found no cases, which is not a real-world figure, so protection comes from Meakin 2024 (84%). There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why the Ebola vaccine must not be reused for the Marburg preset.",
+		why: `The ring-vaccination trial found no cases, which is not a real-world figure, so protection comes from Meakin 2024 (${Math.round(EBOLA_VACCINE.infection * 100)}%). There is no partial course, so partialEfficacy is left out: the page says ERVEBO is approved 'as a single dose administration'. The page also notes 'ERVEBO does not provide protection against other species of orthoebolaviruses or orthomarburgviruses', which is why the Ebola vaccine must not be reused for the Marburg preset.`,
 		context: 'CDC clinician page on the licensed Zaire ebolavirus vaccine; last reviewed 30 January 2025.',
 		verified: {
 			by: 'independent verification pass',
@@ -3496,14 +3496,14 @@ export const CITATIONS: Citation[] = [
 			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron. … We estimated that the VE against laboratory-confirmed Omicron infection was 44.4% (95% CI, 37.7%-51.1%) at 1 month after completion of any primary vaccination cycle, 20.7% (95% CI, 15.1%-26.4%) at 6 months, and 13.4% (95% CI, 7.8%-18.9%) at 9 months (Figure 3 and eFigure 8 in Supplement 1).',
 		location:
 			"Results, laboratory-confirmed infection paragraph (half-life) and 'VE Against Laboratory-Confirmed Infection' (the 1-, 6- and 9-month figures); model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
-		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found. The same sentence gives the start the sim uses for the original vaccine against infection: ${OMICRON_VACCINE.originalInfection} one month after the course, on the same footing as the half-life.`,
+		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found. The second sentence gives the start the sim uses for the original vaccine against infection: ${OMICRON_VACCINE.originalInfection} one month after the course, on the same footing as the half-life.`,
 		context:
 			'40 studies of original (ancestral) vaccines; Omicron BA.1/BA.2. Pooled VE against laboratory-confirmed Omicron infection 44.4% at 1 month, 20.7% at 6 months and 13.4% at 9 months after the primary course. Laboratory-confirmed infection mixes symptomatic and under-counted symptomless infections. No severe-disease analysis.',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: "DOI matches in the PMC open-data metadata (PMC10157431) and OpenAlex; title, authors, JAMA Netw Open 2023;6(5):e2310650 match. Quote and the exponential model found in the full text, including the half-life definition 'log(2)/w + 14 days'. is_retracted false; no correction notice."
+			note: "DOI matches in the PMC open-data metadata (PMC10157431) and OpenAlex; title, authors, JAMA Netw Open 2023;6(5):e2310650 match. Quote and the exponential model found in the full text, including the half-life definition 'log(2)/w + 14 days'. The month-1 sentence (44.4% at 1 month, 20.7% at 6 months) confirmed verbatim in Results, 'VE Against Laboratory-Confirmed Infection' (second pass, 8 Oct). is_retracted false; no correction notice."
 		}
 	},
 	{
@@ -4368,7 +4368,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Meta-analysis of 2 aP vaccine efficacy studies (assessing the 3-component GlaxoSmithKline and 5-component Sanofi-Pasteur formulations) yielded an overall aP vaccine efficacy of 84% (95% confidence interval [CI], 81%-87%).',
 		location: 'Abstract, Results',
-		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's 91%, a fitted starting point from a study its maker funded. The two trials followed children for about 17 and 21 to 23.5 months, so the figure is slightly low just after the course.`,
+		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's ${Math.round(CHIT.start * 100)}%, a fitted starting point from a study its maker funded. The two trials followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${PERTUSSIS_TRIAL_MONTHS[1]} months, so the figure is slightly low just after the course.`,
 		context:
 			'Two randomised trials, Italy and Sweden, 1990s, WHO case definition (21 days or more of cough with confirmed infection). Measures illness, not infection: acellular vaccines block infection less well.',
 		verified: {
