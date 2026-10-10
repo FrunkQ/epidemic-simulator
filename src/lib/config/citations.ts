@@ -47,6 +47,17 @@ import {
 	WORLD_BANK_AGES_2025,
 	YOUNG,
 	fmt,
+	KUGELER_PRE_ANTIBIOTIC,
+	PLAGUE_ALL,
+	PLAGUE_BUBONIC_TREATED_CFR,
+	PLAGUE_EP_R0S,
+	PLAGUE_EUROPE_SECOND_PANDEMIC_CFR,
+	PLAGUE_FIRST_ANTIBIOTICS_YEAR,
+	PLAGUE_ILL_DAYS,
+	PLAGUE_INCUBATION_DAYS,
+	PLAGUE_MORTALITY,
+	PLAGUE_MORTALITY_BANDS,
+	PLAGUE_R0,
 	per100kFromPerMillion
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
@@ -3992,6 +4003,227 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: 'Paragraph wording confirmed on p. 311 of the WER 95(27) PDF (read through a mirror of the official PDF).'
+		}
+	},
+	{
+		id: 'dean-2018-second-pandemic-ectoparasites',
+		authors: 'Dean KR, Krauer F, Walløe L, Lingjærde OC, Bramanti B, Stenseth NC, Schmid BV',
+		title: 'Human ectoparasites and the spread of plague in Europe during the Second Pandemic',
+		journal: 'Proceedings of the National Academy of Sciences 115(6):1304-1309',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason:
+			'No meta-analysis or systematic review estimates R0 or contagious periods for historical plague; this is the broadest published model comparison, fitted to nine outbreaks on the same footing.',
+		doi: '10.1073/pnas.1715640115',
+		usedFor: ['plague.r0', 'plague.latentDays', 'plague.illDays', 'plague.about'],
+		quote: 'the estimated R0 was 1.48–1.91 for all pre-Industrial outbreaks.',
+		location:
+			'Results, "Basic Reproduction Number R0"; the nine values are Table 3, EP rows. Contagious periods: Methods, "Human Ectoparasite Model". Infection while ill: Discussion.',
+		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (Eyam 1.48, Barcelona 1.91). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models.`,
+		context: 'Nine pre-industrial European plague outbreaks, 1348-1813 (Second Pandemic).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Re-opened in full text from the PMC open-data bucket: the Results R0 sentence, all nine EP values in Table 3, and the Methods 8-day and 2-day sentences confirmed. Table 3 dates Eyam 1666 and Moscow 1771 where Figure 1 says 1665 and 1772; Table 3 is used.'
+		}
+	},
+	{
+		id: 'park-2018-ectoparasite-critique',
+		authors: 'Park SW, Dushoff J, Earn DJD, Poinar H, Bolker BM',
+		title:
+			'Human ectoparasite transmission of the plague during the Second Pandemic is only weakly supported by proposed mathematical models',
+		journal: 'Proceedings of the National Academy of Sciences 115:E7892-E7893 (letter)',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason:
+			'A published letter answering Dean 2018; cited only so the About page names both sides of the debate.',
+		doi: '10.1073/pnas.1809775115',
+		usedFor: ['plague.about'],
+		quote:
+			'Given that bubonic plague infection can cause secondary pneumonic infection, the possibility of mixed transmission modes cannot be neglected.',
+		location: 'Letter, second paragraph',
+		why: 'The About page says the route is still argued over. This letter argues that a mix of rat-flea and lung-to-lung spread is not ruled out by Dean 2018, and that its R0 estimates look too precise.',
+		context: 'Comment on Dean 2018 (nine European outbreaks, 1348-1813).',
+		verified: {
+			by: 'build thread, full text via Consensus',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Full text read: authors, pages E7892-E7893 (from the reply’s reference list) and the quoted sentence confirmed; published online 3 August 2018.'
+		}
+	},
+	{
+		id: 'dean-2018-reply-to-park',
+		authors: 'Dean KR, Krauer F, Walløe L, Lingjærde OC, Bramanti B, Stenseth NC, Schmid BV',
+		title:
+			'Reply to Park et al.: Human ectoparasite transmission of plague during the Second Pandemic is still plausible',
+		journal: 'Proceedings of the National Academy of Sciences (reply)',
+		year: 2018,
+		evidence: 'study',
+		noReviewReason: 'The authors’ published reply to Park 2018; cited only for the other side of the debate.',
+		doi: '10.1073/pnas.1810221115',
+		usedFor: ['plague.about'],
+		quote:
+			'Our results support our conclusion that human ectoparasites are a plausible and likely vector of plague epidemics during the Second Pandemic.',
+		location: 'Reply, closing paragraph',
+		why: 'The other side of the debate on the About page. The reply also concedes the point that matters for the tool: "We would like to emphasize that we do not provide evidence against rat-borne plague transmission".',
+		context: 'Reply on Dean 2018 (nine European outbreaks, 1348-1813).',
+		verified: {
+			by: 'build thread, full text via Consensus',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Full text read: author initials (K.R.D., F.K., L.W., O.C.L., B.B., N.C.S., B.V.S.) and both quoted sentences confirmed; published online 3 August 2018.'
+		}
+	},
+	{
+		id: 'mongillo-2024-bubonic-plague-by-age',
+		authors:
+			'Mongillo J, Zedda N, Rinaldo N, Bellini T, Manfrinato MC, Du Z, Yang R, Stenseth NC, Bramanti B',
+		title: 'Differential pathogenicity and lethality of bubonic plague (1720-1945) by sex, age and place',
+		journal: 'Proceedings of the Royal Society B 291',
+		year: 2024,
+		evidence: 'study',
+		noReviewReason:
+			'No systematic review or meta-analysis of plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. This is the only case-by-case dataset of bubonic plague with ages.',
+		doi: '10.1098/rspb.2024.0724',
+		usedFor: [
+			'plague.mortality',
+			'plague.hospitalisedShare',
+			'plague.mortalityByAge',
+			'plague.hospitalisedByAge',
+			'plague.about'
+		],
+		quote:
+			'From this reduced dataset of 1100 cases of bubonic plague, with known sex, we further selected only those patients whose individual age was also known (967 individuals). Doing so, the total CFR ratio does not change (50.4% in males and 54.7% in females; table 2)',
+		location:
+			'Table 2 (cases and deaths by sex and ten-year age class) and the Results text; Table 1 for the European Second Pandemic subset',
+		why: `mortality=${fmt(PLAGUE_MORTALITY, 3)} is ${PLAGUE_ALL.deaths} deaths in ${PLAGUE_ALL.cases} cases, Table 2's total row. The age bands come from the same counts (${PLAGUE_MORTALITY_BANDS.map((v) => fmt(v, 3)).join(' / ')}), so the bands and the overall figure can't disagree: 0-14 takes the 0-9 and 10-19 classes, and 65+ takes the 50+ class, because the source has no 65+ cut. "Data not disaggregated by sex showcase slight differences in lethality among age classes, but for the older adults (50+), who have the highest CFR (61.4%), and for the 10-19 age class, who showed the lowest value of CFR (45.2%)." These are hospital records from before antibiotics, and some Australian patients had the serum of their day, so it is a before-antibiotics rate, not a nobody-treated one, and if anything slightly low for 1347; the European Second Pandemic subset, closest to the Black Death, is ${fmt(PLAGUE_EUROPE_SECOND_PANDEMIC_CFR * 100, 1)}% (Table 1). The hospital share is set equal to deaths, a lower bound: everyone who died needed care.`,
+		context:
+			'Hospital records of bubonic plague from 17 countries, 1720-1945, Second and Third Pandemics merged.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Table 2 counts read from the full text: 0-9 73/40, 10-19 263/119, 20-29 286/158, 30-39 160/81, 40-49 115/59, 50+ 70/43, total 967/500 (51.7%); Table 1 European Second Pandemic 57.2%.'
+		}
+	},
+	{
+		id: 'who-plague-factsheet',
+		authors: 'World Health Organization',
+		title: 'Plague (fact sheet)',
+		journal: 'WHO (who.int)',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/news-room/fact-sheets/detail/plague',
+		usedFor: [
+			'plague.silentDays',
+			'plague.latentDays',
+			'plague.mortality',
+			'plague.fullEfficacy',
+			'plague.about'
+		],
+		quote:
+			'People infected with Y. pestis often develop symptoms after an incubation period of one to seven days.',
+		location: 'Key facts; Overview; Vaccination',
+		why: `silentDays=latentDays=${PLAGUE_INCUBATION_DAYS} is the middle of the one-to-seven-day incubation period; the About page gives the whole range. The death rate sits inside WHO's figure for bubonic plague: "Plague can be a very severe disease in people, with a case-fatality ratio of 30% to 60% for the bubonic type, and it is always fatal for the pneumonic and septicaemic kinds when left untreated." fullEfficacy is 0 and nobody is vaccinated: "WHO does not recommend vaccination, except for high-risk groups (such as laboratory personnel who are constantly exposed to the risk of contamination, and health-care workers)." The page's "Human-to-human transmission of bubonic plague is rare." is why the About page says the dots stand for people living closely enough to share lice and fleas, not for coughs.`,
+		context: "WHO's official fact sheet, dated 29 September 2026.",
+		verified: {
+			by: 'build thread, re-pulled the fact sheet',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Fetched 10 Oct 2026 (dated 29 September 2026). The incubation and human-to-human sentences were confirmed whole; the bubonic 30%-60% sentence and the vaccination sentence were re-pulled in full in pieces, closing the 8 Oct pass’s note that they were held only as fragments.'
+		}
+	},
+	{
+		id: 'andrianaivoarimanana-2020-plague-antibody-persistence',
+		authors: 'Andrianaivoarimanana V, Wagner DM, Birdsell DN, et al.',
+		title:
+			'Short- and long-term humoral immune response against Yersinia pestis in plague patients, Madagascar',
+		journal: 'BMC Infectious Diseases 20:822',
+		year: 2020,
+		evidence: 'study',
+		noReviewReason:
+			'The only study of long-term immune response in recovered plague patients; no review covers it.',
+		doi: '10.1186/s12879-020-05565-8',
+		usedFor: ['plague.waningDays'],
+		quote:
+			'Antibodies persisted for several years and up to 14.8 years for one individual. Antibody titers decreased over time but there was no correlation between titer and time elapsed between the disease onset and serum sampling.',
+		location: 'Abstract (Results); Results, long-term follow-up of 71 recovered patients',
+		why: 'waningDays=null. The study measures antibodies, not protection against catching plague again, and finds no fading with time, so there is no half-life to use. It is never cited for a rate of decay. The About page says protection after plague has never been measured.',
+		context: 'Confirmed plague patients in Madagascar, followed for up to about 15 years.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Re-opened in full text from the PMC open-data bucket: no reinfection endpoint and no measured protection over time, only antibody persistence; quote confirmed.'
+		}
+	},
+	{
+		id: 'ratsitorahina-2000-madagascar-seroprevalence',
+		authors: 'Ratsitorahina M, Chanteau S, Rahalison L, et al.',
+		title: 'Seroepidemiology of human plague in the Madagascar highlands',
+		journal: 'Tropical Medicine & International Health 5(2):94-98',
+		year: 2000,
+		evidence: 'study',
+		noReviewReason:
+			'No study or review gives the share of plague infections without symptoms; this one shows that they happen.',
+		doi: '10.1046/j.1365-3156.2000.00521.x',
+		usedFor: ['plague.about'],
+		quote:
+			'We also confirm that Yersinia pestis infections may occur without marked clinical manifestations and patients may recover without treatment, in accordance with old observations of pestis minor.',
+		location: 'Abstract; Discussion',
+		why: 'Why the share of infections with no symptoms is marked "not yet sourced" rather than set to a guess: such infections are real, but no study gives a fraction, and a modern treated population cannot supply one for an untreated epidemic.',
+		context: 'Madagascar highlands, a modern population where plague is treated.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Full text via Consensus; quote confirmed.'
+		}
+	},
+	{
+		id: 'kugeler-2015-us-plague-1900-2012',
+		authors: 'Kugeler KJ, Staples JE, Hinckley AF, Gage KL, Mead PS',
+		title: 'Epidemiology of human plague in the United States, 1900-2012',
+		journal: 'Emerging Infectious Diseases 21(1):16-22',
+		year: 2015,
+		evidence: 'study',
+		noReviewReason:
+			'A national case series used only as a cross-check and for the date antibiotics arrived; no review gives either.',
+		doi: '10.3201/eid2101.140564',
+		usedFor: ['plague.about'],
+		quote: 'The first documented use of antibiotics to treat plague in the United States was in 1942.',
+		location: 'Results; Table 2 (1900-1941 and 1942-2012)',
+		why: `Why "before antibiotics" means before ${PLAGUE_FIRST_ANTIBIOTICS_YEAR}. It is also a cross-check on the death rate: ${KUGELER_PRE_ANTIBIOTIC.deaths} deaths in ${KUGELER_PRE_ANTIBIOTIC.cases} cases (${fmt((KUGELER_PRE_ANTIBIOTIC.deaths / KUGELER_PRE_ANTIBIOTIC.cases) * 100)}%) in 1900-1941, all forms of plague together, not the figure the model uses.`,
+		context: 'United States, 1900-2012.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Re-opened in full text from the PMC open-data bucket: Table 2 figures (336/511, bubonic 235/354, pneumonic 55/59, septicemic 8/9) and the 1942 sentence confirmed.'
+		}
+	},
+	{
+		id: 'godfred-cato-2020-plague-treatment-review',
+		authors: 'Godfred-Cato S, Cooley KM, Fleck-Derderian S, et al.',
+		title:
+			'Treatment of Human Plague: A Systematic Review of Published Aggregate Data on Antimicrobial Efficacy, 1939-2019',
+		journal: 'Clinical Infectious Diseases',
+		year: 2020,
+		evidence: 'systematic-review',
+		doi: '10.1093/cid/ciz1230',
+		usedFor: ['plague.about'],
+		quote:
+			'Case fatality rates for patients with reported primary clinical form of plague were 14.2% for bubonic, 31.1% for pneumonic, and 20.0% for septicemic plague forms',
+		location: 'Results',
+		why: `The About page's "curable today" line: with antibiotics, about ${fmt(PLAGUE_BUBONIC_TREATED_CFR * 100)}% of people with bubonic plague die, against about half before them. The model uses the before-antibiotics rate, because the Black Death had none.`,
+		context: '2,631 treated cases of human plague in 26 articles, 1939-2019.',
+		verified: {
+			by: 'modern plague research pass',
+			on: '2026-10-08',
+			ok: true,
+			note: 'Quote checked in the full text.'
 		}
 	}
 ];
