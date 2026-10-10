@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DEATHS_TALLY } from '../config/deathsTally';
 	import { COLOURS } from '../sim/render';
 
 	interface Props {
@@ -35,8 +36,7 @@
 	<span class="scale"
 		>Each dot stands for {peoplePerDot.toLocaleString()}
 		{peoplePerDot === 1 ? 'person' : 'people'}.{#if peoplePerDot > 1}
-			Death counts add up each person's real chance of dying, so they can be smaller than one dot. The dots
-			that turn dead on the map are a sample that matches the count on average.{/if}</span
+			{DEATHS_TALLY}{/if}</span
 	>
 	<span class="routes"><b class="road"></b>Road <b class="ferry"></b>Ferry <b class="air"></b>Flight</span>
 </div>

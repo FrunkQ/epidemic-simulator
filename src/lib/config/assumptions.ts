@@ -1,3 +1,4 @@
+import { DEATHS_TALLY } from './deathsTally';
 import { DISEASES } from './diseases';
 import { fullCourseSevere } from '../sim/disease';
 import type { DiseaseConfig } from '../sim/types';
@@ -27,8 +28,7 @@ export const ASSUMPTIONS = {
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
-	deathsTally:
-		'Each dot stands for a group of people. Death counts add up each person’s real chance of dying, so they can be smaller than one dot. The dots that turn dead on the map are a sample that matches the count on average. Where a dot is one person, the count is the dots that died.',
+	deathsTally: `Each dot stands for a group of people. ${DEATHS_TALLY} Where a dot is one person, the count is the dots that died.`,
 	careHomes:
 		'Some older people died of COVID without going into hospital, in care homes or at home. The model counts them as needing a bed, so it slightly overstates hospital pressure for the oldest group.',
 	strainSlope: `No study measures how fast the risk rises between ${Math.round(STRAIN.threshold * 100)}% and ${Math.round(STRAIN.capAt * 100)}%; the model draws a straight line between the sourced starting point and the sourced cap.`,

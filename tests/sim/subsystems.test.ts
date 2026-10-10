@@ -15,6 +15,7 @@ describe('subsystem switches (6.14)', () => {
 		sim.seedNow(0, 200);
 		sim.step(40 * TICKS_PER_DAY);
 		expect(sim.snapshot().totals.deceased).toBe(0);
+		expect(sim.snapshot().deaths).toBe(0);
 	});
 
 	it('silent spread off: a disease contagious almost only before symptoms barely spreads', () => {

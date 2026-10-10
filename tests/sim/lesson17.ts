@@ -23,8 +23,7 @@ export function lesson17(firstSeed: number, lastSeed: number): void {
 	}
 	// The 15-64 death rate per infection is higher under 1918 flu in at least 80% of seeds.
 	expect(higherRate / seeds).toBeGreaterThanOrEqual(0.8);
-	// The working-age share of deaths, the figure the panel shows, pooled over the seeds because
-	// seasonal flu kills only a handful of dots per run.
+	// The working-age share of deaths, the figure the panel shows, pooled over the seeds (10, #17).
 	const share = (d: number[]) => d[0] / d[1];
 	expect(share(pooled.pandemic)).toBeGreaterThanOrEqual(3 * share(pooled.seasonal));
 }

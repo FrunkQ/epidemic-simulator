@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AGE_BANDS } from './ages';
-	import { MARGIN, niceMax, short } from './scale';
+	import { MARGIN, niceMax, roundToTotal, short } from './scale';
 
 	interface Props {
 		/** Plain words saying what the chart shows. */
@@ -17,13 +17,16 @@
 
 	const total = $derived(values[0] + values[1] + values[2]);
 	const shown = $derived(asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice());
+	// Whole numbers that add up to the rounded total, so the bands agree with the card (8).
+	const counts = $derived(roundToTotal(values));
+	const shares = $derived(total > 0 ? roundToTotal(shown, 100) : [0, 0, 0]);
 	const top = $derived(asShares ? 100 : niceMax(Math.max(1, ...shown)));
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
 	const plotH = $derived(height - MARGIN.top - MARGIN.bottom);
 	const slot = $derived(plotW / 3);
 	const barW = $derived(Math.min(34, slot - 10));
 	const ys = (v: number) => MARGIN.top + plotH - (Math.min(v, top) / top) * plotH;
-	const label = (v: number) => (asShares ? `${Math.round(v)}%` : Math.round(v).toLocaleString());
+	const label = (b: number) => (asShares ? `${shares[b]}%` : counts[b].toLocaleString());
 	let hover: number | null = $state(null);
 </script>
 
@@ -68,14 +71,14 @@
 				opacity={shown[b] > 0 ? 1 : 0}
 				pointer-events="none"
 			/>
-			<text class="value" x={x + barW / 2} y={y - 3} text-anchor="middle">{label(shown[b])}</text>
+			<text class="value" x={x + barW / 2} y={y - 3} text-anchor="middle">{label(b)}</text>
 			<text x={x + barW / 2} y={height - 8} text-anchor="middle">{band.short}</text>
 		{/each}
 	</svg>
 	{#if hover !== null}
 		<div class="tip" role="status">
 			<b>{AGE_BANDS[hover].label}</b>
-			<span>{label(shown[hover])}{asShares ? ` (${Math.round(values[hover]).toLocaleString()})` : ''}</span>
+			<span>{label(hover)}{asShares ? ` (${counts[hover].toLocaleString()})` : ''}</span>
 		</div>
 	{/if}
 </figure>

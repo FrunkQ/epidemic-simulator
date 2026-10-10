@@ -34,6 +34,7 @@ const A_SUSCEPTIBLE = 0;
 const A_INFECTED = 1;
 const A_IN_HOSPITAL = 2;
 const A_RECOVERED = 3;
+/** In people (the deaths tally), while the other age channels are in dots. */
 const A_DECEASED = 4;
 const A_VACCINATED = 5;
 const BANDS = 3;
@@ -64,8 +65,9 @@ export class TelemetryCounters {
 	 * Added in the engine's fixed dot order, so a run stays reproducible.
 	 */
 	readonly deathTally: Float64Array;
-	private readonly history: Int32Array;
-	private readonly ageHistory: Int32Array;
+	/** Float, so the deaths channels keep the tally in people; display rounds them (8). */
+	private readonly history: Float64Array;
+	private readonly ageHistory: Float64Array;
 	private historyLen = 0;
 	private historyHead = 0;
 	private readonly historyDay: Int32Array;
@@ -78,8 +80,8 @@ export class TelemetryCounters {
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
 		this.deathTally = new Float64Array(regionCount * MAX_DISEASES * BANDS);
-		this.history = new Int32Array(HISTORY_DAYS * regionCount * CHANNELS);
-		this.ageHistory = new Int32Array(HISTORY_DAYS * regionCount * A_SLOTS);
+		this.history = new Float64Array(HISTORY_DAYS * regionCount * CHANNELS);
+		this.ageHistory = new Float64Array(HISTORY_DAYS * regionCount * A_SLOTS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
 	}
 
@@ -178,7 +180,7 @@ export class TelemetryCounters {
 			history[h + 4] = counts[b + C_UNPROTECTED] + counts[b + C_PARTIAL];
 			history[h + 5] = Math.round(this.patients[r] * HOSPITAL_SCALE);
 			history[h + 6] = Math.round(pressure[r] * 1000);
-			history[h + 7] = Math.round(this.deaths(r));
+			history[h + 7] = this.deaths(r);
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {
@@ -186,6 +188,8 @@ export class TelemetryCounters {
 					agesInHospital[r * BANDS + band] * HOSPITAL_SCALE
 				);
 			}
+			const died = this.deathsByAge(r);
+			for (let band = 0; band < BANDS; band++) ageHistory[a + A_DECEASED * BANDS + band] = died[band];
 		}
 		this.historyDay[slot] = day;
 		this.historyHead = (slot + 1) % HISTORY_DAYS;
@@ -226,13 +230,13 @@ export class TelemetryCounters {
 	regionHistory(r: number): RegionHistory {
 		const len = this.historyLen;
 		const days = new Int32Array(len);
-		const series = Object.fromEntries(HISTORY_CHANNELS.map((ch) => [ch, new Int32Array(len)])) as Record<
+		const series = Object.fromEntries(HISTORY_CHANNELS.map((ch) => [ch, new Float64Array(len)])) as Record<
 			HistoryChannel,
-			Int32Array
+			Float64Array
 		>;
 		const byAge = Object.fromEntries(
-			AGE_CHANNELS.map((ch) => [ch, [new Int32Array(len), new Int32Array(len), new Int32Array(len)]])
-		) as Record<AgeChannel, [Int32Array, Int32Array, Int32Array]>;
+			AGE_CHANNELS.map((ch) => [ch, [new Float64Array(len), new Float64Array(len), new Float64Array(len)]])
+		) as Record<AgeChannel, [Float64Array, Float64Array, Float64Array]>;
 		const start = (this.historyHead - len + HISTORY_DAYS) % HISTORY_DAYS;
 		for (let k = 0; k < len; k++) {
 			const slot = (start + k) % HISTORY_DAYS;
