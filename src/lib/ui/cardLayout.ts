@@ -215,3 +215,64 @@ export function placeInOrder(
 	}
 	return { positions, cover, misplaced, spread };
 }
+
+/**
+ * Pick a frame from `tries` (biggest map first): the first whose layout covers nothing with every
+ * card by its own city; else the first that covers nothing, accepting a card nearer another city;
+ * else the one covering least, then with fewest cards nearer another city.
+ */
+export function pickFrame<T>(tries: T[], layoutAt: (t: T) => Layout): T {
+	let best = tries[0];
+	let bestCover = Infinity;
+	let bestMisplaced = Infinity;
+	let firstClear: T | undefined;
+	for (const t of tries) {
+		const { cover, misplaced } = layoutAt(t);
+		if (cover === 0 && misplaced === 0) return t;
+		if (cover === 0 && firstClear === undefined) firstClear = t;
+		if (cover < bestCover - 0.25 || (cover <= bestCover + 0.25 && misplaced < bestMisplaced)) {
+			best = t;
+			bestCover = cover;
+			bestMisplaced = misplaced;
+		}
+	}
+	return firstClear ?? best;
+}
+
+/** The usual margin around the cities: framing never zooms in closer than this. */
+export const FRAME_MARGIN = 150;
+/** Framing never zooms out below this share of the usual scale just to place the cards. */
+export const FRAME_FLOOR = 0.5;
+/** Other side and top margins tried when the usual frame leaves a card badly placed: this many of each. */
+const FRAME_STEPS = 6;
+
+export interface FrameTry {
+	mx: number;
+	my: number;
+	scale: number;
+}
+
+/**
+ * The side and top margins to try when framing cities spanning `spanX` by `spanY` world units on a
+ * `width` by `height` stage: the usual margin first, then others, biggest map first. None zooms in
+ * past the usual frame or out below FRAME_FLOOR of it; on a stage too short for the usual frame,
+ * any frame that fits will do.
+ */
+export function frameTries(width: number, height: number, spanX: number, spanY: number): FrameTry[] {
+	const scaleOf = (mx: number, my: number) =>
+		Math.min((width - 2 * mx) / Math.max(1, spanX), (height - 2 * my) / Math.max(1, spanY));
+	const usual = { mx: FRAME_MARGIN, my: FRAME_MARGIN, scale: scaleOf(FRAME_MARGIN, FRAME_MARGIN) };
+	const steps = (span: number) =>
+		Array.from({ length: FRAME_STEPS }, (_, k) => Math.round(((k + 1) * span) / (2 * (FRAME_STEPS + 1))));
+	const others: FrameTry[] = [];
+	for (const mx of steps(width))
+		for (const my of steps(height)) {
+			const scale = scaleOf(mx, my);
+			const ok =
+				scale > 0 && (usual.scale <= 0 || (scale <= usual.scale && scale >= FRAME_FLOOR * usual.scale));
+			if (ok) others.push({ mx, my, scale });
+		}
+	others.sort((a, b) => b.scale - a.scale);
+	const tries = usual.scale > 0 ? [usual, ...others] : others;
+	return tries.length ? tries : [usual];
+}

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { discCover, layoutCards, offsetsOf, placeInOrder, type Disc } from '../../src/lib/ui/cardLayout';
+import {
+	FRAME_FLOOR,
+	discCover,
+	frameTries,
+	layoutCards,
+	offsetsOf,
+	pickFrame,
+	placeInOrder,
+	type Disc,
+	type Layout
+} from '../../src/lib/ui/cardLayout';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
@@ -89,5 +99,56 @@ describe('card layout', () => {
 		// Island City is up and left of the middle, so its card sits up and left of it.
 		expect(positions[0].x + sizes[0].w).toBeLessThanOrEqual(moved[0].x);
 		expect(positions[0].y + sizes[0].h).toBeLessThanOrEqual(moved[0].y);
+	});
+
+	it('places the cards again when a kept layout would cover something after a card grows', () => {
+		const first = layoutCards(discs, sizes, stage);
+		// Much taller cards no longer fit where they were: kept, they would leave the stage or overlap.
+		const taller = sizes.map((s) => ({ ...s, h: s.h + 140 }));
+		const kept = first.positions.map((p, i) => ({ ...p, ...taller[i] }));
+		const keptClear =
+			kept.every((r) => r.y + r.h <= stage.height - 8) &&
+			kept.every((r, i) => kept.slice(0, i).every((o) => !overlaps(r, o)));
+		expect(keptClear).toBe(false);
+		const again = layoutCards(discs, taller, { width: stage.width, height: 600 }, offsetsOf(first, discs));
+		expectClear(discs, taller, { width: stage.width, height: 600 }, again);
+		expect(again.positions).not.toEqual(first.positions);
+	});
+});
+
+describe('framing', () => {
+	const layout = (cover: number, misplaced: number): Layout => ({
+		positions: [],
+		cover,
+		misplaced,
+		spread: 0
+	});
+
+	it('never zooms in past the usual frame or out below the floor', () => {
+		for (const [w, h] of [
+			[1366, 444],
+			[1280, 400],
+			[1920, 830],
+			[1400, 625]
+		]) {
+			const tries = frameTries(w, h, 300, 200);
+			expect(tries[0].mx).toBe(150);
+			for (const t of tries) {
+				expect(t.scale).toBeLessThanOrEqual(tries[0].scale);
+				expect(t.scale).toBeGreaterThanOrEqual(FRAME_FLOOR * tries[0].scale);
+			}
+		}
+	});
+
+	it('on a stage too short for the usual frame, tries any frame that fits', () => {
+		const tries = frameTries(1024, 280, 300, 200);
+		expect(tries.length).toBeGreaterThan(0);
+		for (const t of tries) expect(t.scale).toBeGreaterThan(0);
+	});
+
+	it('takes the biggest clear frame, else the biggest with nothing covered, else the least covered', () => {
+		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 0)][t])).toBe(2);
+		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 2)][t])).toBe(1);
+		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(10, 2), layout(10, 1)][t])).toBe(2);
 	});
 });

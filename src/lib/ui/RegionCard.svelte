@@ -18,11 +18,15 @@
 		/** Screen position of the card's top-left corner. */
 		x: number;
 		y: number;
+		/** Tallest the card may be before it scrolls inside (an open card near the stage bottom). */
+		maxHeight?: number;
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
 		/** The card's rendered size, so the page can keep the whole card on screen. */
 		width?: number;
 		height?: number;
+		/** The card's element, so the page can measure it at once. */
+		element?: HTMLElement;
 		/** Whether a settings panel is open (the card is then taller and sits on top). */
 		open?: boolean;
 		onvaccination: (full: number, partial: number) => void;
@@ -40,7 +44,9 @@
 		peoplePerDot,
 		x,
 		y,
+		maxHeight,
 		docked = false,
+		element = $bindable(),
 		width = $bindable(),
 		height = $bindable(),
 		open = $bindable(),
@@ -59,13 +65,13 @@
 	/** The seed button brings in one dot, so it says how many people that is. */
 	let seedLabel = $derived(
 		peoplePerDot === 1
-			? 'Bring in one infected person'
-			: `Bring in one infected dot (${peoplePerDot.toLocaleString('en-GB')} people)`
+			? 'Bring in 1 infected person'
+			: `Bring in ${peoplePerDot.toLocaleString('en-GB')} infected people`
 	);
 	let seedHover = $derived(
 		peoplePerDot === 1
 			? 'Each dot is one person.'
-			: `A dot spreads like one case would, and can die out by chance the way a single case can. It just stands for ${peoplePerDot.toLocaleString('en-GB')} people.`
+			: `This brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${peoplePerDot.toLocaleString('en-GB')} people.`
 	);
 	/** The population when the run starts, in people, to two significant figures so it reads easily. */
 	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
@@ -103,6 +109,7 @@
 </script>
 
 <section
+	bind:this={element}
 	bind:offsetWidth={width}
 	bind:offsetHeight={height}
 	class="card"
@@ -110,6 +117,7 @@
 	class:docked
 	style:left={docked ? null : `${x}px`}
 	style:top={docked ? null : `${y}px`}
+	style:max-height={docked || maxHeight === undefined ? null : `${maxHeight}px`}
 >
 	<header>
 		<h2>{region.name}</h2>
@@ -274,6 +282,7 @@
 	.card.open {
 		width: 250px;
 		z-index: 2;
+		overflow-y: auto;
 	}
 	.card.docked {
 		position: static;

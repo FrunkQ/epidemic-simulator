@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { DISEASES } from '../lib/config/diseases';
 	import { withValue, type LivePolicyKey } from '../lib/config/healthPolicy';
 	import { microcosm } from '../lib/config/scenarios';
 	import { START_MAPS } from '../lib/config/startMaps.generated';
 	import { loadDisease } from '../lib/config';
 	import { vaccineFor } from '../lib/sim/disease';
+	import { DEFAULT_PEOPLE_PER_DOT } from '../lib/sim/constants';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
-	import { layoutCards, offsetsOf, type Offset } from '../lib/ui/cardLayout';
+	import { frameTries, layoutCards, offsetsOf, pickFrame, type Offset } from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -44,10 +45,6 @@
 	let viewVersion = $state(0);
 	let compact = $derived(size.width < 760);
 
-	/** The usual margin around the cities: framing never zooms in closer than this. */
-	const FRAME_MARGIN = 150;
-	/** Other side and top margins tried when the usual frame leaves a card badly placed: this many of each. */
-	const FRAME_STEPS = 6;
 	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
 	let userMoved = false;
 
@@ -77,40 +74,14 @@
 			viewVersion++;
 			return;
 		}
-		const scaleOf = (mx: number, my: number) =>
-			Math.min((width - 2 * mx) / Math.max(1, maxX - minX), (height - 2 * my) / Math.max(1, maxY - minY));
-		const usual = { mx: FRAME_MARGIN, my: FRAME_MARGIN, scale: scaleOf(FRAME_MARGIN, FRAME_MARGIN) };
-		const others: (typeof usual)[] = [];
-		const steps = (span: number) =>
-			Array.from({ length: FRAME_STEPS }, (_, k) => Math.round(((k + 1) * span) / (2 * (FRAME_STEPS + 1))));
-		for (const mx of steps(width))
-			for (const my of steps(height)) {
-				const scale = scaleOf(mx, my);
-				// On a stage too short for the usual frame, any frame that fits will do.
-				if (scale > 0 && (usual.scale <= 0 || scale <= usual.scale)) others.push({ mx, my, scale });
-			}
-		// The usual frame first (when it fits at all), then the biggest map.
-		others.sort((a, b) => b.scale - a.scale);
-		const tries = usual.scale > 0 ? [usual, ...others] : others;
-		if (!tries.length) tries.push(usual);
-		// The first frame with nothing covered and every card by its own city; else the one
-		// covering least, then with fewest cards nearer another city.
-		let best = tries[0];
-		let bestCover = Infinity;
-		let bestMisplaced = Infinity;
-		for (const t of tries) {
+		const tries = frameTries(width, height, maxX - minX, maxY - minY);
+		// The first (biggest) frame with nothing covered and every card by its own city; else the
+		// first with nothing covered, accepting a card nearer another city; else the one covering
+		// least, then with fewest cards nearer another city.
+		const best = pickFrame(tries, (t) => {
 			fit(t.mx, t.my);
-			const { cover, misplaced } = layoutCards(discsOnScreen(), layoutSizes(), size);
-			if (cover === 0 && misplaced === 0) {
-				best = t;
-				break;
-			}
-			if (cover < bestCover - 0.25 || (cover <= bestCover + 0.25 && misplaced < bestMisplaced)) {
-				best = t;
-				bestCover = cover;
-				bestMisplaced = misplaced;
-			}
-		}
+			return layoutCards(discsOnScreen(), layoutSizes(), size);
+		});
 		fit(best.mx, best.my);
 		lastPositions = undefined;
 		viewVersion++;
@@ -184,11 +155,24 @@
 			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
 		});
 	});
-	/** Another disease or map: cards are measured afresh and the map framed for them. */
-	function forgetCardSizes() {
+	/** Each floating card's element, to measure it straight after a disease or map change. */
+	let cardElements: (HTMLElement | undefined)[] = $state([]);
+	/**
+	 * Another disease or map: once the cards show it, measure them afresh (a card the same height
+	 * as before fires no resize, and a stale bound height would be kept as the tallest) and frame
+	 * the map for them.
+	 */
+	async function forgetCardSizes() {
 		userMoved = false;
-		closedSizes = [];
 		lastPositions = undefined;
+		await tick();
+		// Wait for the next paint too: some of a card's lines follow the new run's first telemetry.
+		await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+		closedSizes = scenario.regions.map((_, i) => {
+			const el = cardElements[i];
+			if (!el || cardOpen[i] || el.offsetWidth > CARD_W) return undefined;
+			return { w: el.offsetWidth, h: el.offsetHeight };
+		});
 	}
 	/** Frame again when a card first measures taller than before, unless the user has moved the map. */
 	$effect(() => {
@@ -219,15 +203,12 @@
 		const layout = layoutCards(discs, sizes, size, lastPositions);
 		lastPositions = offsetsOf(layout, discs);
 		const placed = layout.positions;
-		// An open card stays where it was and grows on top, pulled back onto the stage if it must.
+		// An open card stays where it was and grows on top (scrolling inside if it would run past the
+		// stage), so its buttons stay under the pointer; pulled left only if it would leave the stage.
 		return placed.map((p, i) => {
-			if (!cardOpen[i]) return p;
+			if (!cardOpen[i]) return { ...p, maxHeight: undefined };
 			const w = cardWidths[i] || sizes[i].w;
-			const h = cardHeights[i] || sizes[i].h;
-			return {
-				x: Math.max(8, Math.min(p.x, size.width - w - 8)),
-				y: Math.max(8, Math.min(p.y, size.height - h - 8))
-			};
+			return { x: Math.max(8, Math.min(p.x, size.width - w - 8)), y: p.y, maxHeight: size.height - p.y - 8 };
 		});
 	});
 </script>
@@ -281,9 +262,11 @@
 					{region}
 					telemetry={telemetry?.regions[i]}
 					disease={DISEASES[diseaseId]}
-					peoplePerDot={telemetry?.peoplePerDot ?? 100}
+					peoplePerDot={telemetry?.peoplePerDot ?? DEFAULT_PEOPLE_PER_DOT}
 					x={pos.x}
 					y={pos.y}
+					maxHeight={pos.maxHeight}
+					bind:element={cardElements[i]}
 					bind:width={cardWidths[i]}
 					bind:height={cardHeights[i]}
 					bind:open={cardOpen[i]}
@@ -322,7 +305,7 @@
 					{region}
 					telemetry={telemetry?.regions[i]}
 					disease={DISEASES[diseaseId]}
-					peoplePerDot={telemetry?.peoplePerDot ?? 100}
+					peoplePerDot={telemetry?.peoplePerDot ?? DEFAULT_PEOPLE_PER_DOT}
 					x={0}
 					y={0}
 					docked
