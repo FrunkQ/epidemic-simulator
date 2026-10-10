@@ -9,6 +9,7 @@ import {
 	vaccineDeathsWords,
 	vaccineKey
 } from '../../src/lib/config/vaccines';
+import { fullCourseSevere } from '../../src/lib/sim/disease';
 import type { DiseaseConfig, Sourced, Vaccine, VaccineDeathRate } from '../../src/lib/sim/types';
 
 const WITH_VACCINES = (Object.values(DISEASES) as DiseaseConfig[]).filter((d) => d.vaccines?.length);
@@ -181,8 +182,8 @@ describe('vaccines', () => {
 			1 - (1 - k.bivalentRelativeInfection) * (1 - k.originalInfection)
 		);
 		expect(updated.full.severe!.value).toBe(1 - (1 - k.bivalentRelativeSevere) * (1 - k.originalSevere));
-		expect(updated.full.infection.value).toBeCloseTo(0.45, 3);
-		expect(updated.full.severe!.value).toBeCloseTo(0.826, 3);
+		expect(updated.full.infection.value).toBeCloseTo(0.616, 3);
+		expect(updated.full.severe!.value).toBeCloseTo(0.853, 3);
 		// The same constants back the original vaccine's own entry.
 		expect(original.full.infection.value).toBe(k.originalInfection);
 		expect(original.full.severe!.value).toBe(k.originalSevere);
@@ -199,7 +200,8 @@ describe('vaccines', () => {
 		expect(days(DISEASES.flu, 'inactivated')).toBeCloseTo(105, 0);
 		expect(days(DISEASES.mumps, 'MMR')).toBeCloseTo(19.0 * 365.25, 9);
 		expect(days(DISEASES.pertussis, 'DTaP')).toBeCloseTo(2637, 0);
-		expect(days(DISEASES.smallpox, 'vaccinia')).toBeCloseTo(4 * 365.25, 9);
+		// The middle of Nishiura's 11.7-28.4 years: a median duration of protection is a half-life.
+		expect(days(DISEASES.smallpox, 'vaccinia')).toBeCloseTo(((11.7 + 28.4) / 2) * 365.25, 9);
 		expect(days(DISEASES.polio, 'OPV')).toBeCloseTo((5 / 12 + 4) * 365.25, 9);
 		expect(days(DISEASES.chickenpox, 'varicella')).toBeCloseTo(3195, 0);
 		expect(DISEASES.flu.waningDays.value).toBeCloseTo(4.1 * 365.25, 9);
@@ -218,12 +220,77 @@ describe('vaccines', () => {
 		expect(DISEASES.flu.vaccines[0].seriousPer100kDoses.value).toBeCloseTo(0.285, 12);
 		expect(find(DISEASES.polio, 'IPV').seriousPer100kDoses.value).toBeCloseTo(0.131, 12);
 		expect(find(DISEASES.polio, 'IPV').partial!.severe!.value).toBeCloseTo((0.33 + 0.41 + 0.47) / 3, 12);
-		expect(find(DISEASES.polio, 'OPV').full.infection.value).toBeCloseTo(0.87, 12);
+		expect(find(DISEASES.polio, 'OPV').full.infection.value).toBe(0.91);
 		expect(find(DISEASES.polio, 'OPV').seriousPer100kDoses.value).toBeCloseTo((0.05 + 0.1 / 3) / 2, 12);
 		expect(DISEASES.pertussis.vaccines[0].seriousPer100kDoses.value).toBe(10);
 		expect(find(DISEASES.smallpox, 'vaccinia').seriousPer100kDoses.value).toBeCloseTo(7.4, 12);
 		expect(rateOf(find(DISEASES.smallpox, 'vaccinia'))).toBeCloseTo(0.1, 12);
 		expect(DISEASES.ebola.vaccines[0].seriousPer100kDoses.value).toBeCloseTo((3 / 15_399) * 1e5, 12);
+	});
+
+	it('starts each vaccine near the dose, on the same footing as its half-life (6.13)', () => {
+		const flu = find(DISEASES.flu, 'inactivated');
+		// Averaged over days 14-180 on the 105-day half-life, the start gives back Guo's 41.4%.
+		const H = flu.waningDays.value!;
+		const avg = (a: number, b: number) =>
+			(flu.full.infection.value * H * (2 ** (-a / H) - 2 ** (-b / H))) / (Math.LN2 * (b - a));
+		expect(avg(14, 180)).toBeCloseTo(0.414, 9);
+		expect(flu.full.infection.value).toBeCloseTo(0.747, 2);
+		// And Young's own windows, 53.8% (15-90 days) and 31.1% (91-180 days).
+		expect(avg(15, 90)).toBeCloseTo(0.538, 1);
+		expect(avg(91, 180)).toBeCloseTo(0.311, 1);
+		const original = find(DISEASES.covid19omicron, 'covid-original');
+		expect(original.full.infection.value).toBe(0.444);
+		expect(original.full.severe!.value).toBe(0.636);
+		expect(original.partial!.infection!.value).toBe(0.259);
+		expect(find(DISEASES.mumps, 'MMR').full.infection.value).toBe(0.964);
+		expect(find(DISEASES.mumps, 'MMR').partial!.infection!.value).toBe(0.964);
+		expect(find(DISEASES.chickenpox, 'varicella').full.infection.value).toBeCloseTo(0.935, 12);
+		expect(find(DISEASES.chickenpox, 'varicella').partial!.infection!.value).toBe(0.878);
+		expect(find(DISEASES.pertussis, 'DTaP').full.infection.value).toBe(0.84);
+		expect(find(DISEASES.measles, 'MMR').full.infection.value).toBe(0.96);
+		expect(find(DISEASES.measles, 'MMR').partial!.infection!.value).toBe(0.95);
+	});
+
+	it("keeps the source's matched breakthrough factor when infection moves to a near-dose figure", () => {
+		const factor = (i: number, s: number) => breakthroughSevereProtection(i, s);
+		const flu = find(DISEASES.flu, 'inactivated');
+		expect(factor(flu.full.infection.value, flu.full.severe!.value)).toBeCloseTo(factor(0.414, 0.42), 12);
+		expect(flu.full.severe!.value).toBeCloseTo(0.75, 2);
+		const oneDose = find(DISEASES.covid19omicron, 'covid-original').partial!;
+		// Tan 2022's pair (13.6%, 42.3%) carried to Shao's 25.9%.
+		expect(factor(oneDose.infection!.value, oneDose.severe!.value)).toBeCloseTo(factor(0.136, 0.423), 12);
+		expect(oneDose.severe!.value).toBeCloseTo(0.505, 3);
+		const pox = find(DISEASES.chickenpox, 'varicella').partial!;
+		// Marin 2016's pair (81%, 98%) carried to Bolormaa's 87.8%.
+		expect(factor(pox.infection!.value, pox.severe!.value)).toBeCloseTo(factor(0.81, 0.98), 12);
+		expect(pox.severe!.value).toBeCloseTo(0.987, 3);
+		// Ebola: 1 - (1 - 0.84) x Coulborn's relative risk of death 0.40.
+		expect(find(DISEASES.ebola, 'rVSV-ZEBOV').full.severe!.value).toBeCloseTo(0.936, 12);
+		// Smallpox: 77.6% of cases still protected against death is the breakthrough factor.
+		const pox2 = find(DISEASES.smallpox, 'vaccinia').full;
+		expect(factor(pox2.infection.value, pox2.severe!.value)).toBeCloseTo(0.776, 12);
+	});
+
+	it('never gives a full course less protection than an unfinished one; equal passes (a config rule)', () => {
+		let checked = 0;
+		for (const d of WITH_VACCINES) {
+			for (const v of d.vaccines!) {
+				if (!v.partial) continue;
+				const key = `${d.id}.${vaccineKey(v)}`;
+				if (v.partial.infection) {
+					expect(v.full.infection.value, `${key}.infection`).toBeGreaterThanOrEqual(
+						v.partial.infection.value
+					);
+					checked++;
+				}
+				if (v.partial.severe) {
+					expect(fullCourseSevere(v), `${key}.severe`).toBeGreaterThanOrEqual(v.partial.severe.value);
+					checked++;
+				}
+			}
+		}
+		expect(checked).toBeGreaterThan(5);
 	});
 
 	it('shows the vaccine deaths that are known, worked out from their sources', () => {

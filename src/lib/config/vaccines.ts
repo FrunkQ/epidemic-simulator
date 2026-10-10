@@ -12,6 +12,15 @@ export function breakthroughSevereProtection(infection: number, severe: number):
 }
 
 /**
+ * Severe protection for a vaccine whose infection figure moved to `infection` (near the dose), keeping
+ * the breakthrough factor of the source's own matched pair (6.13):
+ * 1 - (1 - infection) x (1 - breakthrough).
+ */
+export function matchedSevere(infection: number, sourceInfection: number, sourceSevere: number): number {
+	return 1 - (1 - infection) * (1 - breakthroughSevereProtection(sourceInfection, sourceSevere));
+}
+
+/**
  * Protection of a vaccine measured relative to another, against people with no vaccine:
  * 1 - (1 - relative) x (1 - base). Used for the updated COVID-19 vaccine, whose sources compare it
  * with the original vaccine rather than with the unvaccinated.
@@ -23,6 +32,17 @@ export function stackedProtection(relative: number, base: number): number {
 /** The key citations use for a vaccine in usedFor, e.g. "covid-updated" or "IPV". */
 export function vaccineKey(vaccine: Vaccine): string {
 	return vaccine.version ? `${vaccine.product}-${vaccine.version}` : vaccine.product;
+}
+
+/**
+ * How the card words a vaccine's waning, e.g. " just after the course, halving every 105 days";
+ * empty when protection doesn't fade. Long half-lives are given in years.
+ */
+export function waningWords(halfLifeDays: number | null): string {
+	if (halfLifeDays === null) return '';
+	const every =
+		halfLifeDays < 730 ? `${Math.round(halfLifeDays)} days` : `${Math.round(halfLifeDays / 365.25)} years`;
+	return ` just after the course, halving every ${every}`;
 }
 
 /** The disease's default vaccine, or undefined when it has none. */

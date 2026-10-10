@@ -106,6 +106,11 @@ export interface Vaccine {
 	 * meaningful waning is established within the time the sim covers, and then a source must say so.
 	 */
 	waningDays: Sourced<number | null>;
+	/**
+	 * A plain line the card adds under the vaccine's protection, written from the same constants:
+	 * the published figure, when the sim starts from a worked-out one (6.13).
+	 */
+	cardNote?: string;
 }
 
 /** The care a disease's death rates were measured under (6.6). */

@@ -3,7 +3,7 @@
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE } from '../config/careBasis';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
-	import { vaccineKey } from '../config/vaccines';
+	import { vaccineKey, waningWords } from '../config/vaccines';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';
@@ -51,6 +51,8 @@
 	/** The vaccine given here, as the engine uses it (the same helper, so the card can't disagree). */
 	let runtime = $derived(loadDisease(disease.id as DiseaseId));
 	let vaccine = $derived(vaccineFor(runtime, region.vaccine));
+	/** The same vaccine's config entry, for its half-life and any card note. */
+	let vaccineConfig = $derived(disease.vaccines?.find((v) => vaccineKey(v) === vaccine.key));
 	/** A disease whose whole silent phase is incubation (6.1): silent dots spread nothing. */
 	let incubatingOnly = $derived(runtime.latentTicks >= runtime.silentTicks && runtime.silentTicks > 0);
 	/** One-dose vaccines have no "partly vaccinated". */
@@ -152,8 +154,11 @@
 				onchange={(e) => onvaccination(Number(e.currentTarget.value), region.vaccinatedPartial)}
 			/>
 			<small
-				>The vaccine {protects(vaccine.fullInfection)} from catching it. {#if fullOverall > vaccine.fullInfection}Overall,
-					it keeps about {Math.round(fullOverall * 100)} in 100 out of serious illness, compared with someone unvaccinated.{/if}</small
+				>The vaccine {protects(vaccine.fullInfection)} from catching it{waningWords(
+					vaccineConfig?.waningDays.value ?? null
+				)}. {#if vaccineConfig?.cardNote}{vaccineConfig.cardNote}{/if}
+				{#if fullOverall > vaccine.fullInfection}Overall, it keeps about {Math.round(fullOverall * 100)} in 100
+					out of serious illness, compared with someone unvaccinated.{/if}</small
 			>
 		</label>
 		{#if partialEfficacy !== undefined}
