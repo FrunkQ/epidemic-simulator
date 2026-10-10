@@ -323,7 +323,7 @@ SvelteKit with Svelte 5 runes and adapter-static (site prerendered, the simulati
   19. COVID-19 at the same campaign dose rate: "most at risk first" gives fewer deaths than "everyone at random" in at least 80% of seeds (6.16).
   20. Starting a campaign on day 0 of the outbreak gives fewer deaths than starting it on day 60, in at least 80% of seeds (6.16).
 - Config test: a vaccine death rate that isn't the 'rate' kind never reaches a numeric total (`vaccineCausedDeaths` keeps its kind for any dose count); HarmComparison shows that kind's plain line instead.
-- Test time budget: the full suite must stay under 5 minutes in CI. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
+- Test time budget: CI runs the suite as 3 parallel shards (10 Oct), and each test job must stay under 5 minutes; the job times out at 10. Run seeds in parallel (vitest threads) and size seed counts from the standard-error rule rather than fixed large counts.
 - If a lesson test fails, fix the model or the calibration. Never loosen a threshold without updating this file and telling Alex.
 
 ## 11. Build order (one PR per step)
