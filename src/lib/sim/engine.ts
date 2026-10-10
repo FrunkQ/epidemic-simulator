@@ -90,6 +90,16 @@ export interface SimulationOptions {
 	secondaryOnly?: boolean;
 }
 
+/**
+ * What one ended illness adds to the deaths tally, in people (6.6): its chance of death times the
+ * people the dot stands for, so deaths scale smoothly. When a dot is one person (the guided
+ * village) the tally is the dead dots themselves, so nobody sees a fraction of a person.
+ */
+export function deathTallyPeople(chance: number, died: boolean, peoplePerDot: number): number {
+	if (peoplePerDot === 1) return died ? 1 : 0;
+	return chance * peoplePerDot;
+}
+
 /** How many dots each population gets, and how many people each dot stands for. */
 export function allocateDots(regions: Region[], capacity: number): { dots: number[]; peoplePerDot: number } {
 	const total = regions.reduce((s, r) => s + r.population, 0);
@@ -158,7 +168,12 @@ export class Simulation {
 					this.pushEvent({ kind: 'firstCase', region: r, day: this.day });
 				}
 			},
-			onDeath: () => {}
+			onDeath: () => {},
+			onIllnessEnd: (dot, slot, region, chance, died) => {
+				if (region < 0) return;
+				const people = deathTallyPeople(chance, died, this.peoplePerDot);
+				if (people > 0) this.counters.addDeaths(region, slot, this.agents.ageBand[dot], people);
+			}
 		};
 		this.diseaseOverride = options.disease ?? null;
 		this.setup(scenario, options.diseaseId, options.seed);
@@ -456,6 +471,7 @@ export class Simulation {
 			dots: this.regionDots[r],
 			counts: c.regionCounts(r),
 			deathsByAge: c.deathsByAge(r),
+			deaths: c.deaths(r),
 			overloaded: this.pressure[r] > 1,
 			capacity: this.bedCapacity[r],
 			beds: this.beds[r],
@@ -477,6 +493,7 @@ export class Simulation {
 			regions,
 			inTransit,
 			totals: sumCounts([...regions.map((r) => r.counts), inTransit]),
+			deaths: regions.reduce((t, r) => t + r.deaths, 0),
 			latest: this.scenario.regions.map((_, r) => c.latest(r)),
 			historyVersion: c.version,
 			events: this.events.slice()

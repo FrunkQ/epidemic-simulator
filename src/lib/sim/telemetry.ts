@@ -1,5 +1,5 @@
 import { Agents } from './agents';
-import { HISTORY_DAYS } from './constants';
+import { HISTORY_DAYS, MAX_DISEASES } from './constants';
 import {
 	AGE_CHANNELS,
 	HISTORY_CHANNELS,
@@ -58,6 +58,12 @@ export class TelemetryCounters {
 	readonly patients: Float64Array;
 	/** The same patients per region and age band (regionCount x 3). */
 	readonly agesInHospital: Float64Array;
+	/**
+	 * Deaths tally in people (6.6), per region, disease slot and age band
+	 * (regionCount x MAX_DISEASES x 3): each ended illness adds its chance of death x peoplePerDot.
+	 * Added in the engine's fixed dot order, so a run stays reproducible.
+	 */
+	readonly deathTally: Float64Array;
 	private readonly history: Int32Array;
 	private readonly ageHistory: Int32Array;
 	private historyLen = 0;
@@ -71,6 +77,7 @@ export class TelemetryCounters {
 		this.ages = new Int32Array(regionCount * A_SLOTS);
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
+		this.deathTally = new Float64Array(regionCount * MAX_DISEASES * BANDS);
 		this.history = new Int32Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.ageHistory = new Int32Array(HISTORY_DAYS * regionCount * A_SLOTS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
@@ -136,10 +143,25 @@ export class TelemetryCounters {
 		return this.counts[region * C_SLOTS + C_SYMPTOMATIC];
 	}
 
-	/** Deaths so far in a region, by age band. */
+	/** Add one ended illness to the deaths tally, in people. */
+	addDeaths(region: number, slot: number, band: number, people: number): void {
+		this.deathTally[(region * MAX_DISEASES + slot) * BANDS + band] += people;
+	}
+
+	/** Deaths so far in a region, in people, by age band, over every disease (6.6). */
 	deathsByAge(region: number): Bands {
-		const b = region * A_SLOTS + A_DECEASED * BANDS;
-		return [this.ages[b], this.ages[b + 1], this.ages[b + 2]];
+		const out: Bands = [0, 0, 0];
+		for (let s = 0; s < MAX_DISEASES; s++) {
+			const b = (region * MAX_DISEASES + s) * BANDS;
+			for (let band = 0; band < BANDS; band++) out[band] += this.deathTally[b + band];
+		}
+		return out;
+	}
+
+	/** Deaths so far in a region, in people. */
+	deaths(region: number): number {
+		const [a, b, c] = this.deathsByAge(region);
+		return a + b + c;
 	}
 
 	/** Store today's sample for every region; `pressure` is each region's hospital pressure (6.6). */
@@ -156,6 +178,7 @@ export class TelemetryCounters {
 			history[h + 4] = counts[b + C_UNPROTECTED] + counts[b + C_PARTIAL];
 			history[h + 5] = Math.round(this.patients[r] * HOSPITAL_SCALE);
 			history[h + 6] = Math.round(pressure[r] * 1000);
+			history[h + 7] = Math.round(this.deaths(r));
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {
