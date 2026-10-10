@@ -26,6 +26,7 @@ import {
 	OMICRON_ONE_DOSE,
 	FLU_VACCINE,
 	LEWNARD_TAKE,
+	COCHRANE_MMR,
 	BOLORMAA_ONE_DOSE_YEAR1,
 	CHICKENPOX_PARTIAL_SEVERE,
 	PERTUSSIS_VACCINE,
@@ -304,7 +305,7 @@ const POLIO_OPV: Vaccine = {
 };
 
 const MEASLES_FULL: Sourced = {
-	value: 0.96,
+	value: COCHRANE_MMR.measles.full,
 	sources: [
 		'dipietrantonj2021-cochrane-mmrv',
 		'uzicanin2011-measles-ve-review',
@@ -313,21 +314,21 @@ const MEASLES_FULL: Sourced = {
 	]
 };
 const MEASLES_PARTIAL: Sourced = {
-	value: 0.95,
+	value: COCHRANE_MMR.measles.partial,
 	sources: ['dipietrantonj2021-cochrane-mmrv', 'uzicanin2011-measles-ve-review']
 };
 /** Lewnard's take, six months after a dose: the same for one dose or two (no difference in waning). */
 const MUMPS_FULL: Sourced = { value: LEWNARD_TAKE, sources: ['lewnard-grad-2018-mumps-waning'] };
 const MUMPS_PARTIAL: Sourced = { value: LEWNARD_TAKE, sources: ['lewnard-grad-2018-mumps-waning'] };
 const RUBELLA_PROVISIONAL =
-	'One cohort study in China, with a strain used only there; no pooled figure exists.';
+	'One cohort in China, mixing BRD-II (a strain used only there) and RA27/3 strains; doses not split.';
 const RUBELLA_FULL: Sourced = {
-	value: 0.89,
+	value: COCHRANE_MMR.rubella,
 	sources: ['dipietrantonj2021-cochrane-mmrv'],
 	provisional: RUBELLA_PROVISIONAL
 };
 const RUBELLA_PARTIAL: Sourced = {
-	value: 0.89,
+	value: COCHRANE_MMR.rubella,
 	sources: ['dipietrantonj2021-cochrane-mmrv'],
 	provisional: RUBELLA_PROVISIONAL
 };

@@ -3,7 +3,8 @@
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE } from '../config/careBasis';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
-	import { vaccineKey, waningWords } from '../config/vaccines';
+	import { vaccineKey } from '../config/vaccines';
+	import { waningWords } from '../config/waning';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';

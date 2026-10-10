@@ -237,8 +237,8 @@ describe('vaccines', () => {
 		expect(avg(14, 180)).toBeCloseTo(0.414, 9);
 		expect(flu.full.infection.value).toBeCloseTo(0.747, 2);
 		// And Young's own windows, 53.8% (15-90 days) and 31.1% (91-180 days).
-		expect(avg(15, 90)).toBeCloseTo(0.538, 1);
-		expect(avg(91, 180)).toBeCloseTo(0.311, 1);
+		expect(avg(15, 90)).toBeCloseTo(0.538, 2);
+		expect(avg(91, 180)).toBeCloseTo(0.311, 2);
 		const original = find(DISEASES.covid19omicron, 'covid-original');
 		expect(original.full.infection.value).toBe(0.444);
 		expect(original.full.severe!.value).toBe(0.636);

@@ -6,7 +6,7 @@ import { createSimulation } from '../../src/lib/sim/engine';
 import { singleCity } from '../../src/lib/config/scenarios';
 import { Protection } from '../../src/lib/sim/types';
 import { DISEASES } from '../../src/lib/config/diseases';
-import { waningWords } from '../../src/lib/config/vaccines';
+import { waningWords } from '../../src/lib/config/waning';
 
 describe('what the card says about vaccination', () => {
 	it('counts the hidden partial share as not vaccinated when the version has no unfinished course', () => {

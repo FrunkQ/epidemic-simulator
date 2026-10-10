@@ -19,6 +19,8 @@ import {
 	FLU_VACCINE,
 	PERTUSSIS_VACCINE,
 	SMALLPOX_VACCINE_HALF_LIFE,
+	SMALLPOX_VACCINE_YEARS,
+	PERTUSSIS_TRIAL_MONTHS,
 	DAYS_PER_YEAR
 } from './derived';
 
@@ -51,8 +53,8 @@ export const ASSUMPTIONS = {
 	opvType2:
 		'The oral polio vaccine’s protection against catching polio was measured as no virus in the gut after a type 2 test dose; protection against types 1 and 3 may be lower. Its protection against paralysis is the figure for children in industrialised countries.',
 	ebolaVaccineDeaths: `The Ebola vaccine’s protection against death rests on ${EBOLA_VACCINE.patients} vaccinated patients, ${EBOLA_VACCINE.deaths} of whom died.`,
-	pertussisVaccine: `The whooping cough vaccine starts at ${Math.round(PERTUSSIS_VACCINE.full * 100)} in 100, measured over the first year and a half or so, so it is slightly low just after the course. How fast it fades (${Math.round(CHIT.decayPerYear * 1000) / 10}% a year) comes from a study funded by Sanofi Pasteur, which makes the vaccine; eight of its nine authors worked there.`,
-	smallpoxVaccineWaning: `Smallpox vaccination protects for decades: half of people have lost protection against catching it after about ${Math.round(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR)} years, and protection against dying lasts far longer. Official advice of “3 to 5 years” is how long full protection lasts.`,
+	pertussisVaccine: `The whooping cough vaccine starts at ${Math.round(PERTUSSIS_VACCINE.full * 100)} in 100, measured in trials that followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${Math.round(PERTUSSIS_TRIAL_MONTHS[1])} months, so it is slightly low just after the course. How fast it fades (${Math.round(CHIT.decayPerYear * 1000) / 10}% a year) comes from a study funded by Sanofi Pasteur, which makes the vaccine; eight of its nine authors worked there.`,
+	smallpoxVaccineWaning: `Smallpox vaccination protects for decades: half of people have lost protection against catching it after about ${Math.round(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR)} years, and protection against dying lasts far longer. Official advice of “${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years” is how long full protection lasts.`,
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,

@@ -34,17 +34,6 @@ export function vaccineKey(vaccine: Vaccine): string {
 	return vaccine.version ? `${vaccine.product}-${vaccine.version}` : vaccine.product;
 }
 
-/**
- * How the card words a vaccine's waning, e.g. " just after the course, halving every 105 days";
- * empty when protection doesn't fade. Long half-lives are given in years.
- */
-export function waningWords(halfLifeDays: number | null): string {
-	if (halfLifeDays === null) return '';
-	const every =
-		halfLifeDays < 730 ? `${Math.round(halfLifeDays)} days` : `${Math.round(halfLifeDays / 365.25)} years`;
-	return ` just after the course, halving every ${every}`;
-}
-
 /** The disease's default vaccine, or undefined when it has none. */
 export function defaultVaccine(vaccines: Vaccine[] | undefined): Vaccine | undefined {
 	return vaccines?.find((v) => v.default === true);

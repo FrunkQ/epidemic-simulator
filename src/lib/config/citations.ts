@@ -51,7 +51,7 @@ import {
 	EICHNER_PROTECTED_CASES,
 	FLU_VACCINE,
 	LEWNARD_TAKE,
-	COCHRANE_MUMPS,
+	COCHRANE_MMR,
 	MARIN,
 	BOLORMAA_ONE_DOSE_YEAR1,
 	CHICKENPOX_PARTIAL_SEVERE,
@@ -558,13 +558,14 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Vaccine effectiveness in preventing measles was 95% after one dose (relative risk (RR) 0.05, 95% CI 0.02 to 0.13; 7 cohort studies; 12,039 children; moderate certainty evidence) and 96% after two doses (RR 0.04, 95% CI 0.01 to 0.28; 5 cohort studies; 21,604 children; moderate certainty evidence). … Vaccine effectiveness against rubella, using a vaccine with the BRD2 strain which is only used in China, is 89% (RR 0.11, 95% CI 0.03 to 0.42; 1 cohort study; 1621 children; moderate certainty evidence).',
 		location: 'Abstract, Main results',
-		why: `Measles: 0.96 after two doses and 0.95 after one, field effectiveness against measles cases; measles almost always shows, so this is close to protection against infection. Rubella: 0.89 for either course, marked as not fully sourced because it is one cohort with a strain used only in China. Mumps (Jeryl Lynn) is ${COCHRANE_MUMPS.full} after two doses and ${COCHRANE_MUMPS.partial} after one, but those average over years since the dose and can't be paired with a half-life, so mumps uses Lewnard & Grad 2018.`,
+		why: `Measles: ${COCHRANE_MMR.measles.full} after two doses and ${COCHRANE_MMR.measles.partial} after one, field effectiveness against measles cases; measles almost always shows, so this is close to protection against infection. Rubella: ${COCHRANE_MMR.rubella} for either course, marked as not fully sourced because it is one cohort in China, mixing the BRD-II strain (used only there) and RA27/3, with doses not split. Mumps (Jeryl Lynn) is ${COCHRANE_MMR.mumps.full} after two doses and ${COCHRANE_MMR.mumps.partial} after one, but those average over years since the dose and can't be paired with a half-life, so mumps uses Lewnard & Grad 2018.`,
 		context:
 			'Children; cohort studies. The same figures are in the 2020 version (pub4). Measures cases of illness, not infection.',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
-			ok: true
+			on: '2026-10-08',
+			ok: true,
+			note: 'Both quoted sentences confirmed verbatim in the Abstract, Main results: measles 95% after one dose and 96% after two, the same in pub4 and pub5; rubella 89% (pub5 adds that the vaccine used the BRD2 strain, used only in China). Outcome is cases of each disease.'
 		}
 	},
 	{
@@ -1444,7 +1445,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The period of communicability extends from 1 to 2 days before the onset of rash until all lesions have formed crusts.',
 		location: "Section 'Varicella' / Epidemiology — Transmission; also Secular Trends, Vaccine Effectiveness",
-		why: "silentDays=2 read straight off this sentence. illDays=5 is my own pick: the page says infectiousness lasts 'until all lesions have formed crusts' but gives no day count, and crusting of all lesions typically takes a few days after the rash appears. mortality=0.00002 is worked out from the quoted fatality rates ('approximately 1 per 100,000 cases among children age 1 through 14 years, 6 per 100,000 cases among persons age 15 through 19 years, and 21 per 100,000 cases among adults') as a child-weighted average, since chickenpox is mostly a childhood disease. hospitalisedShare=0.0015 is the midpoint of 'approximately 1 to 2 per 1,000 cases among healthy children'. fullEfficacy/partialEfficacy taken from the quoted meta-analysis figures (92% two doses, 82% one dose). waningDays=null from 'Recovery from primary varicella infection usually results in lifetime immunity.'",
+		why: "silentDays=2 read straight off this sentence. illDays=5 is my own pick: the page says infectiousness lasts 'until all lesions have formed crusts' but gives no day count, and crusting of all lesions typically takes a few days after the rash appears. mortality=0.00002 is worked out from the quoted fatality rates ('approximately 1 per 100,000 cases among children age 1 through 14 years, 6 per 100,000 cases among persons age 15 through 19 years, and 21 per 100,000 cases among adults') as a child-weighted average, since chickenpox is mostly a childhood disease. hospitalisedShare=0.0015 is the midpoint of 'approximately 1 to 2 per 1,000 cases among healthy children'. waningDays=null from 'Recovery from primary varicella infection usually results in lifetime immunity.'",
 		context:
 			'Official US reference text for vaccine-preventable diseases; the vaccine-effectiveness numbers it quotes come from Marin M et al., Pediatrics 2016, a systematic review and meta-analysis.',
 		verified: {
@@ -1584,7 +1585,7 @@ export const CITATIONS: Citation[] = [
 		],
 		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
-		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. fullEfficacy=0.88 and partialEfficacy=0.78 from 'vaccine effectiveness of one dose of mumps or MMR vaccine was 78% and two dose mumps vaccine effectiveness is 88%'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
+		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
 		context:
 			'Official US reference text; the 78%/88% figures are pooled post-licensure effectiveness estimates.',
 		verified: {
@@ -1638,7 +1639,7 @@ export const CITATIONS: Citation[] = [
 			'Persons with pertussis are infectious from the beginning of the catarrhal stage through the third week after the onset of paroxysms … Rates of these moderate or severe systemic reactions vary by symptom and vaccine but generally occur in fewer than 1 in 10,000 doses.',
 		location:
 			'Epidemiology — Transmission; Clinical Features; Vaccine Efficacy; Vaccine Safety (DTaP adverse reactions)',
-		why: `illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). CDC's 'Point estimates of DTaP vaccine efficacy ranged from 80% to 85%' backs fullEfficacy alongside Chit 2018's meta-analysed 0.91, which sets it; partialEfficacy=0.5 is my own pick for a part-finished infant series, which the page does not quantify. Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in ${fmt(DTAP_SERIOUS_DOSES)} doses = under ${fmt(100_000 / DTAP_SERIOUS_DOSES)} per 100,000 doses, stored as that upper bound (not all need hospital care). No death caused by DTaP is established (IOM 2003).`,
+		why: `illDays=21 read straight off this sentence ('through the third week after the onset of paroxysms'). silentDays=7 is worked out from it together with the page's catarrhal stage duration of 1–2 weeks: infectiousness begins at the start of the catarrhal stage, roughly a week before the recognisable paroxysmal cough, so about 7 days pass before anyone would call it whooping cough. mortality=0.002 is my own value derived from the page's figures of about 15 infant deaths a year against roughly 2,957 reported infant cases a year in 2000–2017 (≈0.5% in infants), scaled down because most reported cases are in older children and adults, among whom deaths are very rare. hospitalisedShare=0.05 is my own pick on the same basis (infant hospitalisations are the bulk of them). The page notes 'Immunity following B. pertussis infection is not permanent.'; the half-lives come from Wendelboe 2005 (infection) and Chit 2018 (vaccine). Vaccine risk: fever of 105°F or higher, febrile seizures, crying for 3 hours or more and floppy episodes occur in fewer than 1 in ${fmt(DTAP_SERIOUS_DOSES)} doses = under ${fmt(100_000 / DTAP_SERIOUS_DOSES)} per 100,000 doses, stored as that upper bound (not all need hospital care). No death caused by DTaP is established (IOM 2003).`,
 		context: 'Official US reference text; page last reviewed October 19, 2022.',
 		verified: {
 			by: 'independent verification pass',
@@ -1950,7 +1951,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
 		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Characteristics',
-		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' The vaccine's waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' (immunity after infection comes from WHO 2020) partialEfficacy=0.95 from 'At least 95% of vaccinated persons age 12 months or older develop serologic evidence of rubella immunity after a single dose'. fullEfficacy=0.97 is my own pick: the chapter gives no separate two-dose figure, so I set it just above the single-dose value. mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
+		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' The vaccine's waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' (immunity after infection comes from WHO 2020) mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
 		context:
 			'Official US reference text; page last reviewed August 18, 2021. The serious burden of rubella is congenital rubella syndrome in pregnancy, which this per-case preset does not represent.',
 		verified: {
@@ -2550,9 +2551,9 @@ export const CITATIONS: Citation[] = [
 			"Search to 1 Aug 2022 (BA.1/BA.2). Full course, 14 days or more after it; comparator unvaccinated. 'Any type' means studies did not say whether people had symptoms. Pools mRNA, AZD1222, CoronaVac and Ad26 courses, so not mRNA-only (BNT162b2 alone 38.1% against any infection). Severe disease is a composite (hospitalisation 59.1%, emergency department 14.2%, ventilation 14.2%, ICU 6.1%, death 6.1%), pooled over all follow-up from 14 days on: 63.6% at 3 months, 48.3% at 6 months, then steady at 49.7%. No one-dose figure.",
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: 'Crossref: title, seven authors, Vaccines 11(2):224 (online 19 Jan 2023) match; no update-to, updated-by or relation entries. PMC9965204 full text: 20.4% (3.2.1), 23.4% symptomatic (3.2.2) and 56.9% severe (3.2.3) found, with the composite breakdown and the 14-day window in Methods. is_retracted false.'
+			note: 'Crossref: title, seven authors, Vaccines 11(2):224 (online 19 Jan 2023) match; no update-to, updated-by or relation entries. PMC9965204 full text: the severe-by-time sentence (63.6% at three months, 48.3% at six) confirmed verbatim in Results 3.2.3, and the same three-month value in the abstract; the overall figures and the 23.4% symptomatic sentence also found. is_retracted false.'
 		}
 	},
 	{
@@ -3115,7 +3116,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Pooled IVE was 42% (95% CI: 39-44) against influenza-associated hospitalisation (very low certainty)',
 		location: 'Abstract, Results',
-		why: `Flu vaccine prevents 0.42 of flu hospital admissions over a season, all ages, counted in everyone vaccinated. Paired with Guo's 0.414 season figure it gives a breakthrough factor of ${fmt(breakthroughSevereProtection(FLU_VACCINE.seasonAverage, FLU_VACCINE.severeAverage), 3)}; the sim keeps that factor at its ${fmt(FLU_VACCINE.start, 3)} start, so severe is 1 - (1 - ${fmt(FLU_VACCINE.start, 3)}) x (1 - ${fmt(breakthroughSevereProtection(FLU_VACCINE.seasonAverage, FLU_VACCINE.severeAverage), 3)}) = ${fmt(FLU_VACCINE.severe, 3)}. Keeping 0.42 beside the new start would make breakthrough cases sicker than the unvaccinated.`,
+		why: `Flu vaccine prevents ${FLU_VACCINE.severeAverage} of flu hospital admissions over a season, all ages, counted in everyone vaccinated. Paired with Guo's ${FLU_VACCINE.seasonAverage} season figure it gives a breakthrough factor of ${fmt(breakthroughSevereProtection(FLU_VACCINE.seasonAverage, FLU_VACCINE.severeAverage), 3)}; the sim keeps that factor at its ${fmt(FLU_VACCINE.start, 3)} start, so severe is 1 - (1 - ${fmt(FLU_VACCINE.start, 3)}) x (1 - ${fmt(breakthroughSevereProtection(FLU_VACCINE.seasonAverage, FLU_VACCINE.severeAverage), 3)}) = ${fmt(FLU_VACCINE.severe, 3)}. Keeping ${FLU_VACCINE.severeAverage} beside the new start would make breakthrough cases sicker than the unvaccinated.`,
 		context:
 			'165 test-negative studies to Sept 2024; adults and children. Higher in seasons with a good vaccine match, but the by-match figure was not in the accessible text. Online 2025, in print Feb 2026.',
 		verified: {
@@ -3163,9 +3164,9 @@ export const CITATIONS: Citation[] = [
 		context: 'Post-licensure studies 1995-2014, healthy children.',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: 'Crossref: title, five authors, Pediatrics, 2016 match; no update or retraction fields. The abstract contains the quote verbatim.'
+			note: 'Crossref: title, five authors, Pediatrics, 2016 match; no update or retraction fields. Both quoted sentences (two doses 92%; one dose 81% against all chickenpox and 98% against moderate or severe) confirmed verbatim in the Abstract, Results.'
 		}
 	},
 	{
@@ -3486,9 +3487,9 @@ export const CITATIONS: Citation[] = [
 			'covid19omicron.vaccines.covid-updated.full.infection'
 		],
 		quote:
-			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron.',
+			'The estimated half-life of vaccine-induced immunity against laboratory-confirmed SARS-CoV-2 infection was 540 days (95% CI, 494-596 days) for Delta and 143 days (95% CI, 108-220 days) for Omicron. … We estimated that the VE against laboratory-confirmed Omicron infection was 44.4% (95% CI, 37.7%-51.1%) at 1 month after completion of any primary vaccination cycle, 20.7% (95% CI, 15.1%-26.4%) at 6 months, and 13.4% (95% CI, 7.8%-18.9%) at 9 months (Figure 3 and eFigure 8 in Supplement 1).',
 		location:
-			"Results, laboratory-confirmed infection paragraph; model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
+			"Results, laboratory-confirmed infection paragraph (half-life) and 'VE Against Laboratory-Confirmed Infection' (the 1-, 6- and 9-month figures); model in Methods: 'VE(t) = Ae−w t … We estimated the mean half-life of vaccine-induced protection as log(2)/w + 14 days'",
 		why: `Worked out: the paper's ${MENEGALE.reported}-day half-life is defined as log(2)/w + ${MENEGALE.rampUp} days, a pure exponential decay plus a ${MENEGALE.rampUp}-day ramp-up after the dose. The model's waning is pure exponential decay, so the half-life used is log(2)/w = ${MENEGALE.reported} - ${MENEGALE.rampUp} = ${MENEGALE.halfLife} days. Used for the original vaccine against Omicron infection, and, as an assumption, for the updated vaccine too: it is taken to wane like the original against Omicron, because no pooled waning figure for the bivalent vaccine against an unvaccinated comparator was found. The same sentence gives the start the sim uses for the original vaccine against infection: ${OMICRON_VACCINE.originalInfection} one month after the course, on the same footing as the half-life.`,
 		context:
 			'40 studies of original (ancestral) vaccines; Omicron BA.1/BA.2. Pooled VE against laboratory-confirmed Omicron infection 44.4% at 1 month, 20.7% at 6 months and 13.4% at 9 months after the primary course. Laboratory-confirmed infection mixes symptomatic and under-counted symptomless infections. No severe-disease analysis.',
@@ -3578,9 +3579,9 @@ export const CITATIONS: Citation[] = [
 			'Six published mumps vaccine-effectiveness studies pooled, plus a US transmission model; the clock runs from the last dose. The 3.6% who never respond to the vaccine are covered by the efficacy values, not by waning.',
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: 'Crossref: title, authors, Sci Transl Med 10(433):eaao5945 (21 March 2018) match; only relation is a preprint (not used); no update-to or updated-by. Results and abstract quotes verbatim. 19.0 x 365.25 recomputed as 6,939.75 days.'
+			note: 'Crossref: title, authors, Sci Transl Med 10(433):eaao5945 (21 March 2018) match; only relation is a preprint (not used); no update-to or updated-by. Results and abstract quotes verbatim, including the 96.4% take at 6 months (Results and Fig. 1B) and no difference by dose (Fig. 1E). 19.0 x 365.25 recomputed as 6,939.75 days.'
 		}
 	},
 	{
@@ -3729,9 +3730,9 @@ export const CITATIONS: Citation[] = [
 			"Mostly observational outbreak studies. The year-9 two-dose estimate has I2 = 100% and a confidence interval that does not contain its own point estimate as printed. The one-dose series rises again (65.2% at year 6, 70.2% at year 7, 81.8% at year 10), so a fit over all its points implies a half-life of decades; it is not used. Pawaskar 2022's network meta-analysis of trials found no waning over 10 years, so the plausible range runs from about 6 years to no meaningful waning.",
 		verified: {
 			by: 'independent verification pass',
-			on: '2026-10-07',
+			on: '2026-10-08',
 			ok: true,
-			note: 'Results paragraph and abstract conclusion confirmed verbatim at jkms.org; the abstract continues "wanes rapidly", so it is quoted in full. Arithmetic reproduced. Tables 2-3 themselves not opened (prose values only). No retraction visible on the publisher page; registries could not be reached.'
+			note: 'Results paragraph and abstract conclusion confirmed verbatim at jkms.org, including the one-dose 87.8% at year one; the abstract continues "wanes rapidly", so it is quoted in full. Arithmetic reproduced. Tables 2-3 themselves not opened (prose values only, so the text figures 87.8% and 93.5% are used, not the tables\' two-decimal values). No retraction visible on the publisher page; registries could not be reached.'
 		}
 	},
 	{
@@ -4334,7 +4335,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The summary VE of full vaccination against infection was 44.4% (95% CI 38.6–50.2) at first month and subsequently declined … we also estimated the summary VE of partial vaccination against infection, with a summary VE of 25.9% (95% CI, 20.0–34.9) estimated in 5 studies (Supplementary Table S9).',
 		location: "Results, 'VE against Omicron variant' (two sentences joined; text lies between them)",
-		why: `One dose of the original vaccine against Omicron infection: ${OMICRON_ONE_DOSE.infection}, pooled over all ages. Its 44.4% at month one for a full course matches Menegale 2023, the half-life's source. No pooled one-dose severe figure exists, so severe is worked out from Tan 2022's matched pair.`,
+		why: `One dose of the original vaccine against Omicron infection: ${OMICRON_ONE_DOSE.infection}, pooled over all ages. Its ${fmt(OMICRON_VACCINE.originalInfection * 100, 1)}% at month one for a full course matches Menegale 2023, the half-life's source. No pooled one-dose severe figure exists, so severe is worked out from Tan 2022's matched pair.`,
 		context:
 			'Omicron studies to mid-2022, infection confirmed by PCR or antigen test. The one-dose figure has no time since the dose reported, so confidence in it is low. Supplementary Table S9 counts 6 studies where the text says 5.',
 		verified: {
@@ -4429,7 +4430,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The expected median duration of protection from disease ranged from 11.7 to 28.4 years after primary vaccination',
 		location: 'Abstract, Results',
-		why: `The sim's waning is one exponential step per dot, so a half-life is the time by which half the vaccinated have lost protection, which is what a median duration of protection measures. The middle of ${SMALLPOX_PROTECTION_MEDIAN_YEARS[0]} to ${SMALLPOX_PROTECTION_MEDIAN_YEARS[1]} years is ${fmt(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR, 2)} years = ${fmt(SMALLPOX_VACCINE_HALF_LIFE)} days. CDC’s “about 3 to 5 years” is how long full protection lasts, not a half-life.`,
+		why: `The sim's waning is one exponential step per dot, so a half-life is the time by which half the vaccinated have lost protection, which is what a median duration of protection measures. The middle of ${SMALLPOX_PROTECTION_MEDIAN_YEARS[0]} to ${SMALLPOX_PROTECTION_MEDIAN_YEARS[1]} years is ${fmt(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR, 2)} years = ${fmt(SMALLPOX_VACCINE_HALF_LIFE)} days. CDC’s “about ${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years” is how long full protection lasts, not a half-life.`,
 		context: 'Six UK outbreaks, protection against any smallpox illness.',
 		verified: {
 			by: 'independent verification pass',
@@ -4471,7 +4472,7 @@ export const CITATIONS: Citation[] = [
 		doi: '10.1093/aje/kwg225',
 		usedFor: ['smallpox.vaccines.vaccinia.full.severe'],
 		quote:
-			'Thus, even 70 years after primary vaccination, 77.6% of cases were still protected (95% confidence interval: 66.6, 85.4).',
+			'Protection against severe and fatal disease was lost at the rate of 1.41% per year, corresponding to a half-life of 49.2 years (95% confidence interval: 42.0, 57.3), and protection against fatal disease alone declined 0.363% per year. Thus, even 70 years after primary vaccination, 77.6% of cases were still protected (95% confidence interval: 66.6, 85.4).',
 		location: 'Abstract',
 		why: `Worked out: ${fmt(EICHNER_PROTECTED_CASES * 100, 1)}% of vaccinated cases were still protected against death 70 years on, so that is the breakthrough factor. With the ${SMALLPOX_START} start, protection against death among everyone vaccinated is 1 - ${fmt(1 - SMALLPOX_START, 2)} x ${fmt(1 - EICHNER_PROTECTED_CASES, 3)} = ${fmt(SMALLPOX_SEVERE, 3)}, a lower bound because it is higher near the dose. Severe protection doesn’t wane in the sim, which fits this.`,
 		context:

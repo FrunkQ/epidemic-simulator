@@ -352,8 +352,16 @@ export const MMR_SERIOUS_PER_100K = midpoint(
 export const LEWNARD_HALF_LIFE_YEARS = 19.0;
 /** Lewnard & Grad 2018: 96.4% protected six months after a dose, the same after a first or second. */
 export const LEWNARD_TAKE = 0.964;
-/** Di Pietrantonj 2021 (Cochrane), Jeryl Lynn MMR against mumps: 86% after two doses, 72% after one (prose only). */
-export const COCHRANE_MUMPS = { full: 0.86, partial: 0.72 };
+/**
+ * Di Pietrantonj 2021 (Cochrane), MMR effectiveness after two doses (full) and one (partial).
+ * Mumps (Jeryl Lynn) is prose only: it averages over years since the dose, so the sim uses Lewnard.
+ * Rubella is one cohort, with both courses together.
+ */
+export const COCHRANE_MMR = {
+	measles: { full: 0.96, partial: 0.95 },
+	mumps: { full: 0.86, partial: 0.72 },
+	rubella: 0.89
+};
 /** Moro 2022: 6 vaccine-strain chickenpox deaths in 132.8 million doses. */
 export const MORO = {
 	deaths: 6,
@@ -421,6 +429,8 @@ export const DTAP_SERIOUS_DOSES = 10_000;
  * about 50% against severe whooping cough in infancy after one dose.
  */
 export const PERTUSSIS_VACCINE = { full: 0.84, fullSevere: 0.93, partialSevere: 0.5 };
+/** Fulton 2016, Table 1: the two pooled trials followed children for 17.2 and 21-23.5 months. */
+export const PERTUSSIS_TRIAL_MONTHS = [17.2, 23.5] as const;
 /** CDC: smallpox vaccination gives full protection "for about 3 to 5 years" (prose only: not a half-life). */
 export const SMALLPOX_VACCINE_YEARS = [3, 5] as const;
 /**
