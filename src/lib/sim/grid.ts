@@ -4,7 +4,7 @@ import { Agents } from './agents';
  * One uniform grid per population, covering its disc's bounding box (dots in different
  * populations never meet, because discs don't overlap). All the grids share one pair of
  * arrays; each region owns a contiguous block of cells. Rebuilt every tick with a counting
- * sort. Only living dots inside a region go in; travellers and the dead do not.
+ * sort. Only dots inside a region go in; travellers do not.
  */
 export class SpatialGrid {
 	readonly cellSize: number;
@@ -70,7 +70,8 @@ export class SpatialGrid {
 		cellStart.fill(0);
 		for (let i = 0; i < n; i++) {
 			const r = agents.region[i];
-			if (r < 0 || agents.dead[i] === 1) {
+			// A mostly dead dot stays in: anyone left alive in it can still catch it and pass it on.
+			if (r < 0) {
 				cellOf[i] = -1;
 				continue;
 			}

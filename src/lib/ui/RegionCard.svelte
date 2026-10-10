@@ -62,20 +62,13 @@
 	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
-	/** The seed button brings in one dot, so it says how many people that is. */
-	let seedLabel = $derived(
-		peoplePerDot === 1
-			? 'Bring in 1 infected person'
-			: `Bring in ${peoplePerDot.toLocaleString('en-GB')} infected people`
-	);
-	let seedHover = $derived(
-		peoplePerDot === 1
-			? 'Each dot is one person.'
-			: `This brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${peoplePerDot.toLocaleString('en-GB')} people.`
-	);
+	/** The seed button brings in one infected person (6.9). */
+	const seedLabel = 'Bring in 1 infected person';
+	const seedHover =
+		'A single case can die out by chance, and often does when a disease spreads slowly. Press again to bring in another.';
 	/** The population when the run starts, in people, to two significant figures so it reads easily. */
 	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
-	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
+	const people = (n: number) => Math.round(n).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
 	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
 	/** The vaccine given here, as the engine uses it (the same helper, so the card can't disagree). */
@@ -257,7 +250,7 @@
 				{incubatingOnly ? 'infected, not ill yet' : 'spreading unaware'}</span
 			>
 			<span><i style:background={COLOURS.symptomatic}></i>{people(t.counts.symptomatic)} ill</span>
-			<span><i style:background={COLOURS.deceased}></i>{Math.round(t.deaths).toLocaleString()} died</span>
+			<span><i style:background={COLOURS.deceased}></i>{t.deaths.toLocaleString()} died</span>
 		</p>
 	{/if}
 	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>

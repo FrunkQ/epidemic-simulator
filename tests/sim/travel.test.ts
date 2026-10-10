@@ -6,12 +6,13 @@ import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import { hospitalRegion } from '../../src/lib/sim/disease';
 import { TRAVEL_DAYS } from '../../src/lib/sim/routes';
-import { State, type Bands } from '../../src/lib/sim/types';
+import type { Bands } from '../../src/lib/sim/types';
 import { loadDisease } from '../../src/lib/config';
 
 /**
- * Follow every traveller who sets off while silently infected and record whether they are
- * still infectious when they arrive, per kind of route.
+ * Follow every traveller who sets off while silently infected and record, person by person, how
+ * many are still infectious when they arrive, per kind of route. Nobody catches it on the way, so
+ * the infected people who arrive are the ones who set off.
  */
 function arrivals(seed: number) {
 	const scenario = microcosm(0);
@@ -23,7 +24,15 @@ function arrivals(seed: number) {
 	const sim = createSimulation(scenario, { seed, diseaseId: 'measles' });
 	sim.send({ type: 'seed', region: 1, count: 20 });
 	const a = sim.agents;
-	const leftSilent = new Map<number, string>();
+	const p = sim.people;
+	// Person by person: by the moment a dot boards, its ill people have swapped out (finer-counts 4.4).
+	const ready = sim.planes.readyToBoard;
+	sim.planes.readyToBoard = (dot) => {
+		const ok = ready(dot);
+		if (ok) expect(p.ill[dot], 'an ill person boarded').toBe(0);
+		return ok;
+	};
+	const leftSilent = new Map<number, { kind: string; silent: number }>();
 	const result: Record<string, { infectious: number; total: number }> = {
 		air: { infectious: 0, total: 0 },
 		ferry: { infectious: 0, total: 0 },
@@ -34,11 +43,15 @@ function arrivals(seed: number) {
 		sim.step(1);
 		for (let i = 0; i < a.activeCount; i++) {
 			const r = a.route[i];
-			if (r >= 0 && wasOnRoute[i] < 0 && a.state[i] === State.SILENT) leftSilent.set(i, sim.routes[r].kind);
+			const silent = p.silentSymptomatic[i] + p.silentAsymptomatic[i];
+			// Counted after the tick, so anyone who fell ill on the first tick of the trip counts too.
+			if (r >= 0 && wasOnRoute[i] < 0 && silent + p.ill[i] > 0)
+				leftSilent.set(i, { kind: sim.routes[r].kind, silent: silent + p.ill[i] });
 			if (r < 0 && wasOnRoute[i] >= 0 && leftSilent.has(i)) {
-				const kind = leftSilent.get(i)!;
-				result[kind].total++;
-				if (a.state[i] === State.SILENT || a.state[i] === State.SYMPTOMATIC) result[kind].infectious++;
+				const left = leftSilent.get(i)!;
+				result[left.kind].total += left.silent;
+				// The arrival tick's spread can infect more of the dot; count only up to those who set off.
+				result[left.kind].infectious += Math.min(left.silent, silent + p.ill[i]);
 				leftSilent.delete(i);
 			}
 			wasOnRoute[i] = r;
@@ -67,7 +80,8 @@ describe('lesson 2: fast travel beats burnout, slow travel does not', () => {
 describe('travel keeps populations level', () => {
 	it('moves people both ways without draining any city', () => {
 		const sim = createSimulation(microcosm(0), { seed: 9, diseaseId: 'flu' });
-		const before = sim.snapshot().regions.map((r) => r.dots);
+		const start = sim.snapshot();
+		const before = start.regions.map((r) => r.dots * start.peoplePerDot);
 		sim.step(60 * TICKS_PER_DAY);
 		const snap = sim.snapshot();
 		expect(snap.travelling).toBeGreaterThan(0);
@@ -78,8 +92,8 @@ describe('travel keeps populations level', () => {
 	});
 });
 
-describe('every dot is counted once, travellers included', () => {
-	it('keeps totals equal to the dots, and deaths on a route in the counts, every day', () => {
+describe('every person is counted once, travellers included', () => {
+	it('keeps totals equal to the people, and deaths on a route in the counts, every day', () => {
 		const scenario = microcosm(0);
 		for (const r of scenario.regions) {
 			r.vaccinatedFull = 0;
@@ -93,6 +107,7 @@ describe('every dot is counted once, travellers included', () => {
 		const sim = createSimulation(scenario, { seed: 7, diseaseId: 'pertussis', disease });
 		sim.send({ type: 'seed', region: 1, count: 20 });
 		const a = sim.agents;
+		const p = sim.people;
 		let diedOnRoute = 0;
 		const counted = new Uint8Array(a.capacity);
 		const origins = new Set<number>();
@@ -100,7 +115,7 @@ describe('every dot is counted once, travellers included', () => {
 			for (let t = 0; t < TICKS_PER_DAY; t++) {
 				sim.step(1);
 				for (let i = 0; i < a.activeCount; i++)
-					if (a.route[i] >= 0 && a.dead[i] === 1 && !counted[i]) {
+					if (a.route[i] >= 0 && p.dead[i] > 0 && !counted[i]) {
 						counted[i] = 1;
 						diedOnRoute++;
 						origins.add(hospitalRegion(a, sim.routes, i));
@@ -108,16 +123,16 @@ describe('every dot is counted once, travellers included', () => {
 			}
 			const snap = sim.snapshot();
 			let dead = 0;
-			for (let i = 0; i < a.activeCount; i++) if (a.state[i] === State.DECEASED) dead++;
+			for (let i = 0; i < a.activeCount; i++) dead += p.dead[i];
 			expect(snap.totals.deceased, `day ${day}`).toBe(dead);
 			const t = snap.totals;
 			const everyone =
 				t.unprotected + t.full + t.partial + t.silent + t.symptomatic + t.recovered + t.deceased;
-			expect(everyone, `day ${day}`).toBe(a.activeCount);
+			expect(everyone, `day ${day}`).toBe(a.activeCount * p.perDot);
 		}
 		// The scenario that lost deaths before: some people did die on the way.
 		expect(diedOnRoute).toBeGreaterThan(0);
-		// Their deaths are in the tally of the region they set out from (6.6).
+		// Their deaths are counted in the region they set out from (6.6).
 		const snap = sim.snapshot();
 		for (const r of origins) {
 			expect(r).toBeGreaterThanOrEqual(0);

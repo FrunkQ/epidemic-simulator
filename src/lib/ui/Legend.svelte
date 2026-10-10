@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEATHS_TALLY } from '../config/deathsTally';
+	import { DOT_COUNTS } from '../config/dotCounts';
 	import { COLOURS } from '../sim/render';
 
 	interface Props {
@@ -35,7 +35,7 @@
 	{/each}
 	<span class="scale"
 		>Each dot stands for {peoplePerDot.toLocaleString()}
-		{peoplePerDot === 1 ? 'person' : 'people'}.{#if peoplePerDot > 1}{` ${DEATHS_TALLY}`}{/if}</span
+		{peoplePerDot === 1 ? 'person' : 'people'}.{#if peoplePerDot > 1}{` ${DOT_COUNTS}`}{/if}</span
 	>
 	<span class="routes"><b class="road"></b>Road <b class="ferry"></b>Ferry <b class="air"></b>Flight</span>
 </div>
