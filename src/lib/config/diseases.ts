@@ -389,6 +389,7 @@ export const DISEASES = {
 	measles: {
 		id: 'measles',
 		name: 'Measles',
+		proseName: 'measles',
 		group: 'common',
 		blurb: 'Spreads very easily. People are contagious for about 4 days before the rash appears.',
 		r0: {
@@ -434,6 +435,7 @@ export const DISEASES = {
 	polio: {
 		id: 'polio',
 		name: 'Polio',
+		proseName: 'polio',
 		group: 'eradicated',
 		blurb: 'Most people never feel ill, so it spreads quietly until it reaches someone vulnerable.',
 		r0: {
@@ -475,6 +477,7 @@ export const DISEASES = {
 	flu: {
 		id: 'flu',
 		name: 'Seasonal flu',
+		proseName: 'seasonal flu',
 		group: 'common',
 		blurb: 'Spreads fast but people feel ill quickly, which makes it easier to slow down.',
 		r0: {
@@ -531,6 +534,7 @@ export const DISEASES = {
 	covid19: {
 		id: 'covid19',
 		name: 'COVID-19',
+		proseName: 'COVID-19',
 		group: 'common',
 		blurb:
 			'The 2020 pandemic virus. Many people pass it on before they feel ill, or without ever feeling ill.',
@@ -568,6 +572,7 @@ export const DISEASES = {
 	covid19omicron: {
 		id: 'covid19omicron',
 		name: 'COVID-19 (Omicron era)',
+		proseName: 'COVID-19 in the Omicron era',
 		group: 'common',
 		blurb:
 			'The 2022 variant. It spreads far faster than the 2020 virus and is milder per case, and the original vaccine stops it less well.',
@@ -608,6 +613,7 @@ export const DISEASES = {
 	chickenpox: {
 		id: 'chickenpox',
 		name: 'Chickenpox',
+		proseName: 'chickenpox',
 		group: 'common',
 		blurb: 'Very catching and usually mild. Almost everyone used to get it as a child.',
 		r0: { value: 5, sources: ['santermans-2015-vzv-r0'] },
@@ -651,6 +657,7 @@ export const DISEASES = {
 	mumps: {
 		id: 'mumps',
 		name: 'Mumps',
+		proseName: 'mumps',
 		group: 'common',
 		blurb: 'Swollen glands. Spreads easily in crowded places, even among some vaccinated people.',
 		r0: { value: 11, sources: ['gupta-2005-mumps-r0'] },
@@ -673,6 +680,7 @@ export const DISEASES = {
 	rubella: {
 		id: 'rubella',
 		name: 'Rubella',
+		proseName: 'rubella',
 		group: 'common',
 		blurb: 'Mild for most, and half of people never notice it, but dangerous in pregnancy.',
 		r0: { value: 5, sources: ['papadopoulos-2022-rubella-r0'] },
@@ -690,6 +698,7 @@ export const DISEASES = {
 	pertussis: {
 		id: 'pertussis',
 		name: 'Whooping cough',
+		proseName: 'whooping cough',
 		group: 'common',
 		blurb: 'A cough that lasts for weeks. People keep going about their lives, so it keeps spreading.',
 		r0: { value: 5.5, sources: ['kretzschmar-2010-pertussis-r0'] },
@@ -734,6 +743,7 @@ export const DISEASES = {
 	smallpox: {
 		id: 'smallpox',
 		name: 'Smallpox',
+		proseName: 'smallpox',
 		group: 'eradicated',
 		blurb: 'Killed about 3 in 10 people it made ill. Wiped out in 1980, so almost no one is protected now.',
 		r0: { value: 5, sources: ['costantino2018-smallpox-r0', 'gani-2001-smallpox-r0'] },
@@ -781,6 +791,7 @@ export const DISEASES = {
 	ebola: {
 		id: 'ebola',
 		name: 'Ebola',
+		proseName: 'Ebola',
 		group: 'deadly',
 		blurb:
 			'Kills about half of those who fall ill, but they are soon too sick to move about, so it spreads less far.',
@@ -821,6 +832,7 @@ export const DISEASES = {
 	marburg: {
 		id: 'marburg',
 		name: 'Marburg',
+		proseName: 'Marburg',
 		group: 'deadly',
 		blurb:
 			'A close cousin of Ebola. Very deadly and no vaccine, but it spreads mainly to people caring for the sick.',
@@ -840,6 +852,7 @@ export const DISEASES = {
 	flu1918: {
 		id: 'flu1918',
 		name: '1918 flu ("Spanish flu")',
+		proseName: 'the 1918 flu',
 		group: 'historic',
 		blurb:
 			'The 1918 pandemic flu. Unlike ordinary flu, a large share of the people it killed were young adults.',
@@ -894,6 +907,7 @@ export const DISEASES = {
 	plague: {
 		id: 'plague',
 		name: 'Black Death (1347)',
+		proseName: 'the Black Death',
 		group: 'historic',
 		blurb:
 			'The plague that reached Europe in 1347 and came back for centuries. It spread between people living closely together, and before antibiotics it killed about half of the people it made ill.',

@@ -14,7 +14,10 @@ export class Camera {
 		return { x: sx / this.scale + this.x, y: sy / this.scale + this.y };
 	}
 
-	/** Frame a world rectangle inside a screen of the given size, with a margin in pixels. */
+	/**
+	 * Frame a world rectangle inside a screen of the given size, with a margin in pixels at the
+	 * sides and (if given) a different one at the top and bottom.
+	 */
 	fit(
 		minX: number,
 		minY: number,
@@ -22,11 +25,12 @@ export class Camera {
 		maxY: number,
 		width: number,
 		height: number,
-		margin = 24
+		margin = 24,
+		marginY = margin
 	): void {
 		const w = Math.max(1, maxX - minX);
 		const h = Math.max(1, maxY - minY);
-		this.scale = Math.min((width - 2 * margin) / w, (height - 2 * margin) / h);
+		this.scale = Math.min((width - 2 * margin) / w, (height - 2 * marginY) / h);
 		this.x = minX - (width / this.scale - w) / 2;
 		this.y = minY - (height / this.scale - h) / 2;
 	}

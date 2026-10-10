@@ -76,7 +76,10 @@ import {
 	PLAGUE_BAND_CUTS,
 	PLAGUE_INCUBATION_RANGE,
 	plagueR0Extremes,
-	per100kFromPerMillion
+	per100kFromPerMillion,
+	BOURNER_HIGH_EFFICACY,
+	KUGELER_2020_TREATED,
+	FLECK_DERDERIAN_UNTREATED_CASES
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
@@ -4041,7 +4044,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'the estimated R0 was 1.48–1.91 for all pre-Industrial outbreaks.',
 		location:
 			'Results, "Basic Reproduction Number R0"; the nine values are Table 3, EP rows. Contagious periods: Methods, "Human Ectoparasite Model". Infection while ill: Discussion.',
-		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (${plagueR0Extremes().join(', ')}). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models.`,
+		why: `r0=${fmt(PLAGUE_R0, 2)} is the mean of the nine fitted human-ectoparasite values in Table 3 (${PLAGUE_EP_R0S.join(', ')}), so no single town sets it. The Discussion's "consistently between 1.5 and 1.9" is not quoted, because the paper's own Table 3 contradicts it at both ends (${plagueR0Extremes().join(', ')}). illDays=${PLAGUE_ILL_DAYS} is the Methods text's two contagious phases added together: "The model assumes that humans are mildly infectious for an average of 8 d (σb−1) ... the model assumes that moribund humans transmit plague at a high rate to vectors βhigh for an average of 2 d (γb−1)." latentDays equals the whole incubation period because people were not yet a source while incubating: "We found that the majority of ectoparasite infections occurred during the period of high infectivity in humans, consistent with experimental evidence". The model's route, lice and fleas that live on people, is close contact between people, which is what this engine models. It also backs asymptomaticFraction=0: most spread in its model comes at the late stage of high infectivity, so a symptom-free case would not pass plague on.`,
 		context: 'Nine pre-industrial European plague outbreaks, 1348-1813 (Second Pandemic).',
 		verified: {
 			by: 'independent verification pass',
@@ -4105,8 +4108,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'Proceedings of the Royal Society B 291',
 		year: 2024,
 		evidence: 'study',
-		noReviewReason:
-			'No systematic review or meta-analysis of bubonic plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. The closest, Fleck-Derderian 2020, pools untreated plague in pregnancy only (136 cases, all forms), so it can’t stand for a whole population. This is the only case-by-case dataset of bubonic plague with ages.',
+		noReviewReason: `No systematic review or meta-analysis of bubonic plague deaths before antibiotics exists (searched 8 Oct 2026); the published reviews cover treated cases. The closest, Fleck-Derderian 2020, pools untreated plague in pregnancy only (${FLECK_DERDERIAN_UNTREATED_CASES} cases, all forms), so it can’t stand for a whole population. This is the only case-by-case dataset of bubonic plague with ages.`,
 		doi: '10.1098/rspb.2024.0724',
 		usedFor: [
 			'plague.mortality',
@@ -4624,8 +4626,7 @@ export const CITATIONS: Citation[] = [
 			'Of those who received a high-efficacy antimicrobial at any time following initial presentation, 15/271 (6%) died',
 		location: 'Results (Treatment)',
 		why: 'About only: beside the "treated today" line, deaths among bubonic plague patients given a high-efficacy antibiotic at any point.',
-		context:
-			'1,343 bubonic plague patients across the review, 15% of whom died; the 6% is the 271 given a high-efficacy antibiotic.',
+		context: `1,343 bubonic plague patients across the review, 15% of whom died; the ${Math.round((BOURNER_HIGH_EFFICACY.deaths / BOURNER_HIGH_EFFICACY.patients) * 100)}% is the ${BOURNER_HIGH_EFFICACY.patients} given a high-efficacy antibiotic.`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-10',
@@ -4649,9 +4650,8 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Mortality differed significantly among those receiving high-efficacy therapy (9%) and only limited-efficacy therapy (51%).',
 		location: 'Abstract, Results',
-		why: 'About only: deaths among US plague patients given a high-efficacy antibiotic, 1942-2018.',
-		context:
-			'US plague surveillance, 1942-2018, all forms; overall deaths fell from 28% before 1970 to 8% in 2000-2018.',
+		why: `About only: deaths among US plague patients given a high-efficacy antibiotic, ${KUGELER_2020_TREATED.from}-${KUGELER_2020_TREATED.to}, all forms of plague.`,
+		context: `US plague surveillance, ${KUGELER_2020_TREATED.from}-${KUGELER_2020_TREATED.to}, all forms; overall deaths fell from 28% before 1970 to 8% in 2000-2018.`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-10',
@@ -4672,7 +4672,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Among cases treated with antimicrobials, maternal mortality and fetal fatality were 29% and 62%, respectively; for untreated cases, maternal mortality and fetal fatality were 67% and 74%, respectively.',
 		location: 'Abstract, Results',
-		why: 'The closest pooled figure for plague deaths without treatment in any systematic review, and why it is not used for the Black Death: it covers pregnant women only, mixes forms of plague, and rests on 136 untreated cases against Mongillo’s 967 bubonic cases with ages.',
+		why: `The closest pooled figure for plague deaths without treatment in any systematic review, and why it is not used for the Black Death: it covers pregnant women only, mixes forms of plague, and rests on ${FLECK_DERDERIAN_UNTREATED_CASES} untreated cases against Mongillo’s ${PLAGUE_ALL.cases} bubonic cases with ages.`,
 		context: '160 cases of plague in pregnancy, 1897-2002, mostly before antibiotics.',
 		verified: {
 			by: 'independent verification pass',

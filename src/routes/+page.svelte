@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { DISEASES } from '../lib/config/diseases';
 	import { withValue, type LivePolicyKey } from '../lib/config/healthPolicy';
 	import { microcosm } from '../lib/config/scenarios';
@@ -7,6 +8,7 @@
 	import { vaccineFor } from '../lib/sim/disease';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
+	import { layoutCards } from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -42,7 +44,16 @@
 	let viewVersion = $state(0);
 	let compact = $derived(size.width < 760);
 
-	/** Frame the populations, leaving room around them for their cards. */
+	/** The usual margin around the cities: framing never zooms in closer than this. */
+	const FRAME_MARGIN = 150;
+	/** Margins tried when the usual one leaves a card over a city, in steps of this many pixels. */
+	const FRAME_STEP = 20;
+
+	/**
+	 * Frame the populations, leaving room around them for their cards. If the closed cards would
+	 * cover a city's dots, try other side and top margins, largest map first, until none does
+	 * (or pick the one that covers least), so on a short screen the cards move beside the cities.
+	 */
 	function frame() {
 		let minX = Infinity;
 		let minY = Infinity;
@@ -55,8 +66,44 @@
 			maxX = Math.max(maxX, r.cx + rad);
 			maxY = Math.max(maxY, r.cy + rad);
 		});
-		const margin = compact ? 40 : 150;
-		sim.view.fit(minX, minY, maxX, maxY, size.width, size.height, margin);
+		const { width, height } = size;
+		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
+		if (compact) {
+			fit(40, 40);
+			viewVersion++;
+			return;
+		}
+		const scaleOf = (mx: number, my: number) =>
+			Math.min((width - 2 * mx) / Math.max(1, maxX - minX), (height - 2 * my) / Math.max(1, maxY - minY));
+		const usual = scaleOf(FRAME_MARGIN, FRAME_MARGIN);
+		const tries: { mx: number; my: number; scale: number }[] = [
+			{ mx: FRAME_MARGIN, my: FRAME_MARGIN, scale: usual }
+		];
+		for (let mx = FRAME_STEP; 2 * mx < width - FRAME_STEP; mx += FRAME_STEP)
+			for (let my = FRAME_STEP; 2 * my < height - FRAME_STEP; my += FRAME_STEP) {
+				const scale = scaleOf(mx, my);
+				if (scale > 0 && scale <= usual) tries.push({ mx, my, scale });
+			}
+		// The usual frame first, then the biggest map.
+		tries.sort((a, b) => (a === tries[0] ? -1 : b === tries[0] ? 1 : b.scale - a.scale));
+		const sizes = scenario.regions.map((_, i) => closedSizes[i] ?? { w: CARD_W, h: CARD_H });
+		// The first frame (largest map) with nothing covered and every card by its own city; else
+		// the first with nothing covered; else the one covering least.
+		let best = tries[0];
+		let bestCover = Infinity;
+		for (const t of tries) {
+			fit(t.mx, t.my);
+			const { cover, misplaced } = layoutCards(discsOnScreen(), sizes, size);
+			if (cover === 0 && misplaced === 0) {
+				best = t;
+				break;
+			}
+			if (cover < bestCover) {
+				best = t;
+				bestCover = cover;
+			}
+		}
+		fit(best.mx, best.my);
 		viewVersion++;
 	}
 
@@ -101,46 +148,52 @@
 		frame();
 	}
 
-	const CARD_W = 200;
 	/** Until a card has been measured. */
+	const CARD_W = 210;
 	const CARD_H = 120;
-	/** Each card's measured height, so the layout keeps the whole card on the stage. */
+	/** Each card's measured size, so the layout keeps the whole card on the stage. */
+	let cardWidths: number[] = $state([]);
 	let cardHeights: number[] = $state([]);
-
+	/** Which cards have a settings panel open. */
+	let cardOpen: boolean[] = $state([]);
 	/**
-	 * Cards sit just outside their city's disc, on the side facing away from the other cities,
-	 * so they don't cover the dots or each other.
+	 * Each card's size when closed: framing uses these, so opening a panel doesn't zoom the map
+	 * (an open card sits on top instead).
 	 */
-	function cardPosition(region: number): { x: number; y: number } {
-		void viewVersion;
-		const regions = scenario.regions;
-		const cx = regions.reduce((a, r) => a + r.cx, 0) / regions.length;
-		const cy = regions.reduce((a, r) => a + r.cy, 0) / regions.length;
-		const r = regions[region];
-		const p = sim.view.worldToScreen(r.cx, r.cy);
-		const c = sim.view.worldToScreen(cx, cy);
-		let dx = p.x - c.x;
-		let dy = p.y - c.y;
-		const d = Math.hypot(dx, dy);
-		if (d < 1) {
-			dx = 0;
-			dy = -1;
-		} else {
-			dx /= d;
-			dy /= d;
-		}
-		const reach = sim.radiusOf(region) * sim.view.scale + 14;
-		const w = CARD_W;
-		const h = cardHeights[region] || CARD_H;
-		// Distance from the card's centre to its edge in direction (dx, dy).
-		const edge = Math.min(w / 2 / Math.max(Math.abs(dx), 1e-6), h / 2 / Math.max(Math.abs(dy), 1e-6));
-		const x = p.x + dx * (reach + edge) - w / 2;
-		const y = p.y + dy * (reach + edge) - h / 2;
-		return {
-			x: Math.min(Math.max(x, 8), size.width - w - 8),
-			y: Math.min(Math.max(y, 8), size.height - h - 8)
-		};
+	let closedSizes: { w: number; h: number }[] = $state([]);
+	$effect(() => {
+		scenario.regions.forEach((_, i) => {
+			if (cardOpen[i]) return;
+			const w = cardWidths[i] || CARD_W;
+			const h = cardHeights[i] || CARD_H;
+			const old = untrack(() => closedSizes[i]);
+			if (!old || old.w !== w || old.h !== h) closedSizes[i] = { w, h };
+		});
+	});
+	/** Re-frame when a closed card changes size (another disease, say), so it still fits. */
+	$effect(() => {
+		void closedSizes.map((c) => c.h + c.w);
+		untrack(() => {
+			if (size.width > 0) frame();
+		});
+	});
+
+	function discsOnScreen() {
+		return scenario.regions.map((r, i) => {
+			const p = sim.view.worldToScreen(r.cx, r.cy);
+			return { x: p.x, y: p.y, r: sim.radiusOf(i) * sim.view.scale };
+		});
 	}
+
+	/** Card positions, kept off every city's dots and off each other (see layoutCards). */
+	let cardPositions = $derived.by(() => {
+		void viewVersion;
+		const sizes = scenario.regions.map((_, i) => ({
+			w: cardWidths[i] || CARD_W,
+			h: cardHeights[i] || CARD_H
+		}));
+		return layoutCards(discsOnScreen(), sizes, size).positions;
+	});
 </script>
 
 <svelte:head>
@@ -183,7 +236,7 @@
 		/>
 		{#if !compact}
 			{#each scenario.regions as region, i (region.id)}
-				{@const pos = cardPosition(i)}
+				{@const pos = cardPositions[i]}
 				<RegionCard
 					{region}
 					telemetry={telemetry?.regions[i]}
@@ -191,7 +244,9 @@
 					peoplePerDot={telemetry?.peoplePerDot ?? 100}
 					x={pos.x}
 					y={pos.y}
+					bind:width={cardWidths[i]}
 					bind:height={cardHeights[i]}
+					bind:open={cardOpen[i]}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}

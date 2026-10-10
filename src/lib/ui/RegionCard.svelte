@@ -20,8 +20,11 @@
 		y: number;
 		/** Lay the card out in a strip (small screens) instead of floating it on the map. */
 		docked?: boolean;
-		/** The card's rendered height, so the page can keep the whole card on screen. */
+		/** The card's rendered size, so the page can keep the whole card on screen. */
+		width?: number;
 		height?: number;
+		/** Whether a settings panel is open (the card is then taller and sits on top). */
+		open?: boolean;
 		onvaccination: (full: number, partial: number) => void;
 		/** A different vaccine version was picked (restarts the run). */
 		onvaccine: (key: string) => void;
@@ -38,7 +41,9 @@
 		x,
 		y,
 		docked = false,
+		width = $bindable(),
 		height = $bindable(),
+		open = $bindable(),
 		onvaccination,
 		onvaccine,
 		onpolicy,
@@ -46,7 +51,9 @@
 	}: Props = $props();
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
-	let open = $derived(panel !== null);
+	$effect(() => {
+		open = panel !== null;
+	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
 	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
@@ -83,6 +90,7 @@
 </script>
 
 <section
+	bind:offsetWidth={width}
 	bind:offsetHeight={height}
 	class="card"
 	class:open
