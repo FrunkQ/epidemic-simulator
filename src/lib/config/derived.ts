@@ -5,6 +5,8 @@
  * drift from the number in use.
  */
 
+import { breakthroughSevereProtection, matchedSevere } from './vaccines';
+
 export const DAYS_PER_YEAR = 365.25;
 export const DAYS_PER_MONTH = DAYS_PER_YEAR / 12;
 const PER_100K = 100_000;
@@ -14,6 +16,14 @@ const mean = (...xs: number[]) => xs.reduce((a, x) => a + x, 0) / xs.length;
 /** Half-life of an exponential fall from `from` to `to` over `days`. */
 const exponentialHalfLife = (days: number, from: number, to: number) =>
 	(days * Math.LN2) / Math.log(from / to);
+
+/**
+ * The share of its starting value that a protection halving every `halfLife` days averages over
+ * days `from` to `to`: H / (ln2 (to - from)) x (2^(-from/H) - 2^(-to/H)).
+ */
+function meanOfHalving(halfLife: number, from: number, to: number): number {
+	return (halfLife / (Math.LN2 * (to - from))) * (2 ** (-from / halfLife) - 2 ** (-to / halfLife));
+}
 
 /** A number for prose: rounded to `digits` decimal places, with thousands separators. */
 export function fmt(n: number, digits = 0): string {
@@ -155,12 +165,35 @@ export const MENEGALE = {
 	}
 };
 
-/** Mohammed 2023 (original vaccine against Omicron) and Cheng 2024 (bivalent relative to original). */
+/**
+ * The original vaccine against Omicron when protection starts, on the half-life's footing (6.13):
+ * Menegale 2023, 44.4% against infection one month after the course; Mohammed 2023, 63.6% against
+ * severe disease at three months. Cheng 2024: the bivalent vaccine relative to the original.
+ */
 export const OMICRON_VACCINE = {
-	originalInfection: 0.204,
-	originalSevere: 0.569,
+	originalInfection: 0.444,
+	originalSevere: 0.636,
 	bivalentRelativeInfection: 0.309,
 	bivalentRelativeSevere: 0.597
+};
+
+/** Mohammed 2023's whole-follow-up averages, which the sim no longer starts from (shown in prose only). */
+export const MOHAMMED_AVERAGED = { infection: 0.204, severe: 0.569 };
+
+/**
+ * One dose against Omicron. Shao 2022 (meta-analysis): 25.9% against infection. No pooled one-dose
+ * severe figure exists, so severe keeps Tan 2022's matched pair (children 5-11, near the dose):
+ * 13.6% against infection and 42.3% against hospitalisation.
+ */
+export const OMICRON_ONE_DOSE = {
+	infection: 0.259,
+	tan: { infection: 0.136, severe: 0.423 },
+	get breakthrough() {
+		return breakthroughSevereProtection(this.tan.infection, this.tan.severe);
+	},
+	get severe() {
+		return matchedSevere(this.infection, this.tan.infection, this.tan.severe);
+	}
 };
 
 /** Ling 2022: myocarditis or pericarditis, 22.6 per million mRNA doses. Greenhawt 2021: anaphylaxis 7.91. */
@@ -226,6 +259,35 @@ export const YOUNG = {
 	}
 };
 
+/**
+ * Flu vaccine when protection starts. Guo 2024's 41.4% is an average over a season (14 to 180 days
+ * after the jab), so the sim starts from the value whose average over that window, waning on
+ * Young's half-life, is 41.4% (6.13). Severe keeps Guo and Yegorov's matched breakthrough factor
+ * (41.4% against infection, 42% against hospitalisation).
+ */
+export const FLU_VACCINE = {
+	seasonAverage: 0.414,
+	season: { fromDay: 14, toDay: 180 },
+	severeAverage: 0.42,
+	/** The season average as a share of the starting value. */
+	get seasonFactor() {
+		return meanOfHalving(YOUNG.halfLife, this.season.fromDay, this.season.toDay);
+	},
+	get start() {
+		return this.seasonAverage / this.seasonFactor;
+	},
+	get severe() {
+		return matchedSevere(this.start, this.seasonAverage, this.severeAverage);
+	},
+	/** Check: the sim's average over Young's two windows (15-90 and 91-180 days). */
+	get earlyWindow() {
+		return this.start * meanOfHalving(YOUNG.halfLife, 15, 90);
+	},
+	get lateWindow() {
+		return this.start * meanOfHalving(YOUNG.halfLife, 91, 180);
+	}
+};
+
 /** Ranjeva 2019: infection-acquired protection against H3N2 in adults halves in 4.1 years. */
 export const RANJEVA_HALF_LIFE_YEARS = 4.1;
 
@@ -240,7 +302,12 @@ export const FLU_SERIOUS = {
 
 // --- Polio ---
 
-/** Hird 2012: OPV against shedding, summary odds ratio 0.13. */
+/**
+ * Macklin 2019: 91% of children have gut immunity (no type 2 virus shed after a test dose) after
+ * three doses of the three-type oral vaccine. Hird 2012's odds ratio 0.13 is kept for context only:
+ * 1 - OR is not a protection figure when shedding is common.
+ */
+export const OPV_INTESTINAL_IMMUNITY = 0.91;
 export const OPV_SHEDDING_OR = 0.13;
 /** Grassly 2014: one IPV dose seroconverts 33%, 41% and 47% of infants (types 1, 2, 3). */
 export const IPV_ONE_DOSE_SEROCONVERSION = [0.33, 0.41, 0.47] as const;
@@ -283,6 +350,18 @@ export const MMR_SERIOUS_PER_100K = midpoint(
 );
 /** Lewnard & Grad 2018: half of vaccinated people lose protection against mumps within 19.0 years. */
 export const LEWNARD_HALF_LIFE_YEARS = 19.0;
+/** Lewnard & Grad 2018: 96.4% protected six months after a dose, the same after a first or second. */
+export const LEWNARD_TAKE = 0.964;
+/**
+ * Di Pietrantonj 2021 (Cochrane), MMR effectiveness after two doses (full) and one (partial).
+ * Mumps (Jeryl Lynn) is prose only: it averages over years since the dose, so the sim uses Lewnard.
+ * Rubella is one cohort, with both courses together.
+ */
+export const COCHRANE_MMR = {
+	measles: { full: 0.96, partial: 0.95 },
+	mumps: { full: 0.86, partial: 0.72 },
+	rubella: 0.89
+};
 /** Moro 2022: 6 vaccine-strain chickenpox deaths in 132.8 million doses. */
 export const MORO = {
 	deaths: 6,
@@ -291,6 +370,19 @@ export const MORO = {
 		return (this.deaths / this.doses) * PER_100K;
 	}
 };
+/**
+ * Marin 2016 (meta-analysis, mostly years after the dose): 92% for two doses; one dose 81% against
+ * any chickenpox and 98% against moderate or severe chickenpox.
+ */
+export const MARIN = { full: 0.92, partial: 0.81, partialSevere: 0.98 };
+/** Bolormaa 2025: one dose 87.8% in year 1. */
+export const BOLORMAA_ONE_DOSE_YEAR1 = 0.878;
+/** One dose near the dose: Bolormaa's year-1 figure, with Marin's matched breakthrough factor kept. */
+export const CHICKENPOX_PARTIAL_SEVERE = matchedSevere(
+	BOLORMAA_ONE_DOSE_YEAR1,
+	MARIN.partial,
+	MARIN.partialSevere
+);
 /** Bolormaa 2025: two doses, 93.5% in year 1 and 49.6% by year 9. */
 export const BOLORMAA = {
 	early: { year: 1, ve: 93.5 },
@@ -331,9 +423,31 @@ export const WENDELBOE_YEARS = [4, 20] as const;
 export const WENDELBOE_HALF_LIFE = midpoint(...WENDELBOE_YEARS) * DAYS_PER_YEAR;
 /** CDC: serious DTaP reactions in fewer than 1 in 10,000 doses (the bound is used). */
 export const DTAP_SERIOUS_DOSES = 10_000;
-/** CDC: smallpox vaccination protects "for about 3 to 5 years" (the middle is used). */
+/**
+ * Fulton 2016: acellular vaccines 84% effective against whooping cough (two trials, about 1.5 to 2
+ * years of follow-up). Radke 2017: 93% against hospitalisation after three infant doses. WHO 2015:
+ * about 50% against severe whooping cough in infancy after one dose.
+ */
+export const PERTUSSIS_VACCINE = { full: 0.84, fullSevere: 0.93, partialSevere: 0.5 };
+/** Fulton 2016, Table 1: the two pooled trials followed children for 17.2 and 21-23.5 months. */
+export const PERTUSSIS_TRIAL_MONTHS = [17.2, 23.5] as const;
+/** CDC: smallpox vaccination gives full protection "for about 3 to 5 years" (prose only: not a half-life). */
 export const SMALLPOX_VACCINE_YEARS = [3, 5] as const;
-export const SMALLPOX_VACCINE_HALF_LIFE = midpoint(...SMALLPOX_VACCINE_YEARS) * DAYS_PER_YEAR;
+/**
+ * Nishiura & Eichner 2006: the median duration of protection from smallpox ranged from 11.7 to
+ * 28.4 years after primary vaccination. The sim's waning is one exponential step per dot, so a
+ * median duration of protection is its half-life directly; the middle of the range is used.
+ */
+export const SMALLPOX_PROTECTION_MEDIAN_YEARS = [11.7, 28.4] as const;
+export const SMALLPOX_VACCINE_HALF_LIFE = midpoint(...SMALLPOX_PROTECTION_MEDIAN_YEARS) * DAYS_PER_YEAR;
+/**
+ * Eichner 2003: "even 70 years after primary vaccination, 77.6% of cases were still protected"
+ * against death. That is protection among cases, so it is the breakthrough factor; with the 95%
+ * start it gives the overall severe figure, a lower bound because near the dose it is higher.
+ */
+export const SMALLPOX_START = 0.95;
+export const EICHNER_PROTECTED_CASES = 0.776;
+export const SMALLPOX_SEVERE = 1 - (1 - SMALLPOX_START) * (1 - EICHNER_PROTECTED_CASES);
 /** Lane 1969: 74 complications and 1 death per million primary vaccinations. */
 export const LANE = { complicationsPerMillion: 74, deathsPerMillion: 1 };
 /** Choi 2021: 3 vaccine-related serious events among 15,399 people given the one-dose Ebola vaccine. */
@@ -342,6 +456,21 @@ export const CHOI = {
 	people: 15_399,
 	get per100k() {
 		return (this.events / this.people) * PER_100K;
+	}
+};
+
+/**
+ * Ebola: Meakin 2024, real-world effectiveness 84% at 10 or more days after the dose. Coulborn 2024:
+ * vaccinated patients (10 or more days before onset) had an adjusted relative risk of death of 0.40,
+ * from 68 patients and 12 deaths. Overall protection against death: 1 - (1 - 0.84) x 0.40.
+ */
+export const EBOLA_VACCINE = {
+	infection: 0.84,
+	deathRelativeRisk: 0.4,
+	patients: 68,
+	deaths: 12,
+	get severe() {
+		return 1 - (1 - this.infection) * this.deathRelativeRisk;
 	}
 };
 

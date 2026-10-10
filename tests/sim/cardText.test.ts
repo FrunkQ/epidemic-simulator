@@ -5,6 +5,8 @@ import { overallSevere, unvaccinatedShare, vaccineFor } from '../../src/lib/sim/
 import { createSimulation } from '../../src/lib/sim/engine';
 import { singleCity } from '../../src/lib/config/scenarios';
 import { Protection } from '../../src/lib/sim/types';
+import { DISEASES } from '../../src/lib/config/diseases';
+import { waningWords } from '../../src/lib/config/waning';
 
 describe('what the card says about vaccination', () => {
 	it('counts the hidden partial share as not vaccinated when the version has no unfinished course', () => {
@@ -36,8 +38,23 @@ describe('what the card says about vaccination', () => {
 
 	it('shows chickenpox full and unfinished courses with the same overall protection against serious illness', () => {
 		const v = loadDisease('chickenpox').vaccines[0];
-		expect(overallSevere(v.fullInfection, v.fullSevere)).toBeCloseTo(0.98, 9);
-		expect(overallSevere(v.partialInfection, v.partialSevere)).toBeCloseTo(0.98, 9);
+		const partial = DISEASES.chickenpox.vaccines[0].partial!.severe!.value;
+		expect(partial).toBeCloseTo(0.987, 3);
+		expect(overallSevere(v.fullInfection, v.fullSevere)).toBeCloseTo(partial, 9);
+		expect(overallSevere(v.partialInfection, v.partialSevere)).toBeCloseTo(partial, 9);
+	});
+
+	it('says how fast protection fades, and the season figure for flu', () => {
+		expect(waningWords(null)).toBe('');
+		expect(waningWords(DISEASES.flu.vaccines[0].waningDays.value)).toBe(
+			' just after the course, halving every 105 days'
+		);
+		expect(waningWords(DISEASES.smallpox.vaccines[0].waningDays.value)).toBe(
+			' just after the course, halving every 20 years'
+		);
+		expect(DISEASES.flu.vaccines[0].cardNote).toBe(
+			'Averaged over a season it protects about 41 in 100 (Guo 2024).'
+		);
 	});
 
 	it('writes one About line for each borrowed or missing course figure', () => {

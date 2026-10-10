@@ -22,7 +22,17 @@ import {
 	MRNA_SERIOUS as MRNA_SERIOUS_INPUTS,
 	OMICRON_VACCINE,
 	OPV_RISK,
-	OPV_SHEDDING_OR,
+	OPV_INTESTINAL_IMMUNITY,
+	OMICRON_ONE_DOSE,
+	FLU_VACCINE,
+	LEWNARD_TAKE,
+	COCHRANE_MMR,
+	BOLORMAA_ONE_DOSE_YEAR1,
+	CHICKENPOX_PARTIAL_SEVERE,
+	PERTUSSIS_VACCINE,
+	SMALLPOX_START,
+	SMALLPOX_SEVERE,
+	EBOLA_VACCINE,
 	RANJEVA_HALF_LIFE_YEARS,
 	SMALLPOX_VACCINE_HALF_LIFE,
 	STEIN_40_WEEKS,
@@ -177,10 +187,20 @@ const OMICRON_ORIGINAL = {
 	version: 'original',
 	label: 'Original vaccine',
 	full: {
-		infection: { value: OMICRON_VACCINE.originalInfection, sources: ['mohammed-2023-omicron-ve'] },
+		infection: {
+			value: OMICRON_VACCINE.originalInfection,
+			sources: ['menegale-2023-waning-meta', 'shao-2022-omicron-ve-meta']
+		},
 		severe: { value: OMICRON_VACCINE.originalSevere, sources: ['mohammed-2023-omicron-ve'] }
 	},
-	partial: { infection: { value: 0.136, sources: ['tan-2022-omicron-children-partial'] } },
+	partial: {
+		infection: { value: OMICRON_ONE_DOSE.infection, sources: ['shao-2022-omicron-ve-meta'] },
+		// Worked out: Shao's one-dose figure with Tan's matched breakthrough factor kept.
+		severe: {
+			value: OMICRON_ONE_DOSE.severe,
+			sources: ['shao-2022-omicron-ve-meta', 'tan-2022-omicron-children-partial']
+		}
+	},
 	seriousPer100kDoses: MRNA_SERIOUS,
 	deathsPer100kDoses: MRNA_DEATHS,
 	waningDays: OMICRON_VACCINE_WANING
@@ -194,7 +214,7 @@ const OMICRON_UPDATED = {
 	full: {
 		infection: {
 			value: stackedProtection(OMICRON_VACCINE.bivalentRelativeInfection, OMICRON_VACCINE.originalInfection),
-			sources: ['cheng-2024-bivalent-rve-meta', 'mohammed-2023-omicron-ve']
+			sources: ['cheng-2024-bivalent-rve-meta', 'menegale-2023-waning-meta']
 		},
 		severe: {
 			value: stackedProtection(OMICRON_VACCINE.bivalentRelativeSevere, OMICRON_VACCINE.originalSevere),
@@ -209,9 +229,10 @@ const OMICRON_UPDATED = {
 /** Exported for tests: the constants behind the updated vaccine's worked-out protection. */
 export const OMICRON_VACCINE_INPUTS = OMICRON_VACCINE;
 
+/** Worked out: the start whose season average, waning on Young's half-life, is Guo's 41.4% (6.13). */
 const FLU_INFECTION: Sourced = {
-	value: 0.414,
-	sources: ['guo2024-flu-ve-review', 'belongia2016-flu-ve-review']
+	value: FLU_VACCINE.start,
+	sources: ['guo2024-flu-ve-review', 'young2018-flu-ve-waning-review', 'belongia2016-flu-ve-review']
 };
 /** One flu dose a season: no unfinished course, so no partial entry. */
 const FLU_INACTIVATED: Vaccine = {
@@ -220,8 +241,13 @@ const FLU_INACTIVATED: Vaccine = {
 	default: true,
 	full: {
 		infection: FLU_INFECTION,
-		severe: { value: 0.42, sources: ['yegorov-2025-flu-severe-ma', 'rondy-2017-flu-hosp-ma'] }
+		// Worked out: the season figures' matched breakthrough factor, kept at the new start.
+		severe: {
+			value: FLU_VACCINE.severe,
+			sources: ['yegorov-2025-flu-severe-ma', 'guo2024-flu-ve-review', 'rondy-2017-flu-hosp-ma']
+		}
 	},
+	cardNote: `Averaged over a season it protects about ${Math.round(FLU_VACCINE.seasonAverage * 100)} in 100 (Guo 2024).`,
 	seriousPer100kDoses: {
 		value: FLU_SERIOUS.per100k,
 		sources: ['cdc-flu-gbs-2024', 'mcneil-2016-anaphylaxis']
@@ -258,9 +284,9 @@ const POLIO_IPV: Vaccine = {
 };
 const POLIO_OPV: Vaccine = {
 	product: 'OPV',
-	label: 'Oral (OPV, drops)',
+	label: 'Oral, three-type (OPV, used until 2016)',
 	full: {
-		infection: { value: 1 - OPV_SHEDDING_OR, sources: ['hird2012-ipv-mucosal-review'] },
+		infection: { value: OPV_INTESTINAL_IMMUNITY, sources: ['macklin-2019-polio-schedules-nma'] },
 		severe: { value: 0.95, sources: ['cdc-pinkbook-polio'] }
 	},
 	partial: { severe: { value: 0.5, sources: ['cdc-pinkbook-polio'] } },
@@ -279,32 +305,56 @@ const POLIO_OPV: Vaccine = {
 };
 
 const MEASLES_FULL: Sourced = {
-	value: 0.97,
+	value: COCHRANE_MMR.measles.full,
 	sources: [
-		'cdc-pinkbook-measles',
+		'dipietrantonj2021-cochrane-mmrv',
 		'uzicanin2011-measles-ve-review',
-		'dipietrantonj2020-cochrane-mmrv',
 		'benet2025-measles-ve-france',
 		'perry2026-measles-ve-wales'
 	]
 };
 const MEASLES_PARTIAL: Sourced = {
-	value: 0.93,
-	sources: ['cdc-pinkbook-measles', 'uzicanin2011-measles-ve-review', 'dipietrantonj2020-cochrane-mmrv']
+	value: COCHRANE_MMR.measles.partial,
+	sources: ['dipietrantonj2021-cochrane-mmrv', 'uzicanin2011-measles-ve-review']
 };
-const MUMPS_FULL: Sourced = { value: 0.88, sources: ['cdc-pinkbook-mumps'] };
-const MUMPS_PARTIAL: Sourced = { value: 0.78, sources: ['cdc-pinkbook-mumps'] };
-const RUBELLA_FULL: Sourced = { value: 0.97, sources: ['cdc-pinkbook-rubella'] };
-const RUBELLA_PARTIAL: Sourced = { value: 0.95, sources: ['cdc-pinkbook-rubella'] };
-const CHICKENPOX_FULL: Sourced = { value: 0.92, sources: ['cdc-pinkbook-varicella'] };
-const CHICKENPOX_PARTIAL: Sourced = { value: 0.82, sources: ['cdc-pinkbook-varicella'] };
+/** Lewnard's take, six months after a dose: the same for one dose or two (no difference in waning). */
+const MUMPS_FULL: Sourced = { value: LEWNARD_TAKE, sources: ['lewnard-grad-2018-mumps-waning'] };
+const MUMPS_PARTIAL: Sourced = { value: LEWNARD_TAKE, sources: ['lewnard-grad-2018-mumps-waning'] };
+const RUBELLA_PROVISIONAL =
+	'One cohort in China, mixing BRD-II (a strain used only there) and RA27/3 strains; doses not split.';
+const RUBELLA_FULL: Sourced = {
+	value: COCHRANE_MMR.rubella,
+	sources: ['dipietrantonj2021-cochrane-mmrv'],
+	provisional: RUBELLA_PROVISIONAL
+};
+const RUBELLA_PARTIAL: Sourced = {
+	value: COCHRANE_MMR.rubella,
+	sources: ['dipietrantonj2021-cochrane-mmrv'],
+	provisional: RUBELLA_PROVISIONAL
+};
+const CHICKENPOX_FULL: Sourced = {
+	value: BOLORMAA.early.ve / 100,
+	sources: ['bolormaa2025-varicella-duration']
+};
+const CHICKENPOX_PARTIAL: Sourced = {
+	value: BOLORMAA_ONE_DOSE_YEAR1,
+	sources: ['bolormaa2025-varicella-duration']
+};
 const PERTUSSIS_FULL: Sourced = {
-	value: CHIT.start,
-	sources: ['chit2018-acellular-pertussis-ve-waning', 'cdc-pinkbook-pertussis']
+	value: PERTUSSIS_VACCINE.full,
+	sources: ['fulton-2016-pertussis-vaccines-ma']
 };
-const PERTUSSIS_PARTIAL: Sourced = { value: 0.5, sources: ['cdc-pinkbook-pertussis'] };
-const SMALLPOX_FULL: Sourced = { value: 0.95, sources: ['cdc-smallpox-vaccine'] };
-const EBOLA_FULL: Sourced = { value: 0.95, sources: ['cdc-ervebo-vaccine'] };
+const PERTUSSIS_PARTIAL: Sourced = {
+	value: 0.5,
+	sources: [],
+	provisional:
+		'No pooled figure for an unfinished course; single studies range from 0% after one dose to 70% after two.'
+};
+const SMALLPOX_FULL: Sourced = { value: SMALLPOX_START, sources: ['cdc-smallpox-vaccine'] };
+const EBOLA_FULL: Sourced = {
+	value: EBOLA_VACCINE.infection,
+	sources: ['meakin-2024-ebola-vaccine-effectiveness']
+};
 
 /** One MMR entry for measles, mumps or rubella, with that disease's protection and waning. */
 function mmr(full: Sourced, partial: Sourced, waningDays: Sourced<number | null>): Vaccine {
@@ -578,7 +628,11 @@ export const DISEASES = {
 				full: { infection: CHICKENPOX_FULL },
 				partial: {
 					infection: CHICKENPOX_PARTIAL,
-					severe: { value: 0.98, sources: ['marin-2016-varicella-ma'] }
+					// Worked out: Bolormaa's year-1 figure with Marin's matched breakthrough factor kept.
+					severe: {
+						value: CHICKENPOX_PARTIAL_SEVERE,
+						sources: ['marin-2016-varicella-ma', 'bolormaa2025-varicella-duration']
+					}
 				},
 				seriousPer100kDoses: { value: 1.3, sources: ['moro-2022-varicella-vaers'] },
 				// Worked out: vaccine-strain deaths per dose, mostly in people the vaccine wasn't recommended for.
@@ -660,8 +714,14 @@ export const DISEASES = {
 				product: 'DTaP',
 				label: 'Acellular whooping cough vaccine (DTaP)',
 				default: true,
-				full: { infection: PERTUSSIS_FULL },
-				partial: { infection: PERTUSSIS_PARTIAL },
+				full: {
+					infection: PERTUSSIS_FULL,
+					severe: { value: PERTUSSIS_VACCINE.fullSevere, sources: ['radke-2017-pertussis-ve-nz'] }
+				},
+				partial: {
+					infection: PERTUSSIS_PARTIAL,
+					severe: { value: PERTUSSIS_VACCINE.partialSevere, sources: ['who-2015-pertussis-position-paper'] }
+				},
 				seriousPer100kDoses: { value: 100_000 / DTAP_SERIOUS_DOSES, sources: ['cdc-pinkbook-pertussis'] },
 				deathsPer100kDoses: { kind: 'none-established', sources: ['iom-2003-vaccines-sudi'] },
 				waningDays: {
@@ -694,7 +754,11 @@ export const DISEASES = {
 				product: 'vaccinia',
 				label: 'Vaccinia (the 1960s vaccine)',
 				default: true,
-				full: { infection: SMALLPOX_FULL },
+				full: {
+					infection: SMALLPOX_FULL,
+					// Worked out: Eichner's share of cases still protected against death, as the breakthrough factor.
+					severe: { value: SMALLPOX_SEVERE, sources: ['eichner-2003-smallpox-protection'] }
+				},
 				seriousPer100kDoses: {
 					value: per100kFromPerMillion(LANE.complicationsPerMillion),
 					sources: ['lane-1969-smallpox-complications']
@@ -706,7 +770,10 @@ export const DISEASES = {
 				},
 				waningDays: {
 					value: SMALLPOX_VACCINE_HALF_LIFE,
-					sources: ['cdc-smallpox-vaccine']
+					sources: [
+						'nishiura-2006-smallpox-protection-duration',
+						'kunasekaran-2019-smallpox-residual-immunity'
+					]
 				}
 			}
 		]
@@ -734,7 +801,14 @@ export const DISEASES = {
 				product: 'rVSV-ZEBOV',
 				label: 'Ervebo (rVSV-ZEBOV, one dose)',
 				default: true,
-				full: { infection: EBOLA_FULL },
+				full: {
+					infection: EBOLA_FULL,
+					// Worked out: 1 - (1 - Meakin's 84%) x Coulborn's relative risk of death 0.40.
+					severe: {
+						value: EBOLA_VACCINE.severe,
+						sources: ['meakin-2024-ebola-vaccine-effectiveness', 'coulborn-2024-ebola-vaccinated-cfr']
+					}
+				},
 				seriousPer100kDoses: { value: CHOI.per100k, sources: ['choi-2021-acip-ebola'] },
 				deathsPer100kDoses: {
 					kind: 'none-established',

@@ -43,7 +43,7 @@ export function isSourced(v: unknown): v is Sourced<number | null> {
 }
 
 /** Vaccine fields that are names and flags, not research numbers. */
-const VACCINE_PLAIN = new Set(['product', 'version', 'label', 'default']);
+const VACCINE_PLAIN = new Set(['product', 'version', 'label', 'default', 'cardNote']);
 
 export function walk(): {
 	sourced: { key: string; value: Sourced<number | null> }[];

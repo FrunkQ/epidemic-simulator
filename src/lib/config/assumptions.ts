@@ -13,7 +13,15 @@ import {
 	PLAGUE_FIRST_ANTIBIOTICS_YEAR,
 	PLAGUE_INCUBATION_RANGE,
 	PLAGUE_MORTALITY,
-	STRAIN
+	STRAIN,
+	CHIT,
+	EBOLA_VACCINE,
+	FLU_VACCINE,
+	PERTUSSIS_VACCINE,
+	SMALLPOX_VACCINE_HALF_LIFE,
+	SMALLPOX_VACCINE_YEARS,
+	PERTUSSIS_TRIAL_MONTHS,
+	DAYS_PER_YEAR
 } from './derived';
 
 const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -37,6 +45,16 @@ export const ASSUMPTIONS = {
 		'Having had a disease protects against serious illness the next time only for COVID-19, the one disease with a sourced figure. For every other disease, once immunity fades, the model gives no such protection.',
 	strongerOfTwo:
 		'Someone protected both by a vaccine and by having had the disease keeps the stronger of the two. The model doesn’t combine them, because combined (“hybrid”) figures aren’t sourced here.',
+	vaccineStart:
+		'Each vaccine starts at its protection when the course takes effect and then fades at its measured rate. Many studies report protection averaged over months, after some has already faded; starting from those would count the fading twice.',
+	vaccineMeasuresIllness:
+		'For measles, mumps, rubella, chickenpox, flu, whooping cough and Ebola, the studies measure how well the vaccine stops people falling ill, not catching it. Some vaccinated people catch it without symptoms and can pass it on, so these vaccines look slightly better at stopping spread in the sim than they really are.',
+	fluVaccineStart: `The flu vaccine starts at about ${Math.round(FLU_VACCINE.start * 100)} in 100 just after the jab, worked out so that, fading at the measured rate, it averages the ${Math.round(FLU_VACCINE.seasonAverage * 100)} in 100 that studies find over a season. That start is higher than any figure measured directly. Those studies count people who saw a doctor, so they may overstate protection against any infection.`,
+	opvType2:
+		'The oral polio vaccine’s protection against catching polio was measured as no virus in the gut after a type 2 test dose; protection against types 1 and 3 may be lower. Its protection against paralysis is the figure for children in industrialised countries.',
+	ebolaVaccineDeaths: `The Ebola vaccine’s protection against death rests on ${EBOLA_VACCINE.patients} vaccinated patients, ${EBOLA_VACCINE.deaths} of whom died.`,
+	pertussisVaccine: `The whooping cough vaccine starts at ${Math.round(PERTUSSIS_VACCINE.full * 100)} in 100, measured in trials that followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${Math.round(PERTUSSIS_TRIAL_MONTHS[1])} months, so it is slightly low just after the course. How fast it fades (${Math.round(CHIT.decayPerYear * 1000) / 10}% a year) comes from a study funded by Sanofi Pasteur, which makes the vaccine; eight of its nine authors worked there.`,
+	smallpoxVaccineWaning: `Smallpox vaccination protects for decades: half of people have lost protection against catching it after about ${Math.round(SMALLPOX_VACCINE_HALF_LIFE / DAYS_PER_YEAR)} years, and protection against dying lasts far longer. Official advice of “${SMALLPOX_VACCINE_YEARS[0]} to ${SMALLPOX_VACCINE_YEARS[1]} years” is how long full protection lasts.`,
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,

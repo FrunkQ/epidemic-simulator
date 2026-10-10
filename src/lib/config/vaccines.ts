@@ -12,6 +12,15 @@ export function breakthroughSevereProtection(infection: number, severe: number):
 }
 
 /**
+ * Severe protection for a vaccine whose infection figure moved to `infection` (near the dose), keeping
+ * the breakthrough factor of the source's own matched pair (6.13):
+ * 1 - (1 - infection) x (1 - breakthrough).
+ */
+export function matchedSevere(infection: number, sourceInfection: number, sourceSevere: number): number {
+	return 1 - (1 - infection) * (1 - breakthroughSevereProtection(sourceInfection, sourceSevere));
+}
+
+/**
  * Protection of a vaccine measured relative to another, against people with no vaccine:
  * 1 - (1 - relative) x (1 - base). Used for the updated COVID-19 vaccine, whose sources compare it
  * with the original vaccine rather than with the unvaccinated.
