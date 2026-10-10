@@ -56,6 +56,8 @@
 	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
+	/** The population when the run starts, in people, to two significant figures so it reads easily. */
+	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
 	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
 	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
@@ -115,6 +117,12 @@
 			>
 		</div>
 	</header>
+	<p
+		class="population"
+		title={`Each dot stands for ${peoplePerDot.toLocaleString('en-GB')} ${peoplePerDot === 1 ? 'person' : 'people'}.`}
+	>
+		{startingPeople} people at the start
+	</p>
 	<p class="summary">
 		{#if !vaccine.exists}
 			No vaccine
@@ -259,6 +267,10 @@
 		position: static;
 		flex: 0 0 200px;
 		box-shadow: none;
+	}
+	.population {
+		margin: 0 0 2px;
+		color: #9fb3c8;
 	}
 	.summary {
 		margin: 0 0 4px;
