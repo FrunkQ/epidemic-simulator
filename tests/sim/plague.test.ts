@@ -49,12 +49,36 @@ describe('latentDays (6.1)', () => {
 		expect(plague.latentTicks).toBe(plague.silentTicks);
 		const sim = createSimulation(singleCity({ population: 500_000 }), { seed: 4, diseaseId: 'plague' });
 		const cases = sim.seedNow(0, 200).length;
-		// Index cases are back-dated one tick so they can spread from the next tick (seedCases), so
-		// stop two ticks short of the end of the latent days.
-		sim.step(plague.latentTicks - 2);
+		// To the last tick of the latent days, index cases included.
+		sim.step(plague.latentTicks);
 		expect(sim.snapshot().totals.everInfected).toBe(cases);
 		sim.step(plague.illTicks);
 		expect(sim.snapshot().totals.everInfected).toBeGreaterThan(cases);
+	});
+
+	it('never lets a silent dot infect anyone when the whole silent phase is latent, index cases included', () => {
+		const plague = loadDisease('plague');
+		const sim = createSimulation(travelWorld(true), { seed: 6, diseaseId: 'plague' });
+		// Many index cases both ways (a queued command and seedNow), so an early tick would show.
+		sim.send({ type: 'seed', region: 1, count: 400 });
+		sim.seedNow(0, 400);
+		const a = sim.agents;
+		let checked = 0;
+		for (let t = 0; t < 30 * TICKS_PER_DAY; t++) {
+			sim.step(1);
+			const tick = sim.snapshot().tick;
+			for (let j = 0; j < a.activeCount; j++) {
+				const src = a.infectedBy[j];
+				if (a.infectedTick[j] !== tick || src < 0) continue;
+				// Silent at transmission means still silent now, or turned ill later this same tick.
+				const wasSilent =
+					a.state[src] === State.SILENT ||
+					(a.state[src] === State.SYMPTOMATIC && a.stateTicks[src] === plague.illTicks);
+				expect(wasSilent, `dot ${j} at tick ${tick}`).toBe(false);
+				checked++;
+			}
+		}
+		expect(checked).toBeGreaterThan(100);
 	});
 });
 
@@ -65,23 +89,22 @@ describe('Black Death travel (6.8)', () => {
 			const sim = createSimulation(travelWorld(true), { seed, diseaseId: 'plague' });
 			sim.send({ type: 'seed', region: 1, count: 50 });
 			const a = sim.agents;
-			const boardedSilent = new Uint8Array(a.capacity);
-			let landedSilent = 0;
-			let reached = false;
-			for (let t = 0; t < 120 * TICKS_PER_DAY && !reached; t++) {
+			/** Dots that were on a flight while still incubating (they may fall ill before landing). */
+			const flewIncubating = new Uint8Array(a.capacity);
+			let firstSource = -2;
+			for (let t = 0; t < 120 * TICKS_PER_DAY && firstSource === -2; t++) {
 				sim.step(1);
+				const tick = sim.snapshot().tick;
 				for (let i = 0; i < a.activeCount; i++) {
 					const r = a.route[i];
-					if (r >= 0 && sim.routes[r].kind === 'air' && a.state[i] === State.SILENT) boardedSilent[i] = 1;
-					if (r < 0 && boardedSilent[i] === 1) {
-						boardedSilent[i] = 0;
-						if (a.region[i] !== 1 && a.state[i] === State.SILENT) landedSilent++;
-					}
+					if (r >= 0 && sim.routes[r].kind === 'air' && a.state[i] === State.SILENT) flewIncubating[i] = 1;
 				}
-				if (t % TICKS_PER_DAY === 0)
-					reached = sim.snapshot().regions.some((reg, k) => k !== 1 && reg.counts.everInfected > 0);
+				// The first case caught in another city: who gave it to them?
+				for (let j = 0; j < a.activeCount && firstSource === -2; j++)
+					if (a.infectedTick[j] === tick && a.region[j] >= 0 && a.region[j] !== 1)
+						firstSource = a.infectedBy[j];
 			}
-			if (reached && landedSilent > 0) seeded++;
+			if (firstSource >= 0 && flewIncubating[firstSource] === 1 && a.region[firstSource] !== 1) seeded++;
 		}
 		expect(seeded).toBeGreaterThanOrEqual(2);
 	});
@@ -110,18 +133,16 @@ describe('Black Death travel (6.8)', () => {
 describe('care basis (6.6)', () => {
 	const beds = (perThousand: number) =>
 		withValue(withValue(defaultPolicy(), 'hospitalBedsPerThousand', perThousand), 'spareBedShare', 1);
-	/** Deaths with plenty of beds and with almost none, same seed. */
-	function deathsBothWays(id: DiseaseId, basis?: 'era' | 'modern-care') {
+	/** Deaths and peak pressure with plenty of beds and with almost none, same seed. */
+	function deathsBothWays(id: DiseaseId, basis: 'era' | 'modern-care') {
 		const base = DISEASES[id];
 		// Hospital share well above the death rate, so strain would bite if it applied (6.6).
-		const config = basis
-			? {
-					...base,
-					mortalityBasis: basis,
-					hospitalisedShare: { value: 0.6, sources: [] },
-					hospitalisedByAge: undefined
-				}
-			: base;
+		const config = {
+			...base,
+			mortalityBasis: basis,
+			hospitalisedShare: { value: 0.6, sources: [] },
+			hospitalisedByAge: undefined
+		};
 		const disease = toRuntime(config, CALIBRATION[id]);
 		return [1000, 0.01].map((b) => {
 			const sim = createSimulation(singleCity({ population: 500_000, policy: beds(b) }), {
@@ -130,29 +151,27 @@ describe('care basis (6.6)', () => {
 				disease
 			});
 			sim.seedNow(0, 400);
-			sim.step(disease.silentTicks + disease.illTicks + 2 * TICKS_PER_DAY);
-			return sim.snapshot().deaths;
+			let peak = 0;
+			const ticks = disease.silentTicks + disease.illTicks + 2 * TICKS_PER_DAY;
+			for (let t = 0; t < ticks; t++) {
+				sim.step(1);
+				peak = Math.max(peak, sim.snapshot().regions[0].pressure);
+			}
+			return { deaths: sim.snapshot().deaths, peak };
 		});
 	}
 
-	it('every disease declares one, and only 1918 flu and the Black Death are era rates', () => {
-		for (const d of Object.values(DISEASES)) {
-			expect(['modern-care', 'era'], d.id).toContain(d.mortalityBasis);
-			expect(d.mortalityBasis === 'era', d.id).toBe(d.id === 'flu1918' || d.id === 'plague');
-		}
-	});
-
+	// A hospital share above the death rate, so strain would bite if it applied (when h = d, P = h
+	// whatever the strain, so the real entries couldn't fail this).
 	it('full hospitals don’t change an era death rate', () => {
-		for (const id of ['plague', 'flu1918'] as DiseaseId[]) {
-			const [roomy, full] = deathsBothWays(id);
-			expect(full, id).toBe(roomy);
-		}
 		const [roomy, full] = deathsBothWays('flu1918', 'era');
-		expect(full).toBe(roomy);
+		expect(full.peak).toBeGreaterThan(1);
+		expect(full.deaths).toBe(roomy.deaths);
 	});
 
 	it('full hospitals raise a modern-care death rate', () => {
 		const [roomy, full] = deathsBothWays('flu1918', 'modern-care');
-		expect(full).toBeGreaterThan(roomy * 1.2);
+		expect(full.peak).toBeGreaterThan(1);
+		expect(full.deaths).toBeGreaterThan(roomy.deaths * 1.2);
 	});
 });

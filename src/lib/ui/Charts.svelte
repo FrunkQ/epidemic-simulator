@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { COLOURS } from '../sim/render';
-	import type { RegionHistory, Telemetry } from '../sim/types';
+	import type { MortalityBasis, RegionHistory, Telemetry } from '../sim/types';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import AgeBarsChart from './charts/AgeBarsChart.svelte';
 	import LineChart from './charts/LineChart.svelte';
@@ -10,10 +10,12 @@
 
 	interface Props {
 		telemetry: Telemetry;
+		/** The care basis of the disease's death rate: strain never applies to an 'era' rate (6.6). */
+		mortalityBasis: MortalityBasis;
 		/** Daily history per region, refreshed by the page when telemetry.historyVersion changes. */
 		history: RegionHistory[];
 	}
-	let { telemetry, history }: Props = $props();
+	let { telemetry, history, mortalityBasis }: Props = $props();
 
 	/** The stack, bottom first, in the dot colours so the map legend carries over. */
 	const BANDS = [
@@ -105,7 +107,11 @@
 				lines={pressureLines}
 				yLabel="% of beds"
 				references={[
-					{ label: `${threshold}%: strain starts`, value: threshold, labelStart: true },
+					{
+						label: `${threshold}%: ${mortalityBasis === 'era' ? 'under pressure' : 'strain starts'}`,
+						value: threshold,
+						labelStart: true
+					},
 					{ label: '100%: full', value: 100 }
 				]}
 			/>

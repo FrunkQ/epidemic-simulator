@@ -384,7 +384,10 @@ export interface RegionTelemetry {
 	/** (Beds normally occupied + outbreak patients) / all beds (6.6). 0 when hospitals are switched off. */
 	pressure: number;
 	pressureBand: PressureBand;
-	/** The strain multiplier on the odds of death for patients in a bed (1 = no strain, 6.6). */
+	/**
+	 * The strain multiplier on the odds of death for patients in a bed (1 = no strain, 6.6). It is
+	 * not applied to an 'era' death rate, which predates modern hospital care.
+	 */
 	strain: number;
 	lockedDown: boolean;
 	fatiguedShare: number;

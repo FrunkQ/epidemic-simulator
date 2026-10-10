@@ -139,7 +139,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const header = all
 		.map(
 			(id) =>
-				`//   ${id}: target R0 ${DISEASES[id].r0.value}, measured ${out[id].measuredR0} ± ${out[id].standardError} ` +
+				`//   ${id}: target R0 ${Number(DISEASES[id].r0.value.toPrecision(4))}, measured ${out[id].measuredR0} ± ${out[id].standardError} ` +
 				`over ${out[id].seeds} seeds, ${out[id].indexCases} index cases`
 		)
 		.join('\n');

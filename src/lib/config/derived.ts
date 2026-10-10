@@ -484,6 +484,23 @@ export const per100kFromPerMillion = perMillionToPer100k;
  * Stockholm 1710, Moscow 1771 and Malta 1813. Their mean is used, so no one town sets it.
  */
 export const PLAGUE_EP_R0S = [1.82, 1.76, 1.91, 1.64, 1.48, 1.64, 1.75, 1.79, 1.57] as const;
+/** The same nine outbreaks, in the same order. */
+export const PLAGUE_EP_TOWNS = [
+	'Givry',
+	'Florence',
+	'Barcelona',
+	'London',
+	'Eyam',
+	'Gdansk',
+	'Stockholm',
+	'Moscow',
+	'Malta'
+] as const;
+/** "Town R0" for the lowest and highest of the nine values. */
+export function plagueR0Extremes(): [string, string] {
+	const at = (v: number) => `${PLAGUE_EP_TOWNS[PLAGUE_EP_R0S.indexOf(v as never)]} ${v}`;
+	return [at(Math.min(...PLAGUE_EP_R0S)), at(Math.max(...PLAGUE_EP_R0S))];
+}
 export const PLAGUE_R0 = mean(...PLAGUE_EP_R0S);
 /** Dean 2018 Methods: mildly infectious for 8 days, then highly infectious (moribund) for 2. */
 export const PLAGUE_MILD_INFECTIOUS_DAYS = 8;
@@ -498,6 +515,11 @@ export const PLAGUE_INCUBATION_DAYS = midpoint(...PLAGUE_INCUBATION_RANGE);
  * antibiotics. The 0-14 band takes the 0-9 and 10-19 classes and 65+ takes the 50+ class (the
  * source has no 65+ cut); both are stated on the About page.
  */
+/** The years Mongillo's hospital records cover. */
+export const PLAGUE_RECORD_YEARS = [1720, 1945] as const;
+/** Mongillo's classes are ten years wide; the model's middle band starts at the 20s and its oldest at the 50s. */
+export const PLAGUE_CLASS_YEARS = 10;
+export const PLAGUE_BAND_CUTS = [20, 50] as const;
 export const PLAGUE_AGE_CLASSES = [
 	{ from: 0, cases: 73, deaths: 40 },
 	{ from: 10, cases: 263, deaths: 119 },
@@ -512,9 +534,9 @@ const tally = (ks: readonly AgeClass[]) => ({
 	deaths: ks.reduce((a, k) => a + k.deaths, 0)
 });
 const PLAGUE_BANDS = [
-	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from < 20)),
-	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= 20 && k.from < 50)),
-	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= 50))
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from < PLAGUE_BAND_CUTS[0])),
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= PLAGUE_BAND_CUTS[0] && k.from < PLAGUE_BAND_CUTS[1])),
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= PLAGUE_BAND_CUTS[1]))
 ];
 /** All 967 cases and 500 deaths. */
 export const PLAGUE_ALL = tally(PLAGUE_AGE_CLASSES);
@@ -534,5 +556,9 @@ export const PLAGUE_EUROPE_SECOND_PANDEMIC_CFR = 0.572;
 export const KUGELER_PRE_ANTIBIOTIC = { deaths: 336, cases: 511 };
 /** Kugeler 2015: the first documented use of antibiotics against plague in the United States. */
 export const PLAGUE_FIRST_ANTIBIOTICS_YEAR = 1942;
+/** Bourner 2023: 15 of 271 bubonic plague patients given a high-efficacy antibiotic at any time died (About only). */
+export const BOURNER_HIGH_EFFICACY = { deaths: 15, patients: 271 };
+/** Kugeler 2020: US plague deaths 1942-2018, 9% on high-efficacy therapy, 51% on limited-efficacy (About only). */
+export const KUGELER_2020_TREATED = { highEfficacy: 0.09, limitedEfficacy: 0.51, from: 1942, to: 2018 };
 /** Godfred-Cato 2020: deaths among treated bubonic plague cases, for the "curable today" line. */
 export const PLAGUE_BUBONIC_TREATED_CFR = 0.142;

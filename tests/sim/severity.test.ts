@@ -145,7 +145,12 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		}
 	});
 
-	for (const id of ['marburg', 'flu1918'] as const) {
+	const noVaccine = (Object.values(DISEASES) as DiseaseConfig[])
+		.filter((d) => !d.vaccines?.length)
+		.map((d) => d.id as DiseaseId);
+	it('covers every disease with no vaccine', () =>
+		expect(noVaccine).toEqual(['marburg', 'flu1918', 'plague']));
+	for (const id of noVaccine) {
 		it(`vaccinates nobody against a disease with no vaccine, whatever the coverage (${id})`, () => {
 			const real = loadDisease(id);
 			expect(real.vaccines.every((v) => !v.exists && !v.hasPartialCourse)).toBe(true);

@@ -102,7 +102,10 @@
 	}
 
 	const CARD_W = 200;
+	/** Until a card has been measured. */
 	const CARD_H = 120;
+	/** Each card's measured height, so the layout keeps the whole card on the stage. */
+	let cardHeights: number[] = $state([]);
 
 	/**
 	 * Cards sit just outside their city's disc, on the side facing away from the other cities,
@@ -128,7 +131,7 @@
 		}
 		const reach = sim.radiusOf(region) * sim.view.scale + 14;
 		const w = CARD_W;
-		const h = CARD_H;
+		const h = cardHeights[region] || CARD_H;
 		// Distance from the card's centre to its edge in direction (dx, dy).
 		const edge = Math.min(w / 2 / Math.max(Math.abs(dx), 1e-6), h / 2 / Math.max(Math.abs(dy), 1e-6));
 		const x = p.x + dx * (reach + edge) - w / 2;
@@ -188,6 +191,7 @@
 					peoplePerDot={telemetry?.peoplePerDot ?? 100}
 					x={pos.x}
 					y={pos.y}
+					bind:height={cardHeights[i]}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
@@ -236,7 +240,7 @@
 
 	<footer>
 		{#if telemetry}
-			<Charts {telemetry} history={histories} />
+			<Charts {telemetry} history={histories} mortalityBasis={DISEASES[diseaseId].mortalityBasis} />
 			<Legend peoplePerDot={telemetry.peoplePerDot} {hasVaccine} {hasPartialCourse} />
 		{/if}
 	</footer>
