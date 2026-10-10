@@ -91,10 +91,12 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		r0: config.r0.value,
 		// Zero is allowed here: some diseases are not contagious before symptoms (see infect).
 		silentTicks: Math.max(0, Math.round(config.silentDays.value * TICKS_PER_DAY)),
+		latentTicks: Math.max(0, Math.round((config.latentDays?.value ?? 0) * TICKS_PER_DAY)),
 		illTicks: days(config.illDays.value),
 		asymptomaticFraction: config.asymptomaticFraction.value,
 		mortality: config.mortality.value,
 		mortalityByBand: bands(config, config.mortalityByAge, config.mortality.value),
+		strainApplies: config.mortalityBasis === 'modern-care',
 		hospitalisedShare: config.hospitalisedShare.value,
 		hospitalByBand: bands(config, config.hospitalisedByAge, config.hospitalisedShare.value),
 		waningMeanTicks: halfLifeTicks(config.waningDays.value),
@@ -279,6 +281,8 @@ export function transmit(
 		if (s !== State.SYMPTOMATIC && (s !== State.SILENT || !silentSpread)) continue;
 		const reg = region[i];
 		if (infectedTick[o + i] >= tick || reg < 0 || dead[i] === 1) continue;
+		// Still incubating: infected, but not yet contagious (6.1).
+		if (s === State.SILENT && tick - infectedTick[o + i] < disease.latentTicks) continue;
 		const xi = x[i];
 		const yi = y[i];
 		const cols = grid.cols[reg];
@@ -349,13 +353,14 @@ export function advanceIllness(
 			continue;
 		}
 		// End of the red phase: one death draw (6.6), with the strain of the dot's hospital region.
+		// An 'era' death rate predates modern hospital care, so strain never applies to it.
 		agents.bedNeed[k] = 0;
 		const home = hospitalRegion(agents, routes, i);
 		let p = 0;
 		if (rules.deaths) {
 			const d = deathChance(agents, k, i, disease, rules);
 			const h = bedChance(agents, k, i, disease, rules);
-			p = deathChanceAtEnd(d, h, rules.hospital && home >= 0 ? strain[home] : 1);
+			p = deathChanceAtEnd(d, h, disease.strainApplies && rules.hospital && home >= 0 ? strain[home] : 1);
 		}
 		const died = p > 0 && rng.next() < p;
 		hooks.onIllnessEnd(i, slot, home, p, died);

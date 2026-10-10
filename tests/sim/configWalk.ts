@@ -32,8 +32,11 @@ export const CONFIG: Record<string, object> = {
 	scenarios: MICROCOSM_COVERAGE,
 	covidAgeIfr: { COVID19_IFR_PERCENT_BY_AGE, UK_2019_AGE_GROUPS, COVID19_SEVERE_PERCENT_BY_GROUP }
 };
-/** Fields that are not research numbers (names, labels). */
-const PLAIN = new Set(['id', 'name', 'group', 'blurb']);
+/**
+ * Fields that are not research numbers (names, labels, and the care basis, a label whose evidence
+ * is the death rate's own source).
+ */
+const PLAIN = new Set(['id', 'name', 'group', 'blurb', 'mortalityBasis']);
 
 export function isSourced(v: unknown): v is Sourced<number | null> {
 	return !!v && typeof v === 'object' && 'value' in v && 'sources' in v;

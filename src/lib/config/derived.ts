@@ -346,3 +346,64 @@ export const CHOI = {
 };
 
 export const per100kFromPerMillion = perMillionToPer100k;
+
+// --- Black Death (research/plague.md) ---
+
+/**
+ * Dean 2018 Table 3, human-ectoparasite (EP) rows: fitted R0 for the nine pre-industrial European
+ * outbreaks, Givry 1348, Florence 1400, Barcelona 1490, London 1563, Eyam 1666, Gdansk 1709,
+ * Stockholm 1710, Moscow 1771 and Malta 1813. Their mean is used, so no one town sets it.
+ */
+export const PLAGUE_EP_R0S = [1.82, 1.76, 1.91, 1.64, 1.48, 1.64, 1.75, 1.79, 1.57] as const;
+export const PLAGUE_R0 = mean(...PLAGUE_EP_R0S);
+/** Dean 2018 Methods: mildly infectious for 8 days, then highly infectious (moribund) for 2. */
+export const PLAGUE_MILD_INFECTIOUS_DAYS = 8;
+export const PLAGUE_HIGH_INFECTIOUS_DAYS = 2;
+export const PLAGUE_ILL_DAYS = PLAGUE_MILD_INFECTIOUS_DAYS + PLAGUE_HIGH_INFECTIOUS_DAYS;
+/** WHO: an incubation period of one to seven days (the middle is used). */
+export const PLAGUE_INCUBATION_RANGE = [1, 7] as const;
+export const PLAGUE_INCUBATION_DAYS = midpoint(...PLAGUE_INCUBATION_RANGE);
+
+/**
+ * Mongillo 2024 Table 2: bubonic plague cases and deaths by ten-year age class, 1720-1945, before
+ * antibiotics. The 0-14 band takes the 0-9 and 10-19 classes and 65+ takes the 50+ class (the
+ * source has no 65+ cut); both are stated on the About page.
+ */
+export const PLAGUE_AGE_CLASSES = [
+	{ from: 0, cases: 73, deaths: 40 },
+	{ from: 10, cases: 263, deaths: 119 },
+	{ from: 20, cases: 286, deaths: 158 },
+	{ from: 30, cases: 160, deaths: 81 },
+	{ from: 40, cases: 115, deaths: 59 },
+	{ from: 50, cases: 70, deaths: 43 }
+] as const;
+type AgeClass = (typeof PLAGUE_AGE_CLASSES)[number];
+const tally = (ks: readonly AgeClass[]) => ({
+	cases: ks.reduce((a, k) => a + k.cases, 0),
+	deaths: ks.reduce((a, k) => a + k.deaths, 0)
+});
+const PLAGUE_BANDS = [
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from < 20)),
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= 20 && k.from < 50)),
+	tally(PLAGUE_AGE_CLASSES.filter((k) => k.from >= 50))
+];
+/** All 967 cases and 500 deaths. */
+export const PLAGUE_ALL = tally(PLAGUE_AGE_CLASSES);
+/** Deaths per case before antibiotics, by band: 0.4732 / 0.5312 / 0.6143. */
+export const PLAGUE_MORTALITY_BANDS = PLAGUE_BANDS.map((b) => b.deaths / b.cases) as [number, number, number];
+/** The source's own case mix as shares, the reference population for the bands. */
+export const PLAGUE_AGE_SHARES = PLAGUE_BANDS.map((b) => b.cases / PLAGUE_ALL.cases) as [
+	number,
+	number,
+	number
+];
+/** All ages: 500 / 967, the published 51.7%. */
+export const PLAGUE_MORTALITY = PLAGUE_ALL.deaths / PLAGUE_ALL.cases;
+/** Mongillo 2024 Table 1: the European Second Pandemic subset, the closest to 1347 (About only). */
+export const PLAGUE_EUROPE_SECOND_PANDEMIC_CFR = 0.572;
+/** Kugeler 2015 Table 2, United States 1900-1941, all forms, before antibiotics (cross-check only). */
+export const KUGELER_PRE_ANTIBIOTIC = { deaths: 336, cases: 511 };
+/** Kugeler 2015: the first documented use of antibiotics against plague in the United States. */
+export const PLAGUE_FIRST_ANTIBIOTICS_YEAR = 1942;
+/** Godfred-Cato 2020: deaths among treated bubonic plague cases, for the "curable today" line. */
+export const PLAGUE_BUBONIC_TREATED_CFR = 0.142;

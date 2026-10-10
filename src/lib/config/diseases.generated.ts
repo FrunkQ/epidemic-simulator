@@ -13,6 +13,7 @@
 //   ebola: target R0 1.95, measured 1.947 ± 0.0326 over 60 seeds, 1860 index cases
 //   marburg: target R0 1.59, measured 1.59 ± 0.0292 over 50 seeds, 1900 index cases
 //   flu1918: target R0 1.8, measured 1.797 ± 0.0308 over 60 seeds, 1980 index cases
+//   plague: target R0 1.7066666666666666, measured 1.713 ± 0.0312 over 50 seeds, 1750 index cases
 import type { DiseaseCalibration, DiseaseId } from '../sim/types';
 
 export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
@@ -119,5 +120,13 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		standardError: 0.0308,
 		seeds: 60,
 		indexCases: 1980
+	},
+	plague: {
+		beta: 0.002486,
+		transmissionRadius: 8,
+		measuredR0: 1.713,
+		standardError: 0.0312,
+		seeds: 50,
+		indexCases: 1750
 	}
 };

@@ -29,6 +29,12 @@ import {
 	WENDELBOE_HALF_LIFE,
 	YOUNG,
 	BOLORMAA,
+	PLAGUE_AGE_SHARES,
+	PLAGUE_ILL_DAYS,
+	PLAGUE_INCUBATION_DAYS,
+	PLAGUE_MORTALITY,
+	PLAGUE_MORTALITY_BANDS,
+	PLAGUE_R0,
 	per100kFromPerMillion
 } from './derived';
 import { stackedProtection } from './vaccines';
@@ -345,6 +351,7 @@ export const DISEASES = {
 		},
 		illDays: { value: 5, sources: ['cdc-survmanual-measles-2025', 'cdc-pinkbook-measles'] },
 		asymptomaticFraction: { value: 0, sources: ['tranter2024-measles-breakthrough'] },
+		mortalityBasis: 'modern-care',
 		mortality: {
 			value: 0.002,
 			sources: ['cdc-survmanual-measles-2025', 'portnoy2019-measles-cfr-lmic', 'sbarra2023-measles-cfr-lmic']
@@ -403,6 +410,7 @@ export const DISEASES = {
 			value: 0.96,
 			sources: ['cdc-pinkbook-polio', 'who2022-polio-position-paper', 'fatusi1997-polio-epidemiology']
 		},
+		mortalityBasis: 'modern-care',
 		mortality: {
 			value: 0.005,
 			sources: ['cdc-pinkbook-polio', 'fatusi1997-polio-epidemiology', 'doshi2011-polio-cfr-india']
@@ -437,6 +445,7 @@ export const DISEASES = {
 				'cohen2021-flu-phirst-southafrica'
 			]
 		},
+		mortalityBasis: 'modern-care',
 		mortality: {
 			value: 0.001,
 			sources: [
@@ -480,6 +489,7 @@ export const DISEASES = {
 		illDays: { value: 7.3, sources: ['rahmani-a-2022-covid-shedding'] },
 		asymptomaticFraction: COVID19_ASYMPTOMATIC,
 		infectionFatalityRate: COVID19_IFR,
+		mortalityBasis: 'modern-care',
 		mortality: {
 			value: perSymptomatic(COVID19_IFR, COVID19_ASYMPTOMATIC),
 			sources: ['meyerowitzkatz2020-covid-ifr', 'ward-2024-covid-ihr-ifr']
@@ -524,6 +534,7 @@ export const DISEASES = {
 		illDays: { value: 5, sources: ['wu-2023-omicron-shedding'] },
 		asymptomaticFraction: OMICRON_ASYMPTOMATIC,
 		infectionFatalityRate: OMICRON_IFR,
+		mortalityBasis: 'modern-care',
 		mortality: {
 			value: perSymptomatic(OMICRON_IFR, OMICRON_ASYMPTOMATIC),
 			sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
@@ -553,6 +564,7 @@ export const DISEASES = {
 		silentDays: { value: 2, sources: ['cdc-pinkbook-varicella'] },
 		illDays: { value: 5, sources: ['cdc-pinkbook-varicella'] },
 		asymptomaticFraction: { value: 0.05, sources: ['who-varicella-position-paper-2014'] },
+		mortalityBasis: 'modern-care',
 		mortality: { value: 2e-5, sources: ['cdc-pinkbook-varicella'] },
 		waningDays: { value: null, sources: ['cdc-pinkbook-varicella'] },
 		fullEfficacy: CHICKENPOX_FULL,
@@ -591,6 +603,7 @@ export const DISEASES = {
 		silentDays: { value: 2, sources: ['cdc-pinkbook-mumps'] },
 		illDays: { value: 5, sources: ['cdc-pinkbook-mumps'] },
 		asymptomaticFraction: { value: 0.2, sources: ['cdc-pinkbook-mumps'] },
+		mortalityBasis: 'modern-care',
 		mortality: { value: 0.0001, sources: ['cdc-pinkbook-mumps'] },
 		waningDays: { value: null, sources: ['who-2007-mumps-position-paper'] },
 		fullEfficacy: MUMPS_FULL,
@@ -612,6 +625,7 @@ export const DISEASES = {
 		silentDays: { value: 7, sources: ['cdc-pinkbook-rubella'] },
 		illDays: { value: 7, sources: ['cdc-pinkbook-rubella'] },
 		asymptomaticFraction: { value: 0.5, sources: ['cdc-pinkbook-rubella'] },
+		mortalityBasis: 'modern-care',
 		mortality: { value: 1e-5, sources: ['cdc-pinkbook-rubella'] },
 		waningDays: { value: null, sources: ['who-2020-rubella-position-paper'] },
 		fullEfficacy: RUBELLA_FULL,
@@ -631,6 +645,7 @@ export const DISEASES = {
 			value: 0.35,
 			sources: ['kretzschmar-2010-pertussis-r0', 'craig-2020-pertussis-asymptomatic']
 		},
+		mortalityBasis: 'modern-care',
 		mortality: { value: 0.002, sources: ['cdc-pinkbook-pertussis'] },
 		// Worked out: the middle of Wendelboe 2005's 4-20 years after infection, read as a half-life.
 		waningDays: {
@@ -665,6 +680,7 @@ export const DISEASES = {
 		silentDays: { value: 0, sources: ['cdc-smallpox-signs-symptoms', 'cdc-smallpox-clinical-signs'] },
 		illDays: { value: 16, sources: ['cdc-smallpox-signs-symptoms', 'who-smallpox-qa'] },
 		asymptomaticFraction: { value: 0, sources: ['who-smallpox-eradication-subclinical'] },
+		mortalityBasis: 'modern-care',
 		mortality: { value: 0.3, sources: ['who-smallpox-qa', 'cdc-smallpox-clinical-signs'] },
 		waningDays: { value: null, sources: ['cdc-smallpox-clinical-signs'] },
 		fullEfficacy: SMALLPOX_FULL,
@@ -708,6 +724,7 @@ export const DISEASES = {
 			value: 0,
 			sources: ['dean2016-ebola-asymptomatic', 'glynn-2017-asymptomatic-ebola']
 		},
+		mortalityBasis: 'modern-care',
 		mortality: { value: 0.5, sources: ['who-ebola-factsheet', 'vankerkhove-2015-ebola-parameters'] },
 		waningDays: { value: null, sources: ['rimoin-2018-ebola-antibodies-40-years'] },
 		fullEfficacy: EBOLA_FULL,
@@ -740,6 +757,7 @@ export const DISEASES = {
 			value: 0,
 			sources: ['glynn-2017-asymptomatic-ebola', 'semancik-2024-filovirus-seroprevalence']
 		},
+		mortalityBasis: 'modern-care',
 		mortality: { value: 0.5, sources: ['who-marburg-factsheet'] },
 		waningDays: { value: null, sources: ['natesan-2016-filovirus-antibody-persistence'] },
 		fullEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
@@ -773,6 +791,8 @@ export const DISEASES = {
 			]
 		},
 		asymptomaticFraction: { value: 0, sources: ['fraser-2011-1918-households'] },
+		// A 1918 rate, from before modern hospital care: full hospitals don't raise it (6.6).
+		mortalityBasis: 'era',
 		mortality: { value: 0.017, sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass'] },
 		waningDays: { value: null, sources: ['yu-2008-1918-survivor-antibodies'] },
 		fullEfficacy: { value: 0, sources: ['cdc-1918-pandemic-page'] },
@@ -795,6 +815,52 @@ export const DISEASES = {
 			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
 			overall: 0.017,
 			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
+		}
+	},
+	plague: {
+		id: 'plague',
+		name: 'Black Death (1347)',
+		group: 'historic',
+		blurb:
+			'The plague that reached Europe in 1347 and came back for centuries. It spread between people living closely together, and before antibiotics it killed about half of the people it made ill.',
+		r0: { value: PLAGUE_R0, sources: ['dean-2018-second-pandemic-ectoparasites'] },
+		// The whole silent phase is latent: infected, no symptoms, and not yet contagious.
+		silentDays: { value: PLAGUE_INCUBATION_DAYS, sources: ['who-plague-factsheet'] },
+		latentDays: {
+			value: PLAGUE_INCUBATION_DAYS,
+			sources: ['who-plague-factsheet', 'dean-2018-second-pandemic-ectoparasites']
+		},
+		illDays: { value: PLAGUE_ILL_DAYS, sources: ['dean-2018-second-pandemic-ectoparasites'] },
+		asymptomaticFraction: {
+			value: 0,
+			sources: [],
+			provisional:
+				'Symptom-free and mild plague infections are documented, but no study gives their share, and a modern treated population cannot supply one for an untreated epidemic.'
+		},
+		// Before antibiotics, from hospital records of 1720-1945 (6.6): an era rate.
+		mortalityBasis: 'era',
+		mortality: {
+			value: PLAGUE_MORTALITY,
+			sources: ['mongillo-2024-bubonic-plague-by-age', 'who-plague-factsheet']
+		},
+		waningDays: { value: null, sources: ['andrianaivoarimanana-2020-plague-antibody-persistence'] },
+		fullEfficacy: { value: 0, sources: ['who-plague-factsheet'] },
+		// Lower bound, as for 1918 flu: everyone who died needed care, and no source gives the share
+		// of plague cases needing a bed.
+		hospitalisedShare: { value: PLAGUE_MORTALITY, sources: ['mongillo-2024-bubonic-plague-by-age'] },
+		mortalityByAge: {
+			value: PLAGUE_MORTALITY_BANDS,
+			per: 'symptomatic-case',
+			reference: PLAGUE_AGE_SHARES,
+			overall: PLAGUE_MORTALITY,
+			sources: ['mongillo-2024-bubonic-plague-by-age']
+		},
+		hospitalisedByAge: {
+			value: PLAGUE_MORTALITY_BANDS,
+			per: 'symptomatic-case',
+			reference: PLAGUE_AGE_SHARES,
+			overall: PLAGUE_MORTALITY,
+			sources: ['mongillo-2024-bubonic-plague-by-age']
 		}
 	}
 } satisfies Record<string, DiseaseConfig>;

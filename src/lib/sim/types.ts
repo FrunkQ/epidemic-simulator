@@ -108,6 +108,9 @@ export interface Vaccine {
 	waningDays: Sourced<number | null>;
 }
 
+/** The care a disease's death rates were measured under (6.6). */
+export type MortalityBasis = 'modern-care' | 'era';
+
 /** Disease settings as written in config: durations in days. */
 export interface DiseaseConfig {
 	id: string;
@@ -116,14 +119,28 @@ export interface DiseaseConfig {
 	/** One plain-language line for the disease picker. */
 	blurb: string;
 	r0: Sourced;
-	/** Days contagious before symptoms (the orange phase). */
+	/** Days infected before symptoms (the orange phase); contagious after any `latentDays`. */
 	silentDays: Sourced;
+	/**
+	 * The first part of the silent phase, during which the dot is infected, has no symptoms and is
+	 * not yet contagious (an incubation period, 6.1). Drawn exactly as a silent dot is, so there is
+	 * no new state in the UI or the charts. At most `silentDays`; left out means 0, where a silent
+	 * dot is contagious from the tick after it was infected.
+	 */
+	latentDays?: Sourced;
 	/** Days contagious with symptoms (the red phase). */
 	illDays: Sourced;
 	/** Share of infections that never show symptoms. */
 	asymptomaticFraction: Sourced;
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
+	/**
+	 * The care the death rates were measured under (6.6). 'modern-care': today's hospitals, so a
+	 * full hospital raises deaths (strain). 'era': a time before modern hospital care (the Black
+	 * Death, 1918 flu), so strain never applies; their patients still fill beds and show on the
+	 * pressure gauge. Required, so no new entry gets strain by accident.
+	 */
+	mortalityBasis: MortalityBasis;
 	/**
 	 * Half-life of infection-acquired immunity (recovered dots): days until half of recovered
 	 * people have lost protection, as sources report it (7 Oct). Vaccine protection has its own
@@ -206,12 +223,16 @@ export interface DiseaseRuntime {
 	id: string;
 	r0: number;
 	silentTicks: number;
+	/** Ticks at the start of the silent phase when a dot is not yet contagious (0 for most diseases). */
+	latentTicks: number;
 	illTicks: number;
 	asymptomaticFraction: number;
 	/** All-ages deaths per symptomatic case: the fallback when age bands are switched off. */
 	mortality: number;
 	/** Deaths per symptomatic case in each age band (the all-ages figure where none is sourced). */
 	mortalityByBand: Bands;
+	/** False for an 'era' death rate: strain never raises it (6.6). */
+	strainApplies: boolean;
 	/** All-ages share of symptomatic cases needing a bed. */
 	hospitalisedShare: number;
 	/** Share of symptomatic cases needing a bed, by age band. */

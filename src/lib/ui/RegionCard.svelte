@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
+	import { ERA_DEATH_RATE } from '../config/careBasis';
 	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
@@ -48,7 +49,10 @@
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
 	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
 	/** The vaccine given here, as the engine uses it (the same helper, so the card can't disagree). */
-	let vaccine = $derived(vaccineFor(loadDisease(disease.id as DiseaseId), region.vaccine));
+	let runtime = $derived(loadDisease(disease.id as DiseaseId));
+	let vaccine = $derived(vaccineFor(runtime, region.vaccine));
+	/** A disease whose whole silent phase is incubation (6.1): silent dots spread nothing. */
+	let incubatingOnly = $derived(runtime.latentTicks >= runtime.silentTicks && runtime.silentTicks > 0);
 	/** One-dose vaccines have no "partly vaccinated". */
 	let partialEfficacy = $derived(vaccine.hasPartialCourse ? vaccine.partialInfection : undefined);
 	const threshold = BEHAVIOUR.strainThreshold.value;
@@ -189,10 +193,16 @@
 			format={pctOf}
 			width={180}
 		/>
+		{#if disease.mortalityBasis === 'era'}
+			<p class="note">{ERA_DEATH_RATE}</p>
+		{/if}
 	{/if}
 	{#if t}
 		<p class="counts">
-			<span><i style:background={COLOURS.silent}></i>{people(t.counts.silent)} spreading unaware</span>
+			<span
+				><i style:background={COLOURS.silent}></i>{people(t.counts.silent)}
+				{incubatingOnly ? 'infected, not ill yet' : 'spreading unaware'}</span
+			>
 			<span><i style:background={COLOURS.symptomatic}></i>{people(t.counts.symptomatic)} ill</span>
 			<span><i style:background={COLOURS.deceased}></i>{Math.round(t.deaths).toLocaleString()} died</span>
 		</p>
