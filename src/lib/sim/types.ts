@@ -395,15 +395,15 @@ export interface Telemetry {
  */
 export interface RegionHistory {
 	days: Int32Array;
-	series: Record<HistoryChannel, Int32Array>;
-	byAge: Record<AgeChannel, [Int32Array, Int32Array, Int32Array]>;
+	series: Record<HistoryChannel, Float64Array>;
+	byAge: Record<AgeChannel, [Float64Array, Float64Array, Float64Array]>;
 }
 
 /**
  * Daily channels per region, in dots. inHospital (here and per age band) is an expected value in
  * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%). `deceased`
- * is the dead dots on the map (a sample); `deaths` is the deaths tally in whole people (6.6), the
- * figure every death count shows.
+ * is the dead dots on the map (a sample); `deaths` is the deaths tally in people (6.6), the
+ * figure every death count shows, kept unrounded and rounded only for display (8).
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -417,7 +417,10 @@ export const HISTORY_CHANNELS = [
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 
-/** Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not). */
+/**
+ * Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not),
+ * except `deceased`, which is the deaths tally in people, unrounded (6.6, 8).
+ */
 export const AGE_CHANNELS = [
 	'susceptible',
 	'infected',

@@ -16,6 +16,22 @@ export function short(n: number): string {
 	return `${Math.round(n)}`;
 }
 
+/**
+ * Round each value to a whole number so the parts add up to the rounded total (largest remainder),
+ * e.g. 0.4, 0.4, 0.4 -> 1, 0, 0, matching a total shown as 1.
+ */
+export function roundToTotal(values: readonly number[], total = values.reduce((a, b) => a + b, 0)): number[] {
+	const out = values.map(Math.floor);
+	let left = Math.round(total) - out.reduce((a, b) => a + b, 0);
+	const order = values.map((v, i) => i).sort((i, j) => values[j] - out[j] - (values[i] - out[i]) || i - j);
+	for (const i of order) {
+		if (left <= 0) break;
+		out[i]++;
+		left--;
+	}
+	return out;
+}
+
 /** Index of the day nearest to `day` in a sorted list. */
 export function nearest(days: readonly number[], day: number): number {
 	let best = 0;

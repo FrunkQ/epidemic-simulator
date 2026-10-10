@@ -4,6 +4,7 @@ import { DISEASES } from '../../src/lib/config/diseases';
 import { withValue } from '../../src/lib/config/healthPolicy';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
+import { hospitalRegion } from '../../src/lib/sim/disease';
 import { TRAVEL_DAYS } from '../../src/lib/sim/routes';
 import { State, type Bands } from '../../src/lib/sim/types';
 import { loadDisease } from '../../src/lib/config';
@@ -94,6 +95,7 @@ describe('every dot is counted once, travellers included', () => {
 		const a = sim.agents;
 		let diedOnRoute = 0;
 		const counted = new Uint8Array(a.capacity);
+		const origins = new Set<number>();
 		for (let day = 1; day <= 150; day++) {
 			for (let t = 0; t < TICKS_PER_DAY; t++) {
 				sim.step(1);
@@ -101,6 +103,7 @@ describe('every dot is counted once, travellers included', () => {
 					if (a.route[i] >= 0 && a.dead[i] === 1 && !counted[i]) {
 						counted[i] = 1;
 						diedOnRoute++;
+						origins.add(hospitalRegion(a, sim.routes, i));
 					}
 			}
 			const snap = sim.snapshot();
@@ -114,6 +117,12 @@ describe('every dot is counted once, travellers included', () => {
 		}
 		// The scenario that lost deaths before: some people did die on the way.
 		expect(diedOnRoute).toBeGreaterThan(0);
+		// Their deaths are in the tally of the region they set out from (6.6).
+		const snap = sim.snapshot();
+		for (const r of origins) {
+			expect(r).toBeGreaterThanOrEqual(0);
+			expect(snap.regions[r].deaths).toBeGreaterThan(0);
+		}
 	});
 });
 

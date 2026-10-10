@@ -170,7 +170,12 @@ export class Simulation {
 			},
 			onDeath: () => {},
 			onIllnessEnd: (dot, slot, region, chance, died) => {
-				if (region < 0) return;
+				// Every dot has a home region, so this can't happen; skipping would lose a death from
+				// the tally while the dot still shows dead, so fail loudly in development and tests.
+				if (region < 0) {
+					if (import.meta.env?.DEV) throw new Error(`Illness ended for dot ${dot} with no home region`);
+					return;
+				}
 				const people = deathTallyPeople(chance, died, this.peoplePerDot);
 				if (people > 0) this.counters.addDeaths(region, slot, this.agents.ageBand[dot], people);
 			}

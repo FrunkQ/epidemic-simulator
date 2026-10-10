@@ -25,7 +25,7 @@
 	/** One dash pattern per city, so the lines differ without relying on colour. */
 	const DASHES = [undefined, '6 3', '2 3', '8 3 2 3'];
 
-	const people = (values: Int32Array, perDot: number) => Array.from(values, (v) => v * perDot);
+	const people = (values: Float64Array, perDot: number) => Array.from(values, (v) => v * perDot);
 
 	/**
 	 * The stack in people. Deaths are the tally (6.6), not the dead dots, so they grow smoothly;
