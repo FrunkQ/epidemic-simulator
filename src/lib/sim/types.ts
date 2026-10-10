@@ -368,20 +368,17 @@ export interface RegionTelemetry {
 	name: string;
 	dots: number;
 	counts: Counts;
-	/**
-	 * Deaths so far in people, by age band (0-14, 15-64, 65+): the tally of each ended illness's
-	 * chance of death (6.6), not the dead dots. Fractional; show it rounded to whole people.
-	 */
+	/** Deaths so far, by age band (0-14, 15-64, 65+): whole people, counted where they died (6.6). */
 	deathsByAge: Bands;
-	/** Deaths so far in people, all ages (the sum of deathsByAge). */
+	/** Deaths so far, all ages (the sum of deathsByAge; the same as counts.deceased). */
 	deaths: number;
 	/** Outbreak patients need more beds than are spare (pressure over 100%). */
 	overloaded: boolean;
-	/** Spare hospital beds, in dots. Multiply by peoplePerDot to show people. */
+	/** Spare hospital beds, in people. */
 	capacity: number;
-	/** All hospital beds, in dots. */
+	/** All hospital beds, in people. */
 	beds: number;
-	/** Expected outbreak patients in a bed now, in dots (fractional, 6.6); ill travellers count at their origin. */
+	/** Expected outbreak patients in a bed now, in people (fractional, 6.6); ill travellers count at their origin. */
 	patients: number;
 	/** (Beds normally occupied + outbreak patients) / all beds (6.6). 0 when hospitals are switched off. */
 	pressure: number;
@@ -406,9 +403,9 @@ export interface Telemetry {
 	/** Dots on a road, ferry or plane right now. */
 	travelling: number;
 	regions: RegionTelemetry[];
-	/** Dots on a road, ferry or plane, by colour. A death on a route counts in its origin region. */
+	/** People on a road, ferry or plane, by colour. A death on a route counts in its origin region. */
 	inTransit: Counts;
-	/** Every dot: the regions plus inTransit. */
+	/** Everyone: the regions plus inTransit. */
 	totals: Counts;
 	/** Deaths so far in people, every region (a death on a trip counts in its origin). */
 	deaths: number;
@@ -431,10 +428,8 @@ export interface RegionHistory {
 }
 
 /**
- * Daily channels per region, in dots. inHospital (here and per age band) is an expected value in
- * thousandths of a dot (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%). `deceased`
- * is the dead dots on the map (a sample); `deaths` is the deaths tally in people (6.6), the
- * figure every death count shows, kept unrounded and rounded only for display (8).
+ * Daily channels per region, in people. inHospital (here and per age band) is an expected value in
+ * thousandths of a person (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%).
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -443,16 +438,11 @@ export const HISTORY_CHANNELS = [
 	'deceased',
 	'susceptible',
 	'inHospital',
-	'pressure',
-	'deaths'
+	'pressure'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 
-/**
- * Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not),
- * except `deceased`, which is the deaths tally in people, unrounded (6.6, 8).
- */
-// Units differ: `deceased` is in people, its sibling channels in dots; don't multiply it by peoplePerDot.
+/** Daily channels per age band, in people (vaccinated: given any course, whether it worked or not). */
 export const AGE_CHANNELS = [
 	'susceptible',
 	'infected',

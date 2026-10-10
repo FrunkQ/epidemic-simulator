@@ -8,8 +8,8 @@ import { outbreak } from './lessonRuns';
 const SEASON_DAYS = 180;
 
 /**
- * Lesson 15 on a range of seeds. Its 20 seeds run as two files of 10 so vitest can run them in
- * parallel; each half must pass on its own, which is at least as strict as the 20 together.
+ * Lesson 15 on a range of seeds. Its 20 seeds run as four files of 5 so vitest can run them in
+ * parallel; each quarter must pass on its own, which is at least as strict as the 20 together.
  * Partial coverage is 0 in both runs (singleCity's default), so the coverage stays the same
  * although only the original vaccine has an unfinished course.
  */

@@ -3,6 +3,7 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
+import { RING_LEVELS } from './look';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
@@ -47,10 +48,20 @@ const COLOUR_INDEX: Record<ColourKey, number> = Object.fromEntries(ORDER.map((k,
 	number
 >;
 
+/** Ring colours for look E, and how bright each of its RING_LEVELS steps is. */
+const RINGS = [
+	{ state: State.SILENT, rgb: '255,143,31' },
+	{ state: State.SYMPTOMATIC, rgb: '227,59,107' },
+	{ state: State.DECEASED, rgb: '160,166,175' }
+] as const;
+const RING_ALPHA = [0.35, 0.55, 0.78, 1] as const;
+
 /** Draws the world. Holds scratch buckets so drawing allocates nothing per dot. */
 export class Renderer {
 	private readonly buckets: Int32Array;
 	private readonly bucketLen = new Int32Array(ORDER.length);
+	private readonly rings: Int32Array;
+	private readonly ringLen = new Int32Array(RINGS.length * RING_LEVELS);
 	private readonly capacity: number;
 	private landPath: Path2D | null = null;
 	private landFor: World | null = null;
@@ -58,6 +69,7 @@ export class Renderer {
 	constructor(capacity: number) {
 		this.capacity = capacity;
 		this.buckets = new Int32Array(capacity * ORDER.length);
+		this.rings = new Int32Array(capacity * RINGS.length * RING_LEVELS);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
@@ -102,6 +114,7 @@ export class Renderer {
 
 		// Sort visible dots into colour buckets.
 		this.bucketLen.fill(0);
+		this.ringLen.fill(0);
 		const n = agents.activeCount;
 		const cap = this.capacity;
 		const margin = 4;
@@ -114,10 +127,35 @@ export class Renderer {
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const b = colourOf(agents, i);
 			this.buckets[b * cap + this.bucketLen[b]++] = i;
+			const ring = ringOf(agents.ring[i]);
+			if (ring >= 0) {
+				const rb = ring * RING_LEVELS + agents.ringLevel[i];
+				this.rings[rb * cap + this.ringLen[rb]++] = i;
+			}
 		}
 
 		const size = Math.max(1.5, Math.min(6, 3.2 * s));
 		const half = size / 2;
+
+		// Look E (finer-counts §5): a ring around a dot some of whose people are infected (or dead),
+		// brighter the more of them there are; at half or more the dot is filled instead. Dots are
+		// squares, so the ring is a square frame: a larger square drawn first, with the dot on top.
+		// Filled squares batch as cheaply as the dots; stroked arcs cost three to four times more.
+		const ringHalf = half + Math.max(1, size * 0.4);
+		const ringSize = ringHalf * 2;
+		for (let rb = 0; rb < this.ringLen.length; rb++) {
+			const len = this.ringLen[rb];
+			if (len === 0) continue;
+			const ring = RINGS[Math.floor(rb / RING_LEVELS)];
+			ctx.fillStyle = `rgba(${ring.rgb},${RING_ALPHA[rb % RING_LEVELS]})`;
+			ctx.beginPath();
+			for (let k = 0; k < len; k++) {
+				const i = this.rings[rb * cap + k];
+				ctx.rect((agents.x[i] - ox) * s - ringHalf, (agents.y[i] - oy) * s - ringHalf, ringSize, ringSize);
+			}
+			ctx.fill();
+		}
+
 		for (let b = 0; b < ORDER.length; b++) {
 			const len = this.bucketLen[b];
 			if (len === 0) continue;
@@ -130,7 +168,7 @@ export class Renderer {
 			ctx.fill();
 		}
 
-		// A faint pulsing ring around every infectious dot.
+		// A faint pulsing ring around every dot filled as infected.
 		const pulse = 0.5 + 0.5 * Math.sin(tick * 0.2);
 		ctx.lineWidth = 1;
 		for (const key of ['silent', 'symptomatic'] as const) {
@@ -257,6 +295,11 @@ function buildLandPath(world: World): Path2D {
 		path.closePath();
 	}
 	return path;
+}
+
+function ringOf(state: number): number {
+	for (let k = 0; k < RINGS.length; k++) if (RINGS[k].state === state) return k;
+	return -1;
 }
 
 function colourOf(agents: Agents, i: number): number {

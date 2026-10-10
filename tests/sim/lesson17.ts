@@ -4,8 +4,8 @@ import { POPULATION } from '../../src/lib/config/population';
 import { byBand, outbreak, withAges } from './lessonRuns';
 
 /**
- * Lesson 17 on a range of seeds. Its 20 seeds run as two files of 10 so vitest can run them in
- * parallel; each half must pass on its own, which is at least as strict as the 20 together.
+ * Lesson 17 on a range of seeds. Its 20 seeds run as four files of 5 so vitest can run them in
+ * parallel; each quarter must pass on its own, which is at least as strict as the 20 together.
  */
 export function lesson17(firstSeed: number, lastSeed: number): void {
 	const policy = withAges(defaultPolicy(), POPULATION.ukAgeMix.value);

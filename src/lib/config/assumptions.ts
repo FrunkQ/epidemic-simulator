@@ -1,6 +1,6 @@
 import { ERA_DEATH_RATE } from './careBasis';
-import { DEATHS_TALLY } from './deathsTally';
 import { DISEASES } from './diseases';
+import { DOT_COUNTS } from './dotCounts';
 import { fullCourseSevere } from '../sim/disease';
 import type { DiseaseConfig } from '../sim/types';
 import {
@@ -80,8 +80,14 @@ export const ASSUMPTIONS = {
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
-	deathsTally: `Each dot stands for a group of people. ${DEATHS_TALLY} Where a dot is one person, the count is the dots that died.`,
-	seedDot: `The button on each card brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people.`,
+	dotCounts: `Each dot is a group of ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people. ${DOT_COUNTS} The hospital gauge is the exception: it shows the patients expected from the people who are ill, so it can count part of a person.`,
+	noMixingInDot:
+		'People in the same dot don’t pass it to each other: it spreads only from dot to dot. So a dot is a group of people who happen to be near each other, not a household.',
+	dotStops: 'A dot stops moving around once half or more of its people are ill.',
+	illStayHome:
+		'Ill people never travel. Before a dot sets off on a trip, its ill people swap places with people who aren’t ill from a dot nearby, so the ill stay at home. If no dot nearby can swap, the dot stays too.',
+	seedPerson:
+		'The button on each card brings in one infected person. A single case can die out by chance, and often does when a disease spreads slowly.',
 	eraDeathRate: `${ERA_DEATH_RATE} This applies to ${eraNames}. Their patients still fill beds and show on the hospital gauge.`,
 	plagueSpread: `The Black Death spread between people living closely together, through the lice and fleas people carried, not through the air; the dots stand in for that closeness. In the source most onward spread happens in the last ${words[PLAGUE_HIGH_INFECTIOUS_DAYS]} days of illness, which the model spreads evenly over the whole illness.`,
 	plagueRoute:

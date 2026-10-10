@@ -45,18 +45,13 @@ export function outbreak(
 	return sim;
 }
 
-/** Deaths (the tally, in people, 6.6) per person ever infected. */
+/** Deaths per person ever infected. */
 export function deathsPerInfection(sim: Simulation): number {
-	const t = sim.snapshot();
-	return t.regions[0].deaths / (t.regions[0].counts.everInfected * t.peoplePerDot);
+	const r = sim.snapshot().regions[0];
+	return r.deaths / r.counts.everInfected;
 }
 
-/** People infected at least once, and deaths (the tally, 6.6), in each age band, in people. */
+/** People infected at least once, and deaths, in each age band. */
 export function byBand(sim: Simulation): { infected: Bands; died: Bands } {
-	const a = sim.agents;
-	const t = sim.snapshot();
-	const infected: Bands = [0, 0, 0];
-	for (let i = 0; i < a.activeCount; i++)
-		if (a.infectedTick[i] >= 0) infected[a.ageBand[i]] += t.peoplePerDot;
-	return { infected, died: [...t.regions[0].deathsByAge] as Bands };
+	return { infected: sim.everInfectedByAge(0), died: [...sim.snapshot().regions[0].deathsByAge] as Bands };
 }
