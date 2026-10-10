@@ -5,6 +5,8 @@
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
+		/** A shorter title for a narrow chart; the full title then shows on hover. */
+		caption?: string;
 		/** One value per age band: 0-14, 15-64, 65+. People, or shares when `asShares` is set. */
 		values: readonly [number, number, number];
 		/** Show each band as its share of the total (e.g. who died, by age), in percent. */
@@ -13,7 +15,7 @@
 		width?: number;
 		height?: number;
 	}
-	let { title, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
+	let { title, caption, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
 
 	const total = $derived(values[0] + values[1] + values[2]);
 	const shown = $derived(asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice());
@@ -30,8 +32,8 @@
 	let hover: number | null = $state(null);
 </script>
 
-<figure>
-	<figcaption>{title}</figcaption>
+<figure style:width="{width}px">
+	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
 	<svg {width} {height} role="img" aria-label={title}>
 		<line
 			class="axis"
@@ -90,6 +92,10 @@
 	}
 	figcaption {
 		margin-bottom: 2px;
+		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: #e6edf5;
 	}
 	svg {

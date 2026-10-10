@@ -4,10 +4,14 @@
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
+		/** A shorter title for a narrow chart; the full title then shows on hover. */
+		caption?: string;
 		days: readonly number[];
 		lines: Line[];
 		/** Labelled horizontal lines, e.g. hospital capacity. */
 		references?: Reference[];
+		/** One label for all the references, shown instead of theirs when they would crowd each other or the day axis. */
+		combinedLabel?: string;
 		/** Top of the y axis; defaults to the highest value or reference. Rounded up to a nice number. */
 		max?: number;
 		yLabel?: string;
@@ -18,9 +22,11 @@
 	}
 	let {
 		title,
+		caption,
 		days,
 		lines,
 		references = [],
+		combinedLabel,
 		max,
 		yLabel = 'People',
 		unit,
@@ -34,6 +40,17 @@
 		niceMax(max ?? Math.max(1, ...lines.flatMap((l) => l.values), ...references.map((r) => r.value)))
 	);
 	const value = (v: number) => (unit === '%' ? `${Math.round(v).toLocaleString()}%` : short(v));
+	/** A label needs this much height (px): references closer together, or to the day axis, are crowded. */
+	const LABEL_ROOM = 12;
+	const crowded = $derived.by(() => {
+		if (!combinedLabel) return false;
+		const at = references.map((r) => ys(r.value)).sort((a, b) => a - b);
+		return (
+			at.some((y, k) => k > 0 && y - at[k - 1] < LABEL_ROOM) ||
+			at.some((y) => MARGIN.top + plotH - y < LABEL_ROOM)
+		);
+	});
+	const highest = $derived(Math.max(...references.map((r) => r.value)));
 	const first = $derived(days[0] ?? 0);
 	const span = $derived(Math.max(30, (days[days.length - 1] ?? 0) - first));
 	const xs = (d: number) => MARGIN.left + ((d - first) / span) * plotW;
@@ -50,8 +67,8 @@
 	}
 </script>
 
-<figure>
-	<figcaption>{title}</figcaption>
+<figure style:width="{width}px">
+	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
 	<svg
 		{width}
 		{height}
@@ -81,13 +98,22 @@
 		<text x={MARGIN.left + plotW / 2} y={height - 8} text-anchor="middle">Day</text>
 		{#each references as r (r.label)}
 			<line class="reference" x1={MARGIN.left} y1={ys(r.value)} x2={MARGIN.left + plotW} y2={ys(r.value)} />
-			<text
-				class="reference-label"
-				x={r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW}
-				y={r.labelStart ? ys(r.value) + 10 : ys(r.value) - 3}
-				text-anchor={r.labelStart ? 'start' : 'end'}>{r.label}</text
-			>
+			{#if !crowded}
+				<text
+					class="reference-label"
+					x={r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW}
+					y={r.labelStart ? ys(r.value) + 10 : ys(r.value) - 3}
+					text-anchor={r.labelStart ? 'start' : 'end'}>{r.label}</text
+				>
+			{/if}
 		{/each}
+		{#if crowded}
+			<!-- Above the highest line, so it clears the other line and the day axis; from the plot's
+			left edge, so on a narrow chart it runs into the margin rather than over the axis numbers. -->
+			<text class="reference-label" x={MARGIN.left + 2} y={ys(highest) - 3} text-anchor="start"
+				>{combinedLabel}</text
+			>
+		{/if}
 		{#each lines as l (l.key)}
 			<polyline points={points(l.values)} stroke={l.colour} stroke-dasharray={l.dash} />
 		{/each}
@@ -122,6 +148,10 @@
 	}
 	figcaption {
 		margin-bottom: 2px;
+		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: #e6edf5;
 	}
 	svg {

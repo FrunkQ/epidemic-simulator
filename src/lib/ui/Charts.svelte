@@ -94,6 +94,8 @@
 		return { wide: Math.floor((room - narrow * narrowCount) / Math.max(1, wideCount)), narrow };
 	});
 	const wide = $derived(fit.wide);
+	/** Charts narrower than usual get shorter one-line captions (the full title shows on hover). */
+	const narrowRow = $derived(fit.wide < WIDE);
 	const narrow = $derived(fit.narrow);
 </script>
 
@@ -102,6 +104,7 @@
 		{#each perRegion as p (p.id)}
 			<StackedAreaChart
 				title="{p.name}: who has caught it so far"
+				caption={narrowRow ? `${p.name}: caught it` : undefined}
 				days={p.days}
 				bands={p.bands}
 				max={p.max}
@@ -109,11 +112,18 @@
 			/>
 		{/each}
 		{#if perRegion.length > 1}
-			<LineChart title="Ill right now, in each city" days={perRegion[0].days} lines={illLines} width={wide} />
+			<LineChart
+				title="Ill right now, in each city"
+				caption={narrowRow ? 'Ill now, each city' : undefined}
+				days={perRegion[0].days}
+				lines={illLines}
+				width={wide}
+			/>
 		{/if}
 		{#if hospitalsOn && perRegion.length > 0}
 			<LineChart
 				title="Hospital beds in use, in each city"
+				caption={narrowRow ? 'Beds in use, each city' : undefined}
 				days={perRegion[0].days}
 				lines={pressureLines}
 				yLabel="% of beds"
@@ -127,13 +137,20 @@
 					},
 					{ label: '100%: full', value: 100 }
 				]}
+				combinedLabel="{threshold}% {mortalityBasis === 'era' ? 'under pressure' : 'strain'} · 100% full"
 			/>
 		{/if}
 		<!-- Held in place, hidden, until someone dies, so the row's height never changes mid-run. -->
 		{#each telemetry.regions as r (r.id)}
 			{@const shown = r.deaths > 0}
 			<div class="slot" class:waiting={!shown} aria-hidden={!shown}>
-				<AgeBarsChart title="{r.name}: who died, by age" values={r.deathsByAge} asShares width={narrow} />
+				<AgeBarsChart
+					title="{r.name}: who died, by age"
+					caption="{r.name}: who died"
+					values={r.deathsByAge}
+					asShares
+					width={narrow}
+				/>
 			</div>
 		{/each}
 	</div>

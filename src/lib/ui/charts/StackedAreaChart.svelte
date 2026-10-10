@@ -4,6 +4,8 @@
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
+		/** A shorter title for a narrow chart; the full title then shows on hover. */
+		caption?: string;
 		days: readonly number[];
 		bands: Band[];
 		/** Top of the y axis (e.g. the population); rounded up to a nice number. */
@@ -12,7 +14,7 @@
 		width?: number;
 		height?: number;
 	}
-	let { title, days, bands, max, yLabel = 'People', width = 240, height = 110 }: Props = $props();
+	let { title, caption, days, bands, max, yLabel = 'People', width = 240, height = 110 }: Props = $props();
 
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
 	const plotH = $derived(height - MARGIN.top - MARGIN.bottom);
@@ -43,8 +45,8 @@
 	}
 </script>
 
-<figure>
-	<figcaption>{title}</figcaption>
+<figure style:width="{width}px">
+	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
 	<svg
 		{width}
 		{height}
@@ -101,6 +103,10 @@
 	}
 	figcaption {
 		margin-bottom: 2px;
+		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: #e6edf5;
 	}
 	svg {
