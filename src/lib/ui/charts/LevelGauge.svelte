@@ -17,15 +17,27 @@
 		warn?: boolean;
 		format: (v: number) => string;
 		width?: number;
+		/** Lines kept for the caption, so the gauge doesn't change height when the reading wraps. */
+		lines?: number;
 	}
-	let { title, value, max, thresholds, reading, warn = false, format, width = 200 }: Props = $props();
+	let {
+		title,
+		value,
+		max,
+		thresholds,
+		reading,
+		warn = false,
+		format,
+		width = 200,
+		lines = 1
+	}: Props = $props();
 
 	const H = 12;
 	const xs = (v: number) => (Math.min(Math.max(v, 0), max) / max) * width;
 </script>
 
 <figure>
-	<figcaption>
+	<figcaption style:min-height="{lines * 1.3}em">
 		{title}: <b>{format(value)}</b>
 		<span class="reading" class:warn>{warn ? '⚠ ' : ''}{reading}</span>
 	</figcaption>
@@ -51,6 +63,7 @@
 		flex-wrap: wrap;
 		gap: 0 6px;
 		margin-bottom: 3px;
+		line-height: 1.3;
 		color: #e6edf5;
 	}
 	.reading {

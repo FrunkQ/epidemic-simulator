@@ -91,7 +91,8 @@
 			<line class="cross" x1={xs(days[hover])} y1={MARGIN.top} x2={xs(days[hover])} y2={MARGIN.top + plotH} />
 		{/if}
 	</svg>
-	<div class="key">
+	<!-- Room for two lines when there are several, so the key wrapping as other charts arrive doesn't resize the map. -->
+	<div class="key" class:several={lines.length > 2}>
 		{#each lines as l (l.key)}
 			<span
 				><svg width="18" height="6" aria-hidden="true"
@@ -156,7 +157,11 @@
 		flex-wrap: wrap;
 		gap: 2px 10px;
 		margin-top: 2px;
+		line-height: 15px;
 		color: #c7d4e2;
+	}
+	.key.several {
+		min-height: 32px;
 	}
 	.key svg {
 		display: inline-block;

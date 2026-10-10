@@ -34,6 +34,7 @@ import {
 } from './derived';
 import { POPULATION } from './population';
 import { TRAVEL_DAYS } from '../sim/routes';
+import { DEFAULT_PEOPLE_PER_DOT } from '../sim/constants';
 
 const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 /** "A, B and C" */
@@ -80,6 +81,7 @@ export const ASSUMPTIONS = {
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
 	deathsTally: `Each dot stands for a group of people. ${DEATHS_TALLY} Where a dot is one person, the count is the dots that died.`,
+	seedDot: `The button on each card brings in one infected dot. A dot spreads like one case would: it can die out by chance the way a single case can. It just stands for ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people.`,
 	eraDeathRate: `${ERA_DEATH_RATE} This applies to ${eraNames}. Their patients still fill beds and show on the hospital gauge.`,
 	plagueSpread: `The Black Death spread between people living closely together, through the lice and fleas people carried, not through the air; the dots stand in for that closeness. In the source most onward spread happens in the last ${words[PLAGUE_HIGH_INFECTIOUS_DAYS]} days of illness, which the model spreads evenly over the whole illness.`,
 	plagueRoute:

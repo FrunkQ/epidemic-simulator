@@ -8,7 +8,7 @@
 	import { vaccineFor } from '../lib/sim/disease';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
-	import { layoutCards } from '../lib/ui/cardLayout';
+	import { layoutCards, offsetsOf, type Offset } from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -46,15 +46,19 @@
 
 	/** The usual margin around the cities: framing never zooms in closer than this. */
 	const FRAME_MARGIN = 150;
-	/** Margins tried when the usual one leaves a card over a city, in steps of this many pixels. */
-	const FRAME_STEP = 20;
+	/** Other side and top margins tried when the usual frame leaves a card badly placed: this many of each. */
+	const FRAME_STEPS = 6;
+	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
+	let userMoved = false;
 
 	/**
 	 * Frame the populations, leaving room around them for their cards. If the closed cards would
-	 * cover a city's dots, try other side and top margins, largest map first, until none does
-	 * (or pick the one that covers least), so on a short screen the cards move beside the cities.
+	 * cover a city's dots or sit nearer another city, try other side and top margins, largest map
+	 * first, until none does (or pick the one that does least), so on a short screen the cards
+	 * move beside the cities.
 	 */
 	function frame() {
+		userMoved = false;
 		let minX = Infinity;
 		let minY = Infinity;
 		let maxX = -Infinity;
@@ -75,35 +79,40 @@
 		}
 		const scaleOf = (mx: number, my: number) =>
 			Math.min((width - 2 * mx) / Math.max(1, maxX - minX), (height - 2 * my) / Math.max(1, maxY - minY));
-		const usual = scaleOf(FRAME_MARGIN, FRAME_MARGIN);
-		const tries: { mx: number; my: number; scale: number }[] = [
-			{ mx: FRAME_MARGIN, my: FRAME_MARGIN, scale: usual }
-		];
-		for (let mx = FRAME_STEP; 2 * mx < width - FRAME_STEP; mx += FRAME_STEP)
-			for (let my = FRAME_STEP; 2 * my < height - FRAME_STEP; my += FRAME_STEP) {
+		const usual = { mx: FRAME_MARGIN, my: FRAME_MARGIN, scale: scaleOf(FRAME_MARGIN, FRAME_MARGIN) };
+		const others: (typeof usual)[] = [];
+		const steps = (span: number) =>
+			Array.from({ length: FRAME_STEPS }, (_, k) => Math.round(((k + 1) * span) / (2 * (FRAME_STEPS + 1))));
+		for (const mx of steps(width))
+			for (const my of steps(height)) {
 				const scale = scaleOf(mx, my);
-				if (scale > 0 && scale <= usual) tries.push({ mx, my, scale });
+				// On a stage too short for the usual frame, any frame that fits will do.
+				if (scale > 0 && (usual.scale <= 0 || scale <= usual.scale)) others.push({ mx, my, scale });
 			}
-		// The usual frame first, then the biggest map.
-		tries.sort((a, b) => (a === tries[0] ? -1 : b === tries[0] ? 1 : b.scale - a.scale));
-		const sizes = scenario.regions.map((_, i) => closedSizes[i] ?? { w: CARD_W, h: CARD_H });
-		// The first frame (largest map) with nothing covered and every card by its own city; else
-		// the first with nothing covered; else the one covering least.
+		// The usual frame first (when it fits at all), then the biggest map.
+		others.sort((a, b) => b.scale - a.scale);
+		const tries = usual.scale > 0 ? [usual, ...others] : others;
+		if (!tries.length) tries.push(usual);
+		// The first frame with nothing covered and every card by its own city; else the one
+		// covering least, then with fewest cards nearer another city.
 		let best = tries[0];
 		let bestCover = Infinity;
+		let bestMisplaced = Infinity;
 		for (const t of tries) {
 			fit(t.mx, t.my);
-			const { cover, misplaced } = layoutCards(discsOnScreen(), sizes, size);
+			const { cover, misplaced } = layoutCards(discsOnScreen(), layoutSizes(), size);
 			if (cover === 0 && misplaced === 0) {
 				best = t;
 				break;
 			}
-			if (cover < bestCover) {
+			if (cover < bestCover - 0.25 || (cover <= bestCover + 0.25 && misplaced < bestMisplaced)) {
 				best = t;
 				bestCover = cover;
+				bestMisplaced = misplaced;
 			}
 		}
 		fit(best.mx, best.my);
+		lastPositions = undefined;
 		viewVersion++;
 	}
 
@@ -144,6 +153,7 @@
 			r.vaccine = kept[i].vaccine;
 			r.policy = kept[i].policy;
 		});
+		forgetCardSizes();
 		restart();
 		frame();
 	}
@@ -151,32 +161,46 @@
 	/** Until a card has been measured. */
 	const CARD_W = 210;
 	const CARD_H = 120;
-	/** Each card's measured size, so the layout keeps the whole card on the stage. */
+	/** Each card's measured size (bigger while a panel is open). */
 	let cardWidths: number[] = $state([]);
 	let cardHeights: number[] = $state([]);
 	/** Which cards have a settings panel open. */
 	let cardOpen: boolean[] = $state([]);
 	/**
-	 * Each card's size when closed: framing uses these, so opening a panel doesn't zoom the map
-	 * (an open card sits on top instead).
+	 * Each card's tallest size while closed, for this disease and map. Layout and framing use only
+	 * these, so opening a panel moves nothing (the open card grows on top) and a card that grows
+	 * during a run doesn't shuffle the others. Measured only while the card is closed: an open
+	 * card is wider than CARD_W, so a reading at that width is a closed one.
 	 */
-	let closedSizes: { w: number; h: number }[] = $state([]);
+	let closedSizes: ({ w: number; h: number } | undefined)[] = $state([]);
+	const GROW_SLACK = 3;
 	$effect(() => {
 		scenario.regions.forEach((_, i) => {
-			if (cardOpen[i]) return;
-			const w = cardWidths[i] || CARD_W;
-			const h = cardHeights[i] || CARD_H;
+			const w = cardWidths[i];
+			const h = cardHeights[i];
+			if (cardOpen[i] || !w || !h || w > CARD_W) return;
 			const old = untrack(() => closedSizes[i]);
-			if (!old || old.w !== w || old.h !== h) closedSizes[i] = { w, h };
+			// A pixel or two is font rounding (the warning sign's glyph), not a new line.
+			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
 		});
 	});
-	/** Re-frame when a closed card changes size (another disease, say), so it still fits. */
+	/** Another disease or map: cards are measured afresh and the map framed for them. */
+	function forgetCardSizes() {
+		userMoved = false;
+		closedSizes = [];
+		lastPositions = undefined;
+	}
+	/** Frame again when a card first measures taller than before, unless the user has moved the map. */
 	$effect(() => {
-		void closedSizes.map((c) => c.h + c.w);
+		void closedSizes.map((c) => c?.h);
 		untrack(() => {
-			if (size.width > 0) frame();
+			if (size.width > 0 && !userMoved) frame();
 		});
 	});
+
+	function layoutSizes() {
+		return scenario.regions.map((_, i) => closedSizes[i] ?? { w: CARD_W, h: CARD_H });
+	}
 
 	function discsOnScreen() {
 		return scenario.regions.map((r, i) => {
@@ -185,14 +209,26 @@
 		});
 	}
 
+	/** The last layout, as offsets from each city, kept while it is still clear so cards don't move without need. */
+	let lastPositions: Offset[] | undefined;
 	/** Card positions, kept off every city's dots and off each other (see layoutCards). */
 	let cardPositions = $derived.by(() => {
 		void viewVersion;
-		const sizes = scenario.regions.map((_, i) => ({
-			w: cardWidths[i] || CARD_W,
-			h: cardHeights[i] || CARD_H
-		}));
-		return layoutCards(discsOnScreen(), sizes, size).positions;
+		const sizes = layoutSizes();
+		const discs = discsOnScreen();
+		const layout = layoutCards(discs, sizes, size, lastPositions);
+		lastPositions = offsetsOf(layout, discs);
+		const placed = layout.positions;
+		// An open card stays where it was and grows on top, pulled back onto the stage if it must.
+		return placed.map((p, i) => {
+			if (!cardOpen[i]) return p;
+			const w = cardWidths[i] || sizes[i].w;
+			const h = cardHeights[i] || sizes[i].h;
+			return {
+				x: Math.max(8, Math.min(p.x, size.width - w - 8)),
+				y: Math.max(8, Math.min(p.y, size.height - h - 8))
+			};
+		});
 	});
 </script>
 
@@ -211,6 +247,7 @@
 		day={telemetry?.day ?? 0}
 		ondisease={(id) => {
 			diseaseId = id;
+			forgetCardSizes();
 			restart();
 		}}
 		onspeed={(s) => {
@@ -232,7 +269,10 @@
 				size = { width: w, height: h };
 				frame();
 			}}
-			onview={() => viewVersion++}
+			onview={() => {
+				userMoved = true;
+				viewVersion++;
+			}}
 		/>
 		{#if !compact}
 			{#each scenario.regions as region, i (region.id)}
@@ -259,6 +299,7 @@
 				aria-label="Zoom in"
 				onclick={() => {
 					sim.view.zoomAt(1.25, size.width / 2, size.height / 2);
+					userMoved = true;
 					viewVersion++;
 				}}>+</button
 			>
@@ -266,6 +307,7 @@
 				aria-label="Zoom out"
 				onclick={() => {
 					sim.view.zoomAt(0.8, size.width / 2, size.height / 2);
+					userMoved = true;
 					viewVersion++;
 				}}>−</button
 			>

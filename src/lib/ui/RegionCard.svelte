@@ -60,12 +60,12 @@
 	let seedLabel = $derived(
 		peoplePerDot === 1
 			? 'Bring in one infected person'
-			: `Bring in ${peoplePerDot.toLocaleString('en-GB')} infected people`
+			: `Bring in one infected dot (${peoplePerDot.toLocaleString('en-GB')} people)`
 	);
 	let seedHover = $derived(
 		peoplePerDot === 1
 			? 'Each dot is one person.'
-			: `Each dot stands for ${peoplePerDot.toLocaleString('en-GB')} people, so this brings in one infected dot: ${peoplePerDot.toLocaleString('en-GB')} people.`
+			: `A dot spreads like one case would, and can die out by chance the way a single case can. It just stands for ${peoplePerDot.toLocaleString('en-GB')} people.`
 	);
 	/** The population when the run starts, in people, to two significant figures so it reads easily. */
 	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
@@ -236,6 +236,7 @@
 			warn={t.pressureBand !== 'coping'}
 			format={pctOf}
 			width={180}
+			lines={2}
 		/>
 		{#if disease.mortalityBasis === 'era'}
 			<p class="note" title={ERA_DEATH_RATE}>{ERA_DEATH_RATE_SHORT}</p>

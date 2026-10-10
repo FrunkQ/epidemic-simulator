@@ -80,7 +80,8 @@ import {
 	BOURNER_HIGH_EFFICACY,
 	KUGELER_2020_TREATED,
 	FLECK_DERDERIAN_UNTREATED_CASES,
-	PERTUSSIS_TRIAL_MONTHS
+	PERTUSSIS_TRIALS,
+	HARTLEY_2023
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
@@ -4368,7 +4369,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Meta-analysis of 2 aP vaccine efficacy studies (assessing the 3-component GlaxoSmithKline and 5-component Sanofi-Pasteur formulations) yielded an overall aP vaccine efficacy of 84% (95% confidence interval [CI], 81%-87%).',
 		location: 'Abstract, Results',
-		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's ${Math.round(CHIT.start * 100)}%, a fitted starting point from a study its maker funded. The two trials followed children for about ${Math.round(PERTUSSIS_TRIAL_MONTHS[0])} to ${PERTUSSIS_TRIAL_MONTHS[1]} months, so the figure is slightly low just after the course.`,
+		why: `A full infant course of the acellular vaccine: ${PERTUSSIS_VACCINE.full} against whooping cough. Used in place of Chit 2018's ${Math.round(CHIT.start * 100)}%, a fitted starting point from a study its maker funded. The two trials followed children for about ${Math.round(PERTUSSIS_TRIALS.firstMonths)} and ${PERTUSSIS_TRIALS.secondMonths[0]} to ${PERTUSSIS_TRIALS.secondMonths[1]} months, so the figure is slightly low just after the course.`,
 		context:
 			'Two randomised trials, Italy and Sweden, 1990s, WHO case definition (21 days or more of cough with confirmed infection). Measures illness, not infection: acellular vaccines block infection less well.',
 		verified: {
@@ -4523,7 +4524,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Hartley L, Harold S, Hawe E',
 		title: 'The efficacy, safety, and immunogenicity of plague vaccines: A systematic literature review',
 		journal: 'Current Research in Immunology 4:100072',
-		year: 2023,
+		year: HARTLEY_2023.year,
 		evidence: 'systematic-review',
 		doi: '10.1016/j.crimmu.2023.100072',
 		url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10637890/',

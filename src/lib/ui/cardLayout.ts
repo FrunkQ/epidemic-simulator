@@ -42,7 +42,7 @@ function overlap(a: Rect, b: Rect): number {
  * How much of a disc a card covers: the overlap with the disc's square when the card touches the
  * circle itself, so a card past the square's corner, clear of every dot, covers nothing.
  */
-function discCover(r: Rect, d: Disc): number {
+export function discCover(r: Rect, d: Disc): number {
 	const nx = Math.min(Math.max(d.x, r.x), r.x + r.w);
 	const ny = Math.min(Math.max(d.y, r.y), r.y + r.h);
 	if (Math.hypot(nx - d.x, ny - d.y) >= d.r) return 0;
@@ -61,8 +61,20 @@ function discCover(r: Rect, d: Disc): number {
 export function layoutCards(
 	discs: Disc[],
 	sizes: { w: number; h: number }[],
-	stage: { width: number; height: number }
+	stage: { width: number; height: number },
+	previous?: Offset[]
 ): Layout {
+	// Keep the last layout (each card at the same offset from its city) while it is still clear,
+	// so cards don't move without need.
+	if (previous?.length === discs.length) {
+		const kept = scoreAt(
+			previous.map((o, i) => ({ x: discs[i].x + o.dx, y: discs[i].y + o.dy })),
+			discs,
+			sizes,
+			stage
+		);
+		if (kept && kept.cover === 0 && kept.misplaced === 0) return kept;
+	}
 	// Cards placed first get first pick, so try every order (a handful of cities) and keep the
 	// best: least covered, then fewest misplaced, then cards closest to their cities.
 	let best: Layout | undefined;
@@ -77,6 +89,43 @@ export function layoutCards(
 			best = l;
 	}
 	return best!;
+}
+
+/** A card's top-left corner relative to its city's centre. */
+export interface Offset {
+	dx: number;
+	dy: number;
+}
+
+/** Offsets of a layout's cards from their cities, to pass back as `previous`. */
+export function offsetsOf(layout: Layout, discs: Disc[]): Offset[] {
+	return layout.positions.map((p, i) => ({ dx: p.x - discs[i].x, dy: p.y - discs[i].y }));
+}
+
+/** Score cards at given positions; undefined if any would leave the stage. */
+function scoreAt(
+	positions: { x: number; y: number }[],
+	discs: Disc[],
+	sizes: { w: number; h: number }[],
+	stage: { width: number; height: number }
+): Layout | undefined {
+	const rects = positions.map((p, i) => ({ ...p, ...sizes[i] }));
+	if (
+		rects.some(
+			(r) => r.x < EDGE || r.y < EDGE || r.x + r.w > stage.width - EDGE || r.y + r.h > stage.height - EDGE
+		)
+	)
+		return undefined;
+	let cover = 0;
+	let misplaced = 0;
+	let spread = 0;
+	rects.forEach((r, i) => {
+		cover += discs.reduce((c, o) => c + discCover(r, o), 0);
+		cover += rects.slice(0, i).reduce((c, o) => c + overlap(r, o), 0);
+		if (nearestDisc(discs, r) !== i) misplaced++;
+		spread += Math.hypot(r.x + r.w / 2 - discs[i].x, r.y + r.h / 2 - discs[i].y);
+	});
+	return { positions, cover, misplaced, spread };
 }
 
 export interface Layout {
@@ -100,7 +149,7 @@ function orders(n: number): number[][] {
 	return out;
 }
 
-function placeInOrder(
+export function placeInOrder(
 	order: number[],
 	discs: Disc[],
 	sizes: { w: number; h: number }[],

@@ -430,7 +430,12 @@ export const DTAP_SERIOUS_DOSES = 10_000;
  */
 export const PERTUSSIS_VACCINE = { full: 0.84, fullSevere: 0.93, partialSevere: 0.5 };
 /** Fulton 2016, Table 1: the two pooled trials followed children for 17.2 and 21-23.5 months. */
-export const PERTUSSIS_TRIAL_MONTHS = [17.2, 23.5] as const;
+export const PERTUSSIS_TRIALS = { firstMonths: 17.2, secondMonths: [21, 23.5] } as const;
+/** The shortest and longest follow-up across both trials. */
+export const PERTUSSIS_TRIAL_MONTHS = [
+	PERTUSSIS_TRIALS.firstMonths,
+	PERTUSSIS_TRIALS.secondMonths[1]
+] as const;
 /** CDC: smallpox vaccination gives full protection "for about 3 to 5 years" (prose only: not a half-life). */
 export const SMALLPOX_VACCINE_YEARS = [3, 5] as const;
 /**
