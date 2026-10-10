@@ -23,6 +23,7 @@ import {
 	type IllnessRules
 } from './disease';
 import { People, type PeopleHooks } from './people';
+import { setLook } from './look';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
 import { generateWorld, type World } from './geography';
@@ -448,7 +449,7 @@ export class Simulation {
 		const a = this.agents;
 		const p = this.people;
 		const half = p.perDot / 2;
-		a.shown[i] = shownState(p, i);
+		setLook(a, p, i);
 		const dead = p.dead[i] >= half ? 1 : 0;
 		const ill = p.ill[i] >= half ? 1 : 0;
 		if (dead === 1 && a.dead[i] === 0) {
@@ -511,7 +512,7 @@ export class Simulation {
 	private refreshDot(i: number): void {
 		const a = this.agents;
 		const p = this.people;
-		a.shown[i] = shownState(p, i);
+		setLook(a, p, i);
 		const ill = p.ill[i] >= p.perDot / 2 ? 1 : 0;
 		if (ill === 1 && a.ill[i] === 0 && this.rules.illStopsMovement) {
 			a.vx[i] = 0;
@@ -656,29 +657,6 @@ function allBeds(people: number, policy: HealthPolicy): number {
  * The state a dot is drawn in: the most common among its people, the more serious on a tie (dead,
  * ill, silent, recovered, then not infected). At one person per dot it is that person's state.
  */
-export function shownState(p: People, i: number): number {
-	const dead = p.dead[i];
-	const ill = p.ill[i];
-	const silent = p.silentSymptomatic[i] + p.silentAsymptomatic[i];
-	const rec = p.recovered[i];
-	const well = p.perDot - dead - ill - silent - rec;
-	let best: number = State.DECEASED;
-	let most = dead;
-	if (ill > most) {
-		best = State.SYMPTOMATIC;
-		most = ill;
-	}
-	if (silent > most) {
-		best = State.SILENT;
-		most = silent;
-	}
-	if (rec > most) {
-		best = State.RECOVERED;
-		most = rec;
-	}
-	if (well > most) best = State.SUSCEPTIBLE;
-	return best;
-}
 
 export function createSimulation(scenario: Scenario, options: SimulationOptions): Simulation {
 	return new Simulation(scenario, options);

@@ -80,7 +80,7 @@ export const ASSUMPTIONS = {
 	omicronAfterInfection:
 		'For Omicron, protection after infection comes from people who mostly had earlier variants and then met Omicron (BA.1), not from people who had Omicron itself.',
 	strainOdds: `Full hospitals make patients more likely to die. Above ${Math.round(STRAIN.threshold * 100)}% of beds in use, the odds of death rise, up to ${fmt(STRAIN.cap, 1)} times at ${Math.round(STRAIN.capAt * 100)}% and beyond. The studies measure odds (one measures hazards, which the model treats as odds), so the model raises the odds, not the chance itself.`,
-	dotCounts: `Each dot is a group of ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people. ${DOT_COUNTS} When people die, the count is the people who died.`,
+	dotCounts: `Each dot is a group of ${DEFAULT_PEOPLE_PER_DOT.toLocaleString('en-GB')} people. ${DOT_COUNTS} The hospital gauge is the exception: it shows the patients expected from the people who are ill, so it can count part of a person.`,
 	noMixingInDot:
 		'People in the same dot don’t pass it to each other: it spreads only from dot to dot. So a dot is a group of people who happen to be near each other, not a household.',
 	dotStops: 'A dot stops moving around once half or more of its people are ill.',

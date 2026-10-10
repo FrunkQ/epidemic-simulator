@@ -35,10 +35,17 @@ export class Agents {
 	readonly planeOf: Int16Array;
 
 	/**
-	 * The state the dot is drawn in (a State): the most common state among its people, the more
-	 * serious one on a tie, set by the engine each tick. A dot's people live in People.
+	 * How a dot is drawn (look E, finer-counts §5), set by the engine whenever its people change.
+	 * `shown` is its fill (a State): dead, infected (silent or ill, whichever is more) or recovered
+	 * when half or more of its people are, otherwise SUSCEPTIBLE, drawn in its vaccination colour.
+	 * `ring` is the State of a ring around a dot that isn't filled that way, when some of its people
+	 * are infected (or, with none infected, dead); SUSCEPTIBLE means no ring. `ringLevel` is how
+	 * bright the ring is, 0 to RING_LEVELS - 1, on a log scale of those people, so one person is
+	 * faint and half the dot is full. A dot's people live in People.
 	 */
 	readonly shown: Uint8Array;
+	readonly ring: Uint8Array;
+	readonly ringLevel: Uint8Array;
 
 	constructor(capacity = MAX_AGENTS) {
 		this.capacity = capacity;
@@ -60,6 +67,8 @@ export class Agents {
 		this.routeDir = new Int8Array(capacity);
 		this.planeOf = new Int16Array(capacity);
 		this.shown = new Uint8Array(capacity);
+		this.ring = new Uint8Array(capacity);
+		this.ringLevel = new Uint8Array(capacity);
 	}
 
 	/** The state a dot is shown in (see `shown`). */
@@ -83,5 +92,7 @@ export class Agents {
 		this.vx.fill(0);
 		this.vy.fill(0);
 		this.shown.fill(0);
+		this.ring.fill(0);
+		this.ringLevel.fill(0);
 	}
 }
