@@ -3,7 +3,7 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
-import { RING_LEVELS } from './look';
+import { RING_LEVELS, TINT, ringWidth } from './look';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
@@ -14,6 +14,10 @@ export interface Scene {
 	transit: Transit;
 	world: World | null;
 	tick: number;
+	/** Average distance between neighbouring dots in the densest city, in world units. */
+	spacing: number;
+	/** Dots just seeded by the button, with the time (performance.now) they were seeded. */
+	seedMarks: readonly { dot: number; at: number }[];
 }
 
 export const MAP_COLOURS = {
@@ -30,6 +34,8 @@ export const MAP_COLOURS = {
 /**
  * Display colours, checked with the dataviz palette validator on the dark map: every pair stays
  * apart under protan, deutan and tritan colour blindness, and infectious dots also get a ring.
+ * Died is pale (10 Oct) so it differs from both infected colours by lightness: OKLab ΔE at least
+ * 32 from ill and 23 from silent under protan and deutan (the darker grey before was 7 from ill).
  */
 export const COLOURS = {
 	unprotected: '#3a7bf0',
@@ -38,7 +44,7 @@ export const COLOURS = {
 	silent: '#ff8f1f',
 	symptomatic: '#e33b6b',
 	recovered: '#d6b4ff',
-	deceased: '#7a7f87'
+	deceased: '#eaecef'
 } as const;
 
 const ORDER = ['deceased', 'unprotected', 'partial', 'full', 'recovered', 'silent', 'symptomatic'] as const;
@@ -48,20 +54,37 @@ const COLOUR_INDEX: Record<ColourKey, number> = Object.fromEntries(ORDER.map((k,
 	number
 >;
 
-/** Ring colours for look E, and how bright each of its RING_LEVELS steps is. */
+/** Ring colours for look E: the dot colours for infected and died. */
 const RINGS = [
-	{ state: State.SILENT, rgb: '255,143,31' },
-	{ state: State.SYMPTOMATIC, rgb: '227,59,107' },
-	{ state: State.DECEASED, rgb: '160,166,175' }
+	{ state: State.SILENT, colour: COLOURS.silent },
+	{ state: State.SYMPTOMATIC, colour: COLOURS.symptomatic },
+	{ state: State.DECEASED, colour: COLOURS.deceased }
 ] as const;
-const RING_ALPHA = [0.35, 0.55, 0.78, 1] as const;
+const RING_BUCKETS = RINGS.length * RING_LEVELS;
+/** Ring opacity per level: even the lowest stands out from the dark disc. */
+const RING_ALPHA = [0.6, 0.75, 0.88, 1] as const;
+const RING_STYLES = RINGS.flatMap((r) => RING_ALPHA.map((a) => rgba(r.colour, a)));
+/**
+ * When there's no room for a ring, the dot itself shows the ring colour, dimmed toward the dark
+ * disc by level: every level stands apart from every plain dot colour, the top short of solid.
+ */
+const DISC_UNDER_DOTS = '#0d1827';
+const TINT_STYLES = RINGS.flatMap((r) => TINT.map((t) => mix(DISC_UNDER_DOTS, r.colour, t)));
+/** A seed marker shows this long at full strength, then fades out over SEED_FADE (real time, ms). */
+const SEED_SHOW = 2500;
+const SEED_FADE = 1500;
 
 /** Draws the world. Holds scratch buckets so drawing allocates nothing per dot. */
 export class Renderer {
 	private readonly buckets: Int32Array;
 	private readonly bucketLen = new Int32Array(ORDER.length);
 	private readonly rings: Int32Array;
-	private readonly ringLen = new Int32Array(RINGS.length * RING_LEVELS);
+	private readonly ringLen = new Int32Array(RING_BUCKETS);
+	/** Dots drawn after the rings: ringed dots in their own colour, and dots filled infected or dead. */
+	private readonly top: Int32Array;
+	private readonly topLen = new Int32Array(ORDER.length);
+	private readonly tinted: Int32Array;
+	private readonly tintLen = new Int32Array(RING_BUCKETS);
 	private readonly capacity: number;
 	private landPath: Path2D | null = null;
 	private landFor: World | null = null;
@@ -69,11 +92,13 @@ export class Renderer {
 	constructor(capacity: number) {
 		this.capacity = capacity;
 		this.buckets = new Int32Array(capacity * ORDER.length);
-		this.rings = new Int32Array(capacity * RINGS.length * RING_LEVELS);
+		this.rings = new Int32Array(capacity * RING_BUCKETS);
+		this.top = new Int32Array(capacity * ORDER.length);
+		this.tinted = new Int32Array(capacity * RING_BUCKETS);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
-		const { agents, regions, radii, routes, transit, world, tick } = scene;
+		const { agents, regions, radii, routes, transit, world, tick, spacing, seedMarks } = scene;
 		const { width, height } = viewport;
 		const s = camera.scale;
 		const ox = camera.x;
@@ -112,9 +137,21 @@ export class Renderer {
 			ctx.stroke();
 		}
 
-		// Sort visible dots into colour buckets.
+		const size = Math.max(1.5, Math.min(6, 3.2 * s));
+		const half = size / 2;
+		// Look E (finer-counts §5). A dot some of whose people are infected (or, with none infected,
+		// dead) gets a ring, brighter the more of them there are; at half or more it is filled instead.
+		// The ring stays inside the dot's share of the space, so it never covers a neighbour; when
+		// that leaves under a device pixel, the dot itself shows the ring colour, dimmed by level.
+		const dpr = ctx.getTransform().a || 1;
+		const rw = ringWidth(spacing * s, size, dpr);
+		const tint = rw === 0;
+
+		// Sort visible dots into buckets: plain dots, rings, tinted dots, and dots drawn on top.
 		this.bucketLen.fill(0);
 		this.ringLen.fill(0);
+		this.topLen.fill(0);
+		this.tintLen.fill(0);
 		const n = agents.activeCount;
 		const cap = this.capacity;
 		const margin = 4;
@@ -126,46 +163,54 @@ export class Renderer {
 			const sy = (agents.y[i] - oy) * s;
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const b = colourOf(agents, i);
-			this.buckets[b * cap + this.bucketLen[b]++] = i;
 			const ring = ringOf(agents.ring[i]);
-			if (ring >= 0) {
-				const rb = ring * RING_LEVELS + agents.ringLevel[i];
+			if (ring < 0) {
+				if (b === COLOUR_INDEX.silent || b === COLOUR_INDEX.symptomatic || b === COLOUR_INDEX.deceased)
+					this.top[b * cap + this.topLen[b]++] = i;
+				else this.buckets[b * cap + this.bucketLen[b]++] = i;
+				continue;
+			}
+			const rb = ring * RING_LEVELS + agents.ringLevel[i];
+			if (tint) {
+				this.tinted[rb * cap + this.tintLen[rb]++] = i;
+			} else {
 				this.rings[rb * cap + this.ringLen[rb]++] = i;
+				this.top[b * cap + this.topLen[b]++] = i;
 			}
 		}
 
-		const size = Math.max(1.5, Math.min(6, 3.2 * s));
-		const half = size / 2;
-
-		// Look E (finer-counts §5): a ring around a dot some of whose people are infected (or dead),
-		// brighter the more of them there are; at half or more the dot is filled instead. Dots are
-		// squares, so the ring is a square frame: a larger square drawn first, with the dot on top.
-		// Filled squares batch as cheaply as the dots; stroked arcs cost three to four times more.
-		const ringHalf = half + Math.max(1, size * 0.4);
-		const ringSize = ringHalf * 2;
-		for (let rb = 0; rb < this.ringLen.length; rb++) {
-			const len = this.ringLen[rb];
-			if (len === 0) continue;
-			const ring = RINGS[Math.floor(rb / RING_LEVELS)];
-			ctx.fillStyle = `rgba(${ring.rgb},${RING_ALPHA[rb % RING_LEVELS]})`;
+		const squares = (list: Int32Array, from: number, len: number, h: number) => {
+			const d = h * 2;
 			ctx.beginPath();
 			for (let k = 0; k < len; k++) {
-				const i = this.rings[rb * cap + k];
-				ctx.rect((agents.x[i] - ox) * s - ringHalf, (agents.y[i] - oy) * s - ringHalf, ringSize, ringSize);
+				const i = list[from + k];
+				ctx.rect((agents.x[i] - ox) * s - h, (agents.y[i] - oy) * s - h, d, d);
 			}
 			ctx.fill();
-		}
-
+		};
 		for (let b = 0; b < ORDER.length; b++) {
-			const len = this.bucketLen[b];
-			if (len === 0) continue;
+			if (this.bucketLen[b] === 0) continue;
 			ctx.fillStyle = COLOURS[ORDER[b]];
-			ctx.beginPath();
-			for (let k = 0; k < len; k++) {
-				const i = this.buckets[b * cap + k];
-				ctx.rect((agents.x[i] - ox) * s - half, (agents.y[i] - oy) * s - half, size, size);
+			squares(this.buckets, b * cap, this.bucketLen[b], half);
+		}
+		if (tint) {
+			for (let tb = 0; tb < this.tintLen.length; tb++) {
+				if (this.tintLen[tb] === 0) continue;
+				ctx.fillStyle = TINT_STYLES[tb];
+				squares(this.tinted, tb * cap, this.tintLen[tb], half);
 			}
-			ctx.fill();
+		} else {
+			// Dots are squares, so a ring is a square frame: a larger square, with its dot drawn over it.
+			for (let rb = 0; rb < RING_BUCKETS; rb++) {
+				if (this.ringLen[rb] === 0) continue;
+				ctx.fillStyle = RING_STYLES[rb];
+				squares(this.rings, rb * cap, this.ringLen[rb], half + rw);
+			}
+		}
+		for (let b = 0; b < ORDER.length; b++) {
+			if (this.topLen[b] === 0) continue;
+			ctx.fillStyle = COLOURS[ORDER[b]];
+			squares(this.top, b * cap, this.topLen[b], half);
 		}
 
 		// A faint pulsing ring around every dot filled as infected.
@@ -173,7 +218,7 @@ export class Renderer {
 		ctx.lineWidth = 1;
 		for (const key of ['silent', 'symptomatic'] as const) {
 			const b = COLOUR_INDEX[key];
-			const len = this.bucketLen[b];
+			const len = this.topLen[b];
 			if (len === 0) continue;
 			ctx.strokeStyle =
 				key === 'silent'
@@ -182,7 +227,7 @@ export class Renderer {
 			ctx.beginPath();
 			const rr = size + 1.5 + pulse * 1.5;
 			for (let k = 0; k < len; k++) {
-				const i = this.buckets[b * cap + k];
+				const i = this.top[b * cap + k];
 				const sx = (agents.x[i] - ox) * s;
 				const sy = (agents.y[i] - oy) * s;
 				ctx.moveTo(sx + rr, sy);
@@ -192,6 +237,36 @@ export class Renderer {
 		}
 
 		this.drawPlanes(ctx, camera, routes, transit);
+		this.drawSeedMarks(ctx, camera, agents, routes, seedMarks, size);
+	}
+
+	/** A one-off ring above everything around each just-seeded dot, so one case can always be found. */
+	private drawSeedMarks(
+		ctx: CanvasRenderingContext2D,
+		camera: Camera,
+		agents: Agents,
+		routes: readonly Route[],
+		marks: Scene['seedMarks'],
+		size: number
+	): void {
+		if (marks.length === 0) return;
+		const now = performance.now();
+		const s = camera.scale;
+		const r = Math.max(7, size * 2.5);
+		ctx.lineWidth = 2;
+		for (const m of marks) {
+			const age = now - m.at;
+			if (age < 0 || age > SEED_SHOW + SEED_FADE) continue;
+			const route = agents.route[m.dot];
+			if (route >= 0 && routes[route].kind === 'air') continue;
+			const alpha = age < SEED_SHOW ? 1 : 1 - (age - SEED_SHOW) / SEED_FADE;
+			const sx = (agents.x[m.dot] - camera.x) * s;
+			const sy = (agents.y[m.dot] - camera.y) * s;
+			ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+			ctx.beginPath();
+			ctx.arc(sx, sy, r, 0, Math.PI * 2);
+			ctx.stroke();
+		}
 	}
 
 	private drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number, camera: Camera): void {
@@ -295,6 +370,30 @@ function buildLandPath(world: World): Path2D {
 		path.closePath();
 	}
 	return path;
+}
+
+/** `#rrggbb` as an rgba() string. */
+function rgba(hex: string, alpha: number): string {
+	const [r, g, b] = rgb(hex);
+	return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function rgb(hex: string): [number, number, number] {
+	const v = parseInt(hex.slice(1), 16);
+	return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+/** `from` moved share `t` of the way to `to`, as #rrggbb. */
+function mix(from: string, to: string, t: number): string {
+	const a = rgb(from);
+	const b = rgb(to);
+	return `#${a
+		.map((c, k) =>
+			Math.round(c + (b[k] - c) * t)
+				.toString(16)
+				.padStart(2, '0')
+		)
+		.join('')}`;
 }
 
 function ringOf(state: number): number {

@@ -139,6 +139,8 @@ export class Simulation {
 	private subsystems: Subsystems = ALL_SUBSYSTEMS;
 	private rules!: IllnessRules;
 	private readonly renderer: Renderer;
+	/** Dots the seed button just brought someone into, for the map's one-off marker (display only). */
+	private seedMarks: { dot: number; at: number }[] = [];
 	private readonly queue: Command[] = [];
 	private events: SimEvent[] = [];
 	private firstCaseSeen!: Uint8Array;
@@ -232,6 +234,7 @@ export class Simulation {
 		this.scenario = structuredClone(scenario);
 		this.diseaseId = diseaseId;
 		this.lostDeathReported = false;
+		this.seedMarks = [];
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
 		this.agents.diseaseCount = 1;
@@ -523,8 +526,11 @@ export class Simulation {
 
 	private applyCommands(): void {
 		for (const c of this.queue) {
-			if (c.type === 'seed') this.seedCases(c.region, c.count);
-			else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
+			if (c.type === 'seed') {
+				const at = performance.now();
+				this.seedMarks = this.seedMarks.filter((m) => at - m.at < 10_000);
+				for (const dot of this.seedCases(c.region, c.count)) this.seedMarks.push({ dot, at });
+			} else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
 			// lockdown, flights, route and massTest arrive with step 3 of the build.
 		}
 		this.queue.length = 0;
@@ -606,8 +612,19 @@ export class Simulation {
 			routes: this.routeList,
 			transit: this.transit,
 			world: this.world,
-			tick: this.tick
+			tick: this.tick,
+			spacing: this.dotSpacing(),
+			seedMarks: this.seedMarks
 		});
+	}
+
+	/** Average distance between neighbouring dots in the densest city, in world units. */
+	private dotSpacing(): number {
+		let spacing = Infinity;
+		this.radii.forEach((rad, r) => {
+			if (this.regionDots[r] > 0) spacing = Math.min(spacing, rad * Math.sqrt(Math.PI / this.regionDots[r]));
+		});
+		return Number.isFinite(spacing) ? spacing : 0;
 	}
 
 	snapshot(): Telemetry {
