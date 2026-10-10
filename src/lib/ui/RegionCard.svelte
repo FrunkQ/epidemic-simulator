@@ -56,6 +56,17 @@
 	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
+	/** The seed button brings in one dot, so it says how many people that is. */
+	let seedLabel = $derived(
+		peoplePerDot === 1
+			? 'Bring in one infected person'
+			: `Bring in ${peoplePerDot.toLocaleString('en-GB')} infected people`
+	);
+	let seedHover = $derived(
+		peoplePerDot === 1
+			? 'Each dot is one person.'
+			: `Each dot stands for ${peoplePerDot.toLocaleString('en-GB')} people, so this brings in one infected dot: ${peoplePerDot.toLocaleString('en-GB')} people.`
+	);
 	/** The population when the run starts, in people, to two significant figures so it reads easily. */
 	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
 	const people = (dots: number) => Math.round(dots * peoplePerDot).toLocaleString();
@@ -240,7 +251,7 @@
 			<span><i style:background={COLOURS.deceased}></i>{Math.round(t.deaths).toLocaleString()} died</span>
 		</p>
 	{/if}
-	<button class="seed" onclick={onseed}>Bring in one infected person</button>
+	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
 </section>
 
 <style>
