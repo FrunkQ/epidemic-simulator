@@ -34,6 +34,7 @@ const A_SUSCEPTIBLE = 0;
 const A_INFECTED = 1;
 const A_IN_HOSPITAL = 2;
 const A_RECOVERED = 3;
+/** In people (the deaths tally), while the other age channels are in dots. */
 const A_DECEASED = 4;
 const A_VACCINATED = 5;
 const BANDS = 3;

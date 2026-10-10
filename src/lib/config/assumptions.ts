@@ -1,3 +1,4 @@
+import { DEATHS_TALLY } from './deathsTally';
 import { DISEASES } from './diseases';
 import { fullCourseSevere } from '../sim/disease';
 import type { DiseaseConfig } from '../sim/types';
@@ -17,10 +18,6 @@ const missingCountries = list(EU_OCCUPANCY_MISSING.map((c) => countryName.of(c) 
  * Plain lines for the About page (step 5): every place where no figure exists and the model
  * assumes none, or makes a simplification a reader should know about (6.2, 6.6, 6.13).
  */
-/** How death counts relate to the dots (6.6); the legend shows the same words. */
-export const DEATHS_TALLY =
-	'Death counts add up each person’s real chance of dying, so they can be smaller than one dot. The dots that turn dead on the map are a sample that matches the count on average.';
-
 export const ASSUMPTIONS = {
 	fullSevereNone:
 		'Where no study gives a vaccine’s protection against serious illness for people it didn’t stop catching it, the model gives them none: they are as likely to get seriously ill as anyone. This holds for a full course and an unfinished one alike, so an unfinished course differs from a full one only by its own sourced figures.',

@@ -421,6 +421,7 @@ export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
  * Daily channels per age band, in dots (vaccinated: given any course, whether it worked or not),
  * except `deceased`, which is the deaths tally in people, unrounded (6.6, 8).
  */
+// Units differ: `deceased` is in people, its sibling channels in dots; don't multiply it by peoplePerDot.
 export const AGE_CHANNELS = [
 	'susceptible',
 	'infected',

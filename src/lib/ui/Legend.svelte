@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEATHS_TALLY } from '../config/assumptions';
+	import { DEATHS_TALLY } from '../config/deathsTally';
 	import { COLOURS } from '../sim/render';
 
 	interface Props {

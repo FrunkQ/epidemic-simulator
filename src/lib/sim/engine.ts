@@ -145,6 +145,8 @@ export class Simulation {
 	private readonly queue: Command[] = [];
 	private events: SimEvent[] = [];
 	private firstCaseSeen!: Uint8Array;
+	/** Whether this run has already reported an illness that had no home region. */
+	private lostDeathReported = false;
 	private readonly secondaryOnly: boolean;
 	private seed: number;
 	private readonly hooks: DiseaseHooks;
@@ -171,9 +173,13 @@ export class Simulation {
 			onDeath: () => {},
 			onIllnessEnd: (dot, slot, region, chance, died) => {
 				// Every dot has a home region, so this can't happen; skipping would lose a death from
-				// the tally while the dot still shows dead, so fail loudly in development and tests.
+				// the tally while the dot still shows dead, so fail loudly in development and tests,
+				// and say so once per run anywhere else.
 				if (region < 0) {
-					if (import.meta.env?.DEV) throw new Error(`Illness ended for dot ${dot} with no home region`);
+					const message = `Illness ended for dot ${dot} with no home region; left out of the deaths tally`;
+					if (import.meta.env?.DEV) throw new Error(message);
+					if (!this.lostDeathReported) console.error(message);
+					this.lostDeathReported = true;
 					return;
 				}
 				const people = deathTallyPeople(chance, died, this.peoplePerDot);
@@ -226,6 +232,7 @@ export class Simulation {
 		// so the same scenario and seed always reproduce the same run.
 		this.scenario = structuredClone(scenario);
 		this.diseaseId = diseaseId;
+		this.lostDeathReported = false;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
 		this.agents.diseaseCount = 1;
