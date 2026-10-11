@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { DISEASES, DISEASE_GROUPS } from '../config/diseases';
 	import type { DiseaseId, Speed } from '../sim/types';
+	import { onMount, tick } from 'svelte';
+	import { BLURB_LINES, fitSentences, sentences } from './blurb';
 	import { SPEEDS, speedTitle } from './speeds';
 
 	interface Props {
@@ -16,6 +18,72 @@
 
 	/** The picker's headings, in DISEASE_GROUPS order. */
 	const groups = Object.entries(DISEASE_GROUPS);
+
+	// The blurb shows as many whole sentences as fit in BLURB_LINES lines; "more" shows the rest
+	// over the map, so opening it never changes the stage (10).
+	let blurb = $state<HTMLParagraphElement>();
+	let measure: HTMLParagraphElement;
+	let moreButton = $state<HTMLButtonElement>();
+	let overlay = $state<HTMLDivElement>();
+	let full = $derived(DISEASES[diseaseId].blurb);
+	let parts = $derived(sentences(full));
+	let shown = $state(Infinity);
+	/** The first sentence alone is longer than the lines allowed (shown whole anyway). */
+	let overlong = $state(false);
+	let moreOpen = $state(false);
+	let clipped = $derived(shown < parts.length);
+
+	/** Fit the blurb to its width now: called before the paint, whenever its width or text can change. */
+	function fit() {
+		if (!blurb || !measure) return;
+		measure.style.width = `${blurb.clientWidth}px`;
+		const [text, more] = measure.children as unknown as [HTMLElement, HTMLElement];
+		more.hidden = true;
+		text.textContent = 'x';
+		const line = measure.offsetHeight;
+		const fits = (t: string, withMore: boolean) => {
+			text.textContent = t;
+			more.hidden = !withMore;
+			return measure.offsetHeight <= BLURB_LINES * line + 0.5;
+		};
+		shown = fitSentences(parts, fits);
+		overlong = !fits(parts[0], parts.length > 1);
+	}
+
+	$effect(() => {
+		void parts;
+		moreOpen = false;
+		fit();
+	});
+
+	onMount(() => {
+		// A window resize event comes before this frame's resize observers and paint, so the page
+		// sees the bar's final height when it frames the map.
+		const onresize = () => fit();
+		const onkey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && moreOpen) {
+				moreOpen = false;
+				moreButton?.focus();
+			}
+		};
+		const ondown = (e: PointerEvent) => {
+			const t = e.target as Node;
+			if (moreOpen && !overlay?.contains(t) && !moreButton?.contains(t)) moreOpen = false;
+		};
+		// Anything else that changes its width (a scrollbar coming or going) is caught a frame late.
+		const observer = new ResizeObserver(() => fit());
+		if (blurb) observer.observe(blurb);
+		addEventListener('resize', onresize);
+		addEventListener('keydown', onkey);
+		addEventListener('pointerdown', ondown);
+		tick().then(fit);
+		return () => {
+			observer.disconnect();
+			removeEventListener('resize', onresize);
+			removeEventListener('keydown', onkey);
+			removeEventListener('pointerdown', ondown);
+		};
+	});
 </script>
 
 <header class="bar">
@@ -32,7 +100,36 @@
 			{/each}
 		</select>
 	</label>
-	<p class="blurb">{DISEASES[diseaseId].blurb}</p>
+	<p class="blurb" bind:this={blurb} title={clipped ? full : undefined} data-overlong={overlong || undefined}>
+		{#if clipped}
+			<span aria-hidden="true">{parts.slice(0, shown).join(' ')}</span>
+			<span class="sr-only">{full}</span>
+			<button
+				class="more"
+				bind:this={moreButton}
+				aria-expanded={moreOpen}
+				aria-controls="blurb-full"
+				onclick={() => (moreOpen = !moreOpen)}>{moreOpen ? 'less' : 'more'}</button
+			>
+		{:else}
+			{full}
+		{/if}
+	</p>
+	<p class="blurb measure" bind:this={measure} aria-hidden="true">
+		<span></span>
+		<button class="more" tabindex="-1">more</button>
+	</p>
+	{#if moreOpen}
+		<div
+			class="full"
+			id="blurb-full"
+			bind:this={overlay}
+			style:left="{blurb?.offsetLeft ?? 0}px"
+			style:min-width="{blurb?.offsetWidth ?? 0}px"
+		>
+			{full}
+		</div>
+	{/if}
 	<div class="speed" role="group" aria-label="Speed">
 		{#each SPEEDS as s (s.value)}
 			<button
@@ -51,6 +148,7 @@
 
 <style>
 	.bar {
+		position: relative;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -72,8 +170,48 @@
 	}
 	.blurb {
 		margin: 0;
-		flex: 1 1 240px;
+		/* Small enough that the bar stays one row at 1280 px with wider fonts (DejaVu Sans on Linux):
+		   a second row takes height from the map and can dock the cards at a target size (10). */
+		flex: 1 1 200px;
 		color: #9fb3c8;
+	}
+	/* Laid out like the blurb, off screen, to find how many sentences fit. */
+	.measure {
+		position: absolute;
+		left: -10000px;
+		top: 0;
+		visibility: hidden;
+		flex: none;
+	}
+	.blurb .more {
+		margin-left: 4px;
+		padding: 0 2px;
+		border: none;
+		background: none;
+		color: #9cc3ea;
+		text-decoration: underline;
+	}
+	/* The whole blurb, over the map below the bar, so the stage keeps its size. */
+	.full {
+		position: absolute;
+		top: 100%;
+		z-index: 20;
+		max-width: min(440px, calc(100% - 32px));
+		box-sizing: border-box;
+		padding: 8px 12px;
+		background: #11233a;
+		border: 1px solid #22405f;
+		border-radius: 0 0 6px 6px;
+		color: #c9d6e3;
+		box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 	.speed {
 		display: flex;

@@ -66,6 +66,7 @@
 	/** When the cards docked: the window, the floating stage's height and the stage's top. */
 	let dockedAt = { width: 0, height: 0, stage: 0, top: 0 };
 	let stageElement: HTMLElement | undefined = $state();
+	let mapCanvas: SimCanvas | undefined = $state();
 	/** The docked cards' strip while it is on the page. */
 	let stripElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
@@ -90,8 +91,29 @@
 	 * first, until none does (or pick the one that does least), so on a short screen the cards
 	 * move beside the cities.
 	 */
-	function frame(resized = false) {
-		userMoved = false;
+	/**
+	 * Frame again once the page has laid out for a change of layout (the strip coming or going),
+	 * still before the next paint, measuring the stage then. Its own resize can't be waited for:
+	 * the stage may end the size it was when last observed, which fires none.
+	 */
+	function frameWhenLaidOut(resized: boolean) {
+		tick().then(() => {
+			if (!stageElement || compact !== !!stripElement) return;
+			// Floating cards just came: measure the closed ones, so the fallback can dock at once
+			// rather than after a frame of floating cards.
+			if (!compact)
+				closedSizes = scenario.regions.map((_, i) => {
+					const el = cardElements[i];
+					return cardOpen[i] || !el ? closedSizes[i] : { w: el.offsetWidth, h: el.offsetHeight };
+				});
+			size = { width: stageElement.clientWidth, height: stageElement.clientHeight };
+			frame(resized);
+			mapCanvas?.redraw();
+		});
+	}
+
+	/** The box around every city's disc, in world units. */
+	function cityBounds() {
 		let minX = Infinity;
 		let minY = Infinity;
 		let maxX = -Infinity;
@@ -103,17 +125,20 @@
 			maxX = Math.max(maxX, r.cx + rad);
 			maxY = Math.max(maxY, r.cy + rad);
 		});
+		return { minX, minY, maxX, maxY };
+	}
+
+	function frame(resized = false) {
+		userMoved = false;
+		const { minX, minY, maxX, maxY } = cityBounds();
 		const { width, height } = size;
 		if (width <= 0 || height <= 0) return; // not laid out yet: its resize frames it
-		// Widened past the narrow-screen width: the strip is still on the page until the DOM
-		// updates, so this stage is the narrow layout's. Measure it again once the strip has gone,
-		// before the next paint, and decide then (a stage that ends the same size fires no resize).
-		if (!compact && stripElement) {
-			tick().then(() => {
-				if (!stageElement || stripElement) return;
-				size = { width: stageElement.clientWidth, height: stageElement.clientHeight };
-				frame(resized);
-			});
+		// Between layouts: widened past the narrow-screen width with the strip still on the page, or
+		// docked (or narrowed) before the strip has come. This stage is the old layout's, so measure
+		// it again once the DOM has caught up, before the next paint, and decide then (a stage that
+		// ends the same size fires no resize).
+		if (compact !== !!stripElement) {
+			frameWhenLaidOut(resized);
 			return;
 		}
 		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
@@ -147,14 +172,16 @@
 			if (!shouldDock(width, floatHeight, ...span) && coverAt(width, floatHeight) === 0) {
 				dockRecheck = false;
 				shortDock = false;
-				return; // the strip goes, the stage grows, and its resize frames again
+				frameWhenLaidOut(resized); // the strip goes and the stage grows
+				return;
 			}
 			dockedAt = { width: window.innerWidth, height: window.innerHeight, stage: floatHeight, top: top() };
 		}
 		if (!sizesStale) dockRecheck = false;
 		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
 			dock();
-			return; // the strip comes, the stage resizes, and its resize frames again
+			frameWhenLaidOut(resized); // the strip comes and the stage shrinks
+			return;
 		}
 		if (compact) {
 			fit(40, 40);
@@ -175,6 +202,7 @@
 			fallbackPending = false;
 			if (layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
 				dock();
+				frameWhenLaidOut(resized);
 				return;
 			}
 		}
@@ -295,6 +323,42 @@
 		});
 	}
 
+	// A read-only view of the layout for the browser checks (tests/browser), built in only when
+	// VITE_LAYOUT_PROBE=1: the deployed build never has it (CI checks its output). Each map drawn
+	// logs its scale and whether the strip was on the page then, for the first-frame check.
+	if (import.meta.env.VITE_LAYOUT_PROBE === '1') {
+		const probe = window as unknown as {
+			__layoutProbe: () => unknown;
+			__layoutLog: { scale: number; docked: boolean; frame: number }[];
+		};
+		probe.__layoutProbe = () => ({
+			stage: { ...size },
+			discs: discsOnScreen(),
+			scale: sim.view.scale,
+			docked: !!stripElement,
+			// The shortest stage, at this width, on which the cards float rather than dock (shouldDock).
+			dockLine: (() => {
+				const b = cityBounds();
+				let lo = 0;
+				let hi = 4 * Math.max(size.height, 1);
+				while (hi - lo > 0.5) {
+					const mid = (lo + hi) / 2;
+					if (shouldDock(size.width, mid, b.maxX - b.minX, b.maxY - b.minY)) lo = mid;
+					else hi = mid;
+				}
+				return Math.ceil(hi);
+			})()
+		});
+		probe.__layoutLog = [];
+		const render = sim.render.bind(sim);
+		sim.render = (...args) => {
+			// Every map drawn in one frame has the same timeline time; the last one is painted.
+			const frame = Number(document.timeline.currentTime ?? 0);
+			probe.__layoutLog.push({ scale: sim.view.scale, docked: !!stripElement, frame });
+			render(...args);
+		};
+	}
+
 	/** The last layout, as offsets from each city, kept while it is still clear so cards don't move without need. */
 	let lastPositions: Offset[] | undefined;
 	/** Card positions, kept off every city's dots and off each other (see layoutCards). */
@@ -355,6 +419,7 @@
 
 	<div class="stage" bind:this={stageElement}>
 		<SimCanvas
+			bind:this={mapCanvas}
 			{sim}
 			ontelemetry={setTelemetry}
 			onresize={(w, h) => {
