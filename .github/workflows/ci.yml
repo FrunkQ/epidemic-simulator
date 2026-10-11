@@ -5,9 +5,10 @@ on:
   pull_request:
 permissions:
   contents: read
-# A new push to a pull request cancels its run still in progress; runs on main always finish.
+# A new push to a pull request cancels its older run. Each push to main gets a group of its own
+# (by commit), so no run on main waits behind another or is cancelled.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   lint:

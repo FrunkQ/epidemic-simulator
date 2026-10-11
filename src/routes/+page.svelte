@@ -9,7 +9,14 @@
 	import { DEFAULT_PEOPLE_PER_DOT } from '../lib/sim/constants';
 	import { createSimulation } from '../lib/sim/engine';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
-	import { frameTries, layoutCards, offsetsOf, pickFrame, type Offset } from '../lib/ui/cardLayout';
+	import {
+		frameTries,
+		layoutCards,
+		offsetsOf,
+		openMaxHeight,
+		pickFrame,
+		type Offset
+	} from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
 	import Legend from '../lib/ui/Legend.svelte';
 	import RegionCard from '../lib/ui/RegionCard.svelte';
@@ -132,24 +139,25 @@
 	/** Until a card has been measured. */
 	const CARD_W = 210;
 	const CARD_H = 120;
-	/** Each card's measured size (bigger while a panel is open). */
+	/** Each card's measured width, for an open card kept on the stage. */
 	let cardWidths: number[] = $state([]);
-	let cardHeights: number[] = $state([]);
 	/** Which cards have a settings panel open. */
 	let cardOpen: boolean[] = $state([]);
+	/** Each card's size as measured with its panel shut (RegionCard closedSize). */
+	let cardClosed: ({ w: number; h: number } | undefined)[] = $state([]);
 	/**
 	 * Each card's tallest size while closed, for this disease and map. Layout and framing use only
 	 * these, so opening a panel moves nothing (the open card grows on top) and a card that grows
-	 * during a run doesn't shuffle the others. Measured only while the card is closed: an open
-	 * card is wider than CARD_W, so a reading at that width is a closed one.
+	 * during a run doesn't shuffle the others. Measured only while the card's panel is shut, by
+	 * the card itself (an open card is the same 210px wide, but taller).
 	 */
 	let closedSizes: ({ w: number; h: number } | undefined)[] = $state([]);
 	const GROW_SLACK = 3;
 	$effect(() => {
 		scenario.regions.forEach((_, i) => {
-			const w = cardWidths[i];
-			const h = cardHeights[i];
-			if (cardOpen[i] || !w || !h || w > CARD_W) return;
+			const closed = cardClosed[i];
+			if (!closed) return;
+			const { w, h } = closed;
 			const old = untrack(() => closedSizes[i]);
 			// A pixel or two is font rounding (the warning sign's glyph), not a new line.
 			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
@@ -173,7 +181,7 @@
 			const el = cardElements[i];
 			// An open card can't be measured closed: keep its last closed size until it closes.
 			if (cardOpen[i]) return old[i];
-			if (!el || el.offsetWidth > CARD_W) return undefined;
+			if (!el) return undefined;
 			return { w: el.offsetWidth, h: el.offsetHeight };
 		});
 	}
@@ -211,7 +219,9 @@
 		return placed.map((p, i) => {
 			if (!cardOpen[i]) return { ...p, maxHeight: undefined };
 			const w = cardWidths[i] || sizes[i].w;
-			return { x: Math.max(8, Math.min(p.x, size.width - w - 8)), y: p.y, maxHeight: size.height - p.y - 8 };
+			const x = Math.max(8, Math.min(p.x, size.width - w - 8));
+			// Stop above any city below it, so the city stays in view while its settings change.
+			return { x, y: p.y, maxHeight: openMaxHeight({ x, y: p.y, w }, sizes[i].h, discs, size.height) };
 		});
 	});
 </script>
@@ -271,8 +281,8 @@
 					maxHeight={pos.maxHeight}
 					bind:element={cardElements[i]}
 					bind:width={cardWidths[i]}
-					bind:height={cardHeights[i]}
 					bind:open={cardOpen[i]}
+					bind:closedSize={cardClosed[i]}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}

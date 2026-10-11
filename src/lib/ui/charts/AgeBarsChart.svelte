@@ -5,6 +5,8 @@
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
+		/** A shorter title for a narrow chart; the full title then shows on hover. */
+		caption?: string;
 		/** One value per age band: 0-14, 15-64, 65+. People, or shares when `asShares` is set. */
 		values: readonly [number, number, number];
 		/** Show each band as its share of the total (e.g. who died, by age), in percent. */
@@ -13,7 +15,7 @@
 		width?: number;
 		height?: number;
 	}
-	let { title, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
+	let { title, caption, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
 
 	const total = $derived(values[0] + values[1] + values[2]);
 	const shown = $derived(asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice());
@@ -30,8 +32,8 @@
 	let hover: number | null = $state(null);
 </script>
 
-<figure>
-	<figcaption>{title}</figcaption>
+<figure style:width="{width}px">
+	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
 	<svg {width} {height} role="img" aria-label={title}>
 		<line
 			class="axis"
@@ -71,7 +73,11 @@
 				opacity={shown[b] > 0 ? 1 : 0}
 				pointer-events="none"
 			/>
-			<text class="value" x={x + barW / 2} y={y - 3} text-anchor="middle">{label(b)}</text>
+			<!-- Above the bar, or just inside its top when the bar reaches the top of the chart. -->
+			{@const inside = y - MARGIN.top < 12}
+			<text class="value" class:inside x={x + barW / 2} y={inside ? y + 11 : y - 3} text-anchor="middle"
+				>{label(b)}</text
+			>
 			<text x={x + barW / 2} y={height - 8} text-anchor="middle">{band.short}</text>
 		{/each}
 	</svg>
@@ -84,12 +90,23 @@
 </figure>
 
 <style>
+	.value.inside {
+		/* Inside the bar: a halo in the panel's colour keeps it readable on any bar colour. */
+		paint-order: stroke;
+		stroke: #11233a;
+		stroke-width: 3px;
+		stroke-linejoin: round;
+	}
 	figure {
 		position: relative;
 		margin: 0;
 	}
 	figcaption {
 		margin-bottom: 2px;
+		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: #e6edf5;
 	}
 	svg {

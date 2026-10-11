@@ -29,6 +29,11 @@
 		element?: HTMLElement;
 		/** Whether a settings panel is open (the card is then taller and sits on top). */
 		open?: boolean;
+		/**
+		 * The card's size as last measured with no panel open. Taken from resizes seen while the panel
+		 * is shut, so closing a panel never reports the open height as the closed one.
+		 */
+		closedSize?: { w: number; h: number };
 		onvaccination: (full: number, partial: number) => void;
 		/** A different vaccine version was picked (restarts the run). */
 		onvaccine: (key: string) => void;
@@ -50,6 +55,9 @@
 		width = $bindable(),
 		height = $bindable(),
 		open = $bindable(),
+		// Bound by the page; written from the ResizeObserver below, which the linter can't follow.
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-useless-assignment
+		closedSize = $bindable(),
 		onvaccination,
 		onvaccine,
 		onpolicy,
@@ -61,6 +69,17 @@
 		open = panel !== null;
 	});
 	const toggle = (p: 'vaccination' | 'policy') => (panel = panel === p ? null : p);
+	// A ResizeObserver reports the card after layout, so when a panel closes it reports the closed
+	// height; a bound offsetHeight read in an effect could still hold the open one.
+	$effect(() => {
+		const el = element;
+		if (!el) return;
+		const observer = new ResizeObserver(() => {
+			if (panel === null && el.offsetHeight > 0) closedSize = { w: el.offsetWidth, h: el.offsetHeight };
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
 	const pct = (v: number) => `${Math.round(v * 100)}%`;
 	/** The seed button brings in one infected person (6.9). */
 	const seedLabel = 'Bring in 1 infected person';
@@ -273,7 +292,6 @@
 		width: 210px;
 	}
 	.card.open {
-		width: 250px;
 		z-index: 2;
 		overflow-y: auto;
 	}
