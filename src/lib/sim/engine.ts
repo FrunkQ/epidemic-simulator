@@ -144,6 +144,8 @@ export class Simulation {
 	private readonly renderer: Renderer;
 	/** Dots the seed button brought someone into, for the map's marker (display only, latest SEED_MARKS). */
 	private seedMarks: number[] = [];
+	/** Marks made this run, counting those dropped from seedMarks. */
+	private seedMarkTotal = 0;
 	private readonly queue: Command[] = [];
 	private events: SimEvent[] = [];
 	private firstCaseSeen!: Uint8Array;
@@ -238,6 +240,7 @@ export class Simulation {
 		this.diseaseId = diseaseId;
 		this.lostDeathReported = false;
 		this.seedMarks = [];
+		this.seedMarkTotal = 0;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
 		this.agents.diseaseCount = 1;
@@ -534,7 +537,10 @@ export class Simulation {
 	private applyCommands(): void {
 		for (const c of this.queue) {
 			if (c.type === 'seed') {
-				for (const dot of this.seedCases(c.region, c.count)) this.seedMarks.push(dot);
+				for (const dot of this.seedCases(c.region, c.count)) {
+					this.seedMarks.push(dot);
+					this.seedMarkTotal++;
+				}
 				if (this.seedMarks.length > SEED_MARKS) this.seedMarks.splice(0, this.seedMarks.length - SEED_MARKS);
 			} else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
 			// lockdown, flights, route and massTest arrive with step 3 of the build.
@@ -614,7 +620,8 @@ export class Simulation {
 		return this.counters.regionHistory(region);
 	}
 
-	render(ctx: CanvasRenderingContext2D, viewport: Viewport): void {
+	/** Draws the map; `now` is the frame's time (ms), which only the seed marker's fade uses. */
+	render(ctx: CanvasRenderingContext2D, viewport: Viewport, now: number): void {
 		this.renderer.draw(ctx, viewport, this.view, {
 			agents: this.agents,
 			regions: this.scenario.regions,
@@ -624,7 +631,9 @@ export class Simulation {
 			world: this.world,
 			tick: this.tick,
 			spacing: this.dotSpacing(),
-			seedMarks: this.seedMarks
+			seedMarks: this.seedMarks,
+			seedMarkTotal: this.seedMarkTotal,
+			now
 		});
 	}
 

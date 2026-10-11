@@ -2,13 +2,21 @@ import type { Agents } from './agents';
 import type { People } from './people';
 import { State } from './types';
 
-/** Ring brightness steps for look E: few, so the renderer draws each in one batch. */
-export const RING_LEVELS = 4;
-/** Tint steps, by the share of the dot's people, up to just under half (where it fills). */
-export const TINT_STEPS = 6;
-/** The faintest tint (one case) and the strongest (just under half), as shares of the way to the ring colour. */
-const TINT_FLOOR = 0.12;
-const TINT_TOP = 0.8;
+/**
+ * Strength steps for look E, by the share of the dot's people, up to just under half (where it
+ * fills). One ladder for the ring and the tint, so a city reads the same in either.
+ */
+export const SHARE_STEPS = 6;
+/**
+ * The faintest step (one case) and the strongest (just under half), as shares of the way to the
+ * ring colour. The top stays at least ΔE 6 from the solid fill, so the step to solid at half reads.
+ */
+const STEP_FLOOR = 0.12;
+const STEP_TOP = 0.55;
+/** A ring is drawn only when it is at least this many device pixels wide. */
+const RING_MIN_DEVICE_PX = 2;
+/** Ring width as a share of the dot's width: a square frame this wide has about the dot's own area. */
+const RING_SHARE = 0.2;
 
 /** How one dot looks: its fill, and the ring (or tint) marking some of its people. */
 export interface Look {
@@ -16,10 +24,8 @@ export interface Look {
 	fill: number;
 	/** SILENT or SYMPTOMATIC when some are infected, DECEASED when some died and none are infected, else SUSCEPTIBLE (none). */
 	ring: number;
-	/** 0 to RING_LEVELS - 1: how many of the dot's people the ring stands for, on a log scale up to half the dot. */
-	level: number;
-	/** 0 to TINT_STEPS - 1: the same people as a share of the dot, in even steps up to half, for the tint. */
-	tint: number;
+	/** 0 to SHARE_STEPS - 1: those people as a share of the dot, in even steps up to half. */
+	step: number;
 }
 
 /**
@@ -29,7 +35,7 @@ export interface Look {
  * infected colour when anyone is infected, else in grey when anyone has died.
  */
 export function lookOf(n: number, dead: number, ill: number, silent: number, recovered: number): Look {
-	const out = { fill: 0, ring: 0, level: 0, tint: 0 };
+	const out = { fill: 0, ring: 0, step: 0 };
 	writeLook(n, dead, ill, silent, recovered, out);
 	return out;
 }
@@ -55,27 +61,12 @@ function writeLook(n: number, dead: number, ill: number, silent: number, recover
 	}
 	out.fill = fill;
 	out.ring = ring;
-	out.level = count === 0 ? 0 : levelsFor(n)[Math.min(count, n)];
-	out.tint = count === 0 ? 0 : Math.min(TINT_STEPS - 1, Math.floor((2 * TINT_STEPS * count) / n));
+	out.step = count === 0 ? 0 : Math.min(SHARE_STEPS - 1, Math.floor((2 * SHARE_STEPS * count) / n));
 }
 
-/** Ring level by people counted, for dots of n people (worked out once per dot size). */
-let levelsN = -1;
-let levels = new Uint8Array(0);
-function levelsFor(n: number): Uint8Array {
-	if (n !== levelsN) {
-		levelsN = n;
-		levels = new Uint8Array(n + 1);
-		const top = Math.log1p(n / 2);
-		for (let k = 1; k <= n; k++)
-			levels[k] = Math.min(RING_LEVELS - 1, Math.floor((RING_LEVELS * Math.log1p(k)) / top));
-	}
-	return levels;
-}
+const scratch: Look = { fill: 0, ring: 0, step: 0 };
 
-const scratch: Look = { fill: 0, ring: 0, level: 0, tint: 0 };
-
-/** Sets agents.shown, ring and ringLevel for dot i from its people. */
+/** Sets agents.shown, ring and shareStep for dot i from its people. */
 export function setLook(agents: Agents, p: People, i: number): void {
 	writeLook(
 		p.perDot,
@@ -87,29 +78,26 @@ export function setLook(agents: Agents, p: People, i: number): void {
 	);
 	agents.shown[i] = scratch.fill;
 	agents.ring[i] = scratch.ring;
-	agents.ringLevel[i] = scratch.level;
-	agents.tintStep[i] = scratch.tint;
+	agents.shareStep[i] = scratch.step;
 }
 
 /**
- * How wide a ring may be, in CSS pixels, around a dot `size` pixels across whose neighbours sit
- * `spacing` pixels apart on average: its outer edge stays within half the spacing, so it never
- * covers or merges with a neighbour. 0 when that leaves under one device pixel: the dot is then
- * tinted instead.
+ * How wide a ring is, in CSS pixels, around a dot `size` pixels across whose neighbours sit
+ * `spacing` pixels apart on average: a fifth of the dot, so the frame's area is about the dot's
+ * own. 0 when that is under RING_MIN_DEVICE_PX device pixels or reaches past half the spacing
+ * (where it would cover a neighbour): the dot is then tinted instead.
  */
 export function ringWidth(spacing: number, size: number, dpr: number): number {
-	const room = spacing / 2 - size / 2;
-	// A ring a little under half the dot's width, so its area stays near the dot's own.
-	const w = Math.min(size * 0.4, room);
-	return w * dpr >= 1 ? w : 0;
+	const w = size * RING_SHARE;
+	return w * dpr >= RING_MIN_DEVICE_PX && size / 2 + w <= spacing / 2 ? w : 0;
 }
 
 /**
- * How far a tinted dot's own colour moves toward the ring colour, per tint step: it follows the
- * share of its people (finer-counts §5, "follow the share"), from a faint mark for one case to
- * well short of the solid fill that half or more of them bring.
+ * How far toward the ring colour each share step goes (finer-counts §5, "follow the share"): a
+ * tinted dot's own colour moves this far, and a ring is drawn at this opacity. From a faint mark
+ * for one case to well short of the solid fill that half or more of them bring.
  */
-export const TINT = Array.from(
-	{ length: TINT_STEPS },
-	(_, k) => TINT_FLOOR + ((TINT_TOP - TINT_FLOOR) * k) / (TINT_STEPS - 1)
+export const STEP_STRENGTH = Array.from(
+	{ length: SHARE_STEPS },
+	(_, k) => STEP_FLOOR + ((STEP_TOP - STEP_FLOOR) * k) / (SHARE_STEPS - 1)
 );

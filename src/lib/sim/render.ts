@@ -3,7 +3,7 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
-import { RING_LEVELS, TINT, TINT_STEPS, ringWidth } from './look';
+import { SHARE_STEPS, STEP_STRENGTH, ringWidth } from './look';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
@@ -18,6 +18,10 @@ export interface Scene {
 	spacing: number;
 	/** Dots the seed button brought someone into, oldest first; a new array after every setup. */
 	seedMarks: readonly number[];
+	/** How many marks the seed button has made this run, so a dot seeded again gets a new mark. */
+	seedMarkTotal: number;
+	/** The frame's time (ms, from requestAnimationFrame), for the seed marker's fade. */
+	now: number;
 }
 
 export const MAP_COLOURS = {
@@ -60,19 +64,22 @@ const RINGS = [
 	{ state: State.SYMPTOMATIC, colour: COLOURS.symptomatic },
 	{ state: State.DECEASED, colour: COLOURS.deceased }
 ] as const;
-const RING_BUCKETS = RINGS.length * RING_LEVELS;
-/** Ring opacity per level: even the lowest stands out from the dark disc. */
-const RING_ALPHA = [0.6, 0.75, 0.88, 1] as const;
-const RING_STYLES = RINGS.flatMap((r) => RING_ALPHA.map((a) => rgba(r.colour, a)));
+const RING_BUCKETS = RINGS.length * SHARE_STEPS;
+/** Ring opacity per share step (look.ts STEP_STRENGTH), the same ladder as the tint. */
+const RING_STYLES = RINGS.flatMap((r) => STEP_STRENGTH.map((a) => rgba(r.colour, a)));
 /**
- * When dots sit too close for a ring, the dot's own colour is tinted toward the ring colour by the
- * share of its people (look.ts TINT), so the vaccination colour still shows at low shares.
+ * Fill styles by index: the plain dot colours (ORDER), then, where dots sit too close for a ring,
+ * each dot colour tinted toward each ring colour by each share step (look.ts STEP_STRENGTH), so
+ * the vaccination colour still shows at low shares.
  */
-const TINT_BUCKETS = RINGS.length * TINT_STEPS;
-const TINT_STYLES = ORDER.flatMap((k) => RINGS.flatMap((r) => TINT.map((t) => mix(COLOURS[k], r.colour, t))));
+const TINTS_PER_COLOUR = RINGS.length * SHARE_STEPS;
+const FILL_STYLES = [
+	...ORDER.map((k) => COLOURS[k]),
+	...ORDER.flatMap((k) => RINGS.flatMap((r) => STEP_STRENGTH.map((t) => mix(COLOURS[k], r.colour, t))))
+];
 /**
  * A seed marker shows this long at full strength, then fades over SEED_FADE (real time, ms) to a
- * thin dim outline that stays while the dot holds anyone infected, so the first case can be watched.
+ * thin dim outline that stays until the dot first has nobody infected, so the first case can be watched.
  */
 const SEED_SHOW = 2500;
 const SEED_FADE = 1500;
@@ -80,17 +87,18 @@ const SEED_STAY = 0.35;
 
 /** Draws the world. Holds scratch buckets so drawing allocates nothing per dot. */
 export class Renderer {
-	private readonly buckets: Int32Array;
-	private readonly bucketLen = new Int32Array(ORDER.length);
+	/** Visible dots in index order, with each one's fill style (FILL_STYLES index). */
+	private readonly order: Int32Array;
+	private readonly orderStyle: Uint8Array;
 	private readonly rings: Int32Array;
 	private readonly ringLen = new Int32Array(RING_BUCKETS);
-	/** Dots drawn after the rings: ringed dots in their own colour, and dots filled infected or dead. */
-	private readonly top: Int32Array;
-	private readonly topLen = new Int32Array(ORDER.length);
-	private readonly tinted: Int32Array;
-	private readonly tintLen = new Int32Array(ORDER.length * TINT_BUCKETS);
-	/** When this renderer first drew each seed mark (performance.now), for the engine's current marks. */
+	/** Dots filled silent or ill, for the pulse: [silent..., ill...] by PULSE index. */
+	private readonly pulsing: Int32Array;
+	private readonly pulseLen = new Int32Array(2);
+	/** When this renderer first drew each seed mark, by its number in the run (Scene.now). */
 	private markSeen = new Map<number, number>();
+	/** Marks whose dot has had nobody infected since; they are not drawn again. */
+	private markDone = new Set<number>();
 	private marksFor: readonly number[] | null = null;
 	private readonly capacity: number;
 	private landPath: Path2D | null = null;
@@ -98,14 +106,14 @@ export class Renderer {
 
 	constructor(capacity: number) {
 		this.capacity = capacity;
-		this.buckets = new Int32Array(capacity * ORDER.length);
+		this.order = new Int32Array(capacity);
+		this.orderStyle = new Uint8Array(capacity);
 		this.rings = new Int32Array(capacity * RING_BUCKETS);
-		this.top = new Int32Array(capacity * ORDER.length);
-		this.tinted = new Int32Array(capacity * ORDER.length * TINT_BUCKETS);
+		this.pulsing = new Int32Array(capacity * 2);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
-		const { agents, regions, radii, routes, transit, world, tick, spacing, seedMarks } = scene;
+		const { agents, regions, radii, routes, transit, world, tick, spacing } = scene;
 		const { width, height } = viewport;
 		const s = camera.scale;
 		const ox = camera.x;
@@ -147,18 +155,16 @@ export class Renderer {
 		const size = Math.max(1.5, Math.min(6, 3.2 * s));
 		const half = size / 2;
 		// Look E (finer-counts §5). A dot some of whose people are infected (or, with none infected,
-		// dead) gets a ring, brighter the more of them there are; at half or more it is filled instead.
-		// The ring stays inside the dot's share of the space, so it never covers a neighbour; when
-		// that leaves under a device pixel, the dot's colour is tinted toward the ring colour by the share.
+		// dead) is marked more strongly the larger their share, in the same six steps either way: as a
+		// ring where one at least 2 device pixels wide fits within half the spacing, else as a tint of
+		// the dot's own colour. At half or more it is filled instead.
 		const dpr = ctx.getTransform().a || 1;
 		const rw = ringWidth(spacing * s, size, dpr);
 		const tint = rw === 0;
 
-		// Sort visible dots into buckets: plain dots, rings, tinted dots, and dots drawn on top.
-		this.bucketLen.fill(0);
 		this.ringLen.fill(0);
-		this.topLen.fill(0);
-		this.tintLen.fill(0);
+		this.pulseLen.fill(0);
+		let count = 0;
 		const n = agents.activeCount;
 		const cap = this.capacity;
 		const margin = 4;
@@ -170,21 +176,22 @@ export class Renderer {
 			const sy = (agents.y[i] - oy) * s;
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const b = colourOf(agents, i);
+			let style = b;
+			if (b === COLOUR_INDEX.silent || b === COLOUR_INDEX.symptomatic) {
+				const k = b === COLOUR_INDEX.silent ? 0 : 1;
+				this.pulsing[k * cap + this.pulseLen[k]++] = i;
+			}
 			const ring = ringOf(agents.ring[i]);
-			if (ring < 0) {
-				if (b === COLOUR_INDEX.silent || b === COLOUR_INDEX.symptomatic || b === COLOUR_INDEX.deceased)
-					this.top[b * cap + this.topLen[b]++] = i;
-				else this.buckets[b * cap + this.bucketLen[b]++] = i;
-				continue;
+			if (ring >= 0) {
+				const step = agents.shareStep[i];
+				if (tint) style = ORDER.length + b * TINTS_PER_COLOUR + ring * SHARE_STEPS + step;
+				else {
+					const rb = ring * SHARE_STEPS + step;
+					this.rings[rb * cap + this.ringLen[rb]++] = i;
+				}
 			}
-			const rb = ring * RING_LEVELS + agents.ringLevel[i];
-			if (tint) {
-				const tb = (b * RINGS.length + ring) * TINT_STEPS + agents.tintStep[i];
-				this.tinted[tb * cap + this.tintLen[tb]++] = i;
-			} else {
-				this.rings[rb * cap + this.ringLen[rb]++] = i;
-				this.top[b * cap + this.topLen[b]++] = i;
-			}
+			this.order[count] = i;
+			this.orderStyle[count++] = style;
 		}
 
 		const squares = (list: Int32Array, from: number, len: number, h: number) => {
@@ -196,46 +203,41 @@ export class Renderer {
 			}
 			ctx.fill();
 		};
-		for (let b = 0; b < ORDER.length; b++) {
-			if (this.bucketLen[b] === 0) continue;
-			ctx.fillStyle = COLOURS[ORDER[b]];
-			squares(this.buckets, b * cap, this.bucketLen[b], half);
-		}
-		if (tint) {
-			for (let tb = 0; tb < this.tintLen.length; tb++) {
-				if (this.tintLen[tb] === 0) continue;
-				ctx.fillStyle = TINT_STYLES[tb];
-				squares(this.tinted, tb * cap, this.tintLen[tb], half);
-			}
-		} else {
-			// Dots are squares, so a ring is a square frame: a larger square, with its dot drawn over it.
+		// Dots are squares, so a ring is a square frame: a larger square, with its dot drawn over it.
+		// Rings stay inside half the spacing, so they go first, under every dot.
+		if (!tint) {
 			for (let rb = 0; rb < RING_BUCKETS; rb++) {
 				if (this.ringLen[rb] === 0) continue;
 				ctx.fillStyle = RING_STYLES[rb];
 				squares(this.rings, rb * cap, this.ringLen[rb], half + rw);
 			}
 		}
-		for (let b = 0; b < ORDER.length; b++) {
-			if (this.topLen[b] === 0) continue;
-			ctx.fillStyle = COLOURS[ORDER[b]];
-			squares(this.top, b * cap, this.topLen[b], half);
+		// Dots in index order, whatever their state, so no colour wins where dots overlap. One fillRect
+		// each is as fast as the colour batches were; the style is set only when it changes.
+		const d = size;
+		let last = -1;
+		for (let k = 0; k < count; k++) {
+			const style = this.orderStyle[k];
+			if (style !== last) {
+				ctx.fillStyle = FILL_STYLES[style];
+				last = style;
+			}
+			const i = this.order[k];
+			ctx.fillRect((agents.x[i] - ox) * s - half, (agents.y[i] - oy) * s - half, d, d);
 		}
 
 		// A faint pulsing ring around every dot filled as infected.
 		const pulse = 0.5 + 0.5 * Math.sin(tick * 0.2);
 		ctx.lineWidth = 1;
-		for (const key of ['silent', 'symptomatic'] as const) {
-			const b = COLOUR_INDEX[key];
-			const len = this.topLen[b];
+		for (let k = 0; k < 2; k++) {
+			const len = this.pulseLen[k];
 			if (len === 0) continue;
 			ctx.strokeStyle =
-				key === 'silent'
-					? `rgba(255,143,31,${0.25 + 0.3 * pulse})`
-					: `rgba(227,59,107,${0.25 + 0.3 * pulse})`;
+				k === 0 ? `rgba(255,143,31,${0.25 + 0.3 * pulse})` : `rgba(227,59,107,${0.25 + 0.3 * pulse})`;
 			ctx.beginPath();
 			const rr = size + 1.5 + pulse * 1.5;
-			for (let k = 0; k < len; k++) {
-				const i = this.top[b * cap + k];
+			for (let j = 0; j < len; j++) {
+				const i = this.pulsing[k * cap + j];
 				const sx = (agents.x[i] - ox) * s;
 				const sy = (agents.y[i] - oy) * s;
 				ctx.moveTo(sx + rr, sy);
@@ -245,46 +247,55 @@ export class Renderer {
 		}
 
 		this.drawPlanes(ctx, camera, routes, transit);
-		this.drawSeedMarks(ctx, camera, agents, routes, seedMarks, size);
+		this.drawSeedMarks(ctx, camera, agents, routes, scene, size);
 	}
 
 	/**
-	 * A ring above everything around each seeded dot: bright at first, then a thin dim outline for as
-	 * long as the dot holds anyone infected. The clock is the renderer's, from when it first drew the
-	 * mark, so the engine stays free of real time.
+	 * A ring above everything around each seeded dot: bright at first, then a thin dim outline until
+	 * the dot first has nobody infected. The clock is the frame's time from the canvas, from when
+	 * this renderer first drew the mark, so the engine stays free of real time.
 	 */
 	private drawSeedMarks(
 		ctx: CanvasRenderingContext2D,
 		camera: Camera,
 		agents: Agents,
 		routes: readonly Route[],
-		marks: readonly number[],
+		scene: Scene,
 		size: number
 	): void {
+		const { seedMarks: marks, seedMarkTotal, now } = scene;
 		// A new run brings a new array of marks.
 		if (marks !== this.marksFor) {
 			this.marksFor = marks;
 			this.markSeen.clear();
+			this.markDone.clear();
 		}
 		if (marks.length === 0) return;
-		const now = performance.now();
 		const s = camera.scale;
 		const r = Math.max(7, size * 2.5);
+		// Mark k is number first + k of this run, so a dot seeded twice has two marks and flashes again.
+		const first = seedMarkTotal - marks.length;
 		for (let k = 0; k < marks.length; k++) {
+			const id = first + k;
+			if (this.markDone.has(id)) continue;
 			const dot = marks[k];
-			const route = agents.route[dot];
-			if (route >= 0 && routes[route].kind === 'air') continue;
-			let seen = this.markSeen.get(dot);
-			if (seen === undefined) this.markSeen.set(dot, (seen = now));
-			const age = now - seen;
-			const fading = age < SEED_SHOW ? 1 : Math.max(0, 1 - (age - SEED_SHOW) / SEED_FADE);
 			const infected =
 				agents.ring[dot] === State.SILENT ||
 				agents.ring[dot] === State.SYMPTOMATIC ||
 				agents.shown[dot] === State.SILENT ||
 				agents.shown[dot] === State.SYMPTOMATIC;
-			const alpha = Math.max(fading, infected ? SEED_STAY : 0);
-			if (alpha <= 0) continue;
+			if (!infected) {
+				this.markDone.add(id);
+				this.markSeen.delete(id);
+				continue;
+			}
+			const route = agents.route[dot];
+			if (route >= 0 && routes[route].kind === 'air') continue;
+			let seen = this.markSeen.get(id);
+			if (seen === undefined) this.markSeen.set(id, (seen = now));
+			const age = now - seen;
+			const fading = age < SEED_SHOW ? 1 : Math.max(0, 1 - (age - SEED_SHOW) / SEED_FADE);
+			const alpha = Math.max(fading, SEED_STAY);
 			ctx.lineWidth = fading > 0 ? 2 : 1;
 			ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
 			ctx.beginPath();
