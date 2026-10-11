@@ -110,8 +110,8 @@
 		});
 	}
 
-	function frame(resized = false) {
-		userMoved = false;
+	/** The box around every city's disc, in world units. */
+	function cityBounds() {
 		let minX = Infinity;
 		let minY = Infinity;
 		let maxX = -Infinity;
@@ -123,6 +123,12 @@
 			maxX = Math.max(maxX, r.cx + rad);
 			maxY = Math.max(maxY, r.cy + rad);
 		});
+		return { minX, minY, maxX, maxY };
+	}
+
+	function frame(resized = false) {
+		userMoved = false;
+		const { minX, minY, maxX, maxY } = cityBounds();
 		const { width, height } = size;
 		if (width <= 0 || height <= 0) return; // not laid out yet: its resize frames it
 		// Between layouts: widened past the narrow-screen width with the strip still on the page, or
@@ -327,7 +333,19 @@
 			stage: { ...size },
 			discs: discsOnScreen(),
 			scale: sim.view.scale,
-			docked: !!stripElement
+			docked: !!stripElement,
+			// The shortest stage, at this width, on which the cards float rather than dock (shouldDock).
+			dockLine: (() => {
+				const b = cityBounds();
+				let lo = 0;
+				let hi = 4 * Math.max(size.height, 1);
+				while (hi - lo > 0.5) {
+					const mid = (lo + hi) / 2;
+					if (shouldDock(size.width, mid, b.maxX - b.minX, b.maxY - b.minY)) lo = mid;
+					else hi = mid;
+				}
+				return Math.ceil(hi);
+			})()
 		});
 		probe.__layoutLog = [];
 		const render = sim.render.bind(sim);

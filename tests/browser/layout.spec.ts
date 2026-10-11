@@ -236,3 +236,72 @@ test('the first painted frame is already the final layout', async ({ page }) => 
 		expectStraightToFinal((await paintedSince(page, 0)).slice(0, 3), `${w}x${h} load`);
 	}
 });
+
+/** Lay the page out in `font`, as on a desktop whose system-ui font it is (DejaVu Sans on many Linux desktops). */
+async function forceFont(page: Page, font: string) {
+	await page.addInitScript((f) => {
+		document.addEventListener('DOMContentLoaded', () => {
+			const style = document.createElement('style');
+			style.textContent = `* { font-family: '${f}', monospace !important; }`;
+			document.head.append(style);
+		});
+	}, font);
+}
+
+test('1280x720 in DejaVu Sans: every disease keeps the cards floating, its blurb at most 3 lines or one sentence', async ({
+	page
+}) => {
+	await forceFont(page, 'DejaVu Sans');
+	await open(page, 1280, 720);
+	// The font must be installed, or this would check the fallback font instead.
+	const installed = await page.evaluate(() => {
+		const ctx = document.createElement('canvas').getContext('2d')!;
+		const width = (font: string) => ((ctx.font = font), ctx.measureText('Epidemic simulator 1347').width);
+		return width("13px 'DejaVu Sans', monospace") !== width('13px monospace');
+	});
+	expect(installed, 'DejaVu Sans is installed').toBe(true);
+	const diseases = await page
+		.locator('select option')
+		.evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+	for (const disease of diseases) {
+		await page.selectOption('select', disease);
+		await settle(page);
+		expect(await docked(page), disease).toBe(0);
+		const lines = await page.locator('p.blurb:not(.measure)').evaluate((p) => {
+			// Distinct line tops of the text shown (the screen-reader copy is clipped out of the layout).
+			const range = document.createRange();
+			range.selectNodeContents(p);
+			const tops = [...range.getClientRects()]
+				.filter((r) => r.width > 1 && r.height > 1)
+				.map((r) => Math.round(r.top));
+			return new Set(tops).size;
+		});
+		// A first sentence longer than 3 lines is shown whole, never cut (Ebola's, in this font).
+		const overlong = await page.locator('p.blurb:not(.measure)').getAttribute('data-overlong');
+		if (overlong)
+			test.info().annotations.push({ type: 'overlong blurb', description: `${disease}: ${lines} lines` });
+		else expect(lines, disease).toBeLessThanOrEqual(3);
+	}
+});
+
+test('the blurb\'s "more" shows the whole text over the map, and Escape closes it', async ({ page }) => {
+	await forceFont(page, 'DejaVu Sans');
+	await open(page, 1280, 720);
+	await page.selectOption('select', 'plague');
+	await settle(page);
+	const before = await probe(page);
+	const more = page.getByRole('button', { name: 'more' });
+	await expect(more).toHaveAttribute('aria-expanded', 'false');
+	await more.click();
+	await expect(page.locator('#blurb-full')).toContainText('before antibiotics');
+	await expect(page.getByRole('button', { name: 'less' })).toHaveAttribute('aria-expanded', 'true');
+	await settle(page);
+	const after = await probe(page);
+	expect(after.stage).toEqual(before.stage);
+	expect(after.scale).toBeCloseTo(before.scale, 9);
+	await page.keyboard.press('Escape');
+	await expect(page.locator('#blurb-full')).toHaveCount(0);
+	await more.click();
+	await page.mouse.click(5, 700);
+	await expect(page.locator('#blurb-full')).toHaveCount(0);
+});
