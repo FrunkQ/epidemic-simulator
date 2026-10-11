@@ -3,7 +3,7 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
-import { RING_LEVELS, TINT, ringWidth } from './look';
+import { RING_LEVELS, TINT, TINT_STEPS, ringWidth } from './look';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
@@ -16,8 +16,8 @@ export interface Scene {
 	tick: number;
 	/** Average distance between neighbouring dots in the densest city, in world units. */
 	spacing: number;
-	/** Dots just seeded by the button, with the time (performance.now) they were seeded. */
-	seedMarks: readonly { dot: number; at: number }[];
+	/** Dots the seed button brought someone into, oldest first; a new array after every setup. */
+	seedMarks: readonly number[];
 }
 
 export const MAP_COLOURS = {
@@ -65,14 +65,18 @@ const RING_BUCKETS = RINGS.length * RING_LEVELS;
 const RING_ALPHA = [0.6, 0.75, 0.88, 1] as const;
 const RING_STYLES = RINGS.flatMap((r) => RING_ALPHA.map((a) => rgba(r.colour, a)));
 /**
- * When there's no room for a ring, the dot itself shows the ring colour, dimmed toward the dark
- * disc by level: every level stands apart from every plain dot colour, the top short of solid.
+ * When dots sit too close for a ring, the dot's own colour is tinted toward the ring colour by the
+ * share of its people (look.ts TINT), so the vaccination colour still shows at low shares.
  */
-const DISC_UNDER_DOTS = '#0d1827';
-const TINT_STYLES = RINGS.flatMap((r) => TINT.map((t) => mix(DISC_UNDER_DOTS, r.colour, t)));
-/** A seed marker shows this long at full strength, then fades out over SEED_FADE (real time, ms). */
+const TINT_BUCKETS = RINGS.length * TINT_STEPS;
+const TINT_STYLES = ORDER.flatMap((k) => RINGS.flatMap((r) => TINT.map((t) => mix(COLOURS[k], r.colour, t))));
+/**
+ * A seed marker shows this long at full strength, then fades over SEED_FADE (real time, ms) to a
+ * thin dim outline that stays while the dot holds anyone infected, so the first case can be watched.
+ */
 const SEED_SHOW = 2500;
 const SEED_FADE = 1500;
+const SEED_STAY = 0.35;
 
 /** Draws the world. Holds scratch buckets so drawing allocates nothing per dot. */
 export class Renderer {
@@ -84,7 +88,10 @@ export class Renderer {
 	private readonly top: Int32Array;
 	private readonly topLen = new Int32Array(ORDER.length);
 	private readonly tinted: Int32Array;
-	private readonly tintLen = new Int32Array(RING_BUCKETS);
+	private readonly tintLen = new Int32Array(ORDER.length * TINT_BUCKETS);
+	/** When this renderer first drew each seed mark (performance.now), for the engine's current marks. */
+	private markSeen = new Map<number, number>();
+	private marksFor: readonly number[] | null = null;
 	private readonly capacity: number;
 	private landPath: Path2D | null = null;
 	private landFor: World | null = null;
@@ -94,7 +101,7 @@ export class Renderer {
 		this.buckets = new Int32Array(capacity * ORDER.length);
 		this.rings = new Int32Array(capacity * RING_BUCKETS);
 		this.top = new Int32Array(capacity * ORDER.length);
-		this.tinted = new Int32Array(capacity * RING_BUCKETS);
+		this.tinted = new Int32Array(capacity * ORDER.length * TINT_BUCKETS);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
@@ -142,7 +149,7 @@ export class Renderer {
 		// Look E (finer-counts §5). A dot some of whose people are infected (or, with none infected,
 		// dead) gets a ring, brighter the more of them there are; at half or more it is filled instead.
 		// The ring stays inside the dot's share of the space, so it never covers a neighbour; when
-		// that leaves under a device pixel, the dot itself shows the ring colour, dimmed by level.
+		// that leaves under a device pixel, the dot's colour is tinted toward the ring colour by the share.
 		const dpr = ctx.getTransform().a || 1;
 		const rw = ringWidth(spacing * s, size, dpr);
 		const tint = rw === 0;
@@ -172,7 +179,8 @@ export class Renderer {
 			}
 			const rb = ring * RING_LEVELS + agents.ringLevel[i];
 			if (tint) {
-				this.tinted[rb * cap + this.tintLen[rb]++] = i;
+				const tb = (b * RINGS.length + ring) * TINT_STEPS + agents.tintStep[i];
+				this.tinted[tb * cap + this.tintLen[tb]++] = i;
 			} else {
 				this.rings[rb * cap + this.ringLen[rb]++] = i;
 				this.top[b * cap + this.topLen[b]++] = i;
@@ -240,31 +248,47 @@ export class Renderer {
 		this.drawSeedMarks(ctx, camera, agents, routes, seedMarks, size);
 	}
 
-	/** A one-off ring above everything around each just-seeded dot, so one case can always be found. */
+	/**
+	 * A ring above everything around each seeded dot: bright at first, then a thin dim outline for as
+	 * long as the dot holds anyone infected. The clock is the renderer's, from when it first drew the
+	 * mark, so the engine stays free of real time.
+	 */
 	private drawSeedMarks(
 		ctx: CanvasRenderingContext2D,
 		camera: Camera,
 		agents: Agents,
 		routes: readonly Route[],
-		marks: Scene['seedMarks'],
+		marks: readonly number[],
 		size: number
 	): void {
+		// A new run brings a new array of marks.
+		if (marks !== this.marksFor) {
+			this.marksFor = marks;
+			this.markSeen.clear();
+		}
 		if (marks.length === 0) return;
 		const now = performance.now();
 		const s = camera.scale;
 		const r = Math.max(7, size * 2.5);
-		ctx.lineWidth = 2;
-		for (const m of marks) {
-			const age = now - m.at;
-			if (age < 0 || age > SEED_SHOW + SEED_FADE) continue;
-			const route = agents.route[m.dot];
+		for (let k = 0; k < marks.length; k++) {
+			const dot = marks[k];
+			const route = agents.route[dot];
 			if (route >= 0 && routes[route].kind === 'air') continue;
-			const alpha = age < SEED_SHOW ? 1 : 1 - (age - SEED_SHOW) / SEED_FADE;
-			const sx = (agents.x[m.dot] - camera.x) * s;
-			const sy = (agents.y[m.dot] - camera.y) * s;
+			let seen = this.markSeen.get(dot);
+			if (seen === undefined) this.markSeen.set(dot, (seen = now));
+			const age = now - seen;
+			const fading = age < SEED_SHOW ? 1 : Math.max(0, 1 - (age - SEED_SHOW) / SEED_FADE);
+			const infected =
+				agents.ring[dot] === State.SILENT ||
+				agents.ring[dot] === State.SYMPTOMATIC ||
+				agents.shown[dot] === State.SILENT ||
+				agents.shown[dot] === State.SYMPTOMATIC;
+			const alpha = Math.max(fading, infected ? SEED_STAY : 0);
+			if (alpha <= 0) continue;
+			ctx.lineWidth = fading > 0 ? 2 : 1;
 			ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
 			ctx.beginPath();
-			ctx.arc(sx, sy, r, 0, Math.PI * 2);
+			ctx.arc((agents.x[dot] - camera.x) * s, (agents.y[dot] - camera.y) * s, r, 0, Math.PI * 2);
 			ctx.stroke();
 		}
 	}

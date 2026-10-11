@@ -1,40 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { RING_LEVELS, lookOf, ringWidth } from '../../src/lib/sim/look';
+import { RING_LEVELS, TINT, TINT_STEPS, lookOf, ringWidth } from '../../src/lib/sim/look';
 import { State } from '../../src/lib/sim/types';
 
 const NONE = State.SUSCEPTIBLE;
 
 describe('look E', () => {
 	it('shows nothing extra for a dot with nobody infected or dead (k = 0)', () => {
-		expect(lookOf(100, 0, 0, 0, 0)).toEqual({ fill: NONE, ring: NONE, level: 0 });
-		expect(lookOf(100, 0, 0, 0, 30)).toEqual({ fill: NONE, ring: NONE, level: 0 });
+		expect(lookOf(100, 0, 0, 0, 0)).toMatchObject({ fill: NONE, ring: NONE, level: 0 });
+		expect(lookOf(100, 0, 0, 0, 30)).toMatchObject({ fill: NONE, ring: NONE, level: 0 });
 	});
 
 	it('rings one infected person at the lowest level, and fills at half the dot', () => {
-		expect(lookOf(100, 0, 0, 1, 0)).toEqual({ fill: NONE, ring: State.SILENT, level: 0 });
-		expect(lookOf(100, 0, 1, 0, 0)).toEqual({ fill: NONE, ring: State.SYMPTOMATIC, level: 0 });
+		expect(lookOf(100, 0, 0, 1, 0)).toMatchObject({ fill: NONE, ring: State.SILENT, level: 0 });
+		expect(lookOf(100, 0, 1, 0, 0)).toMatchObject({ fill: NONE, ring: State.SYMPTOMATIC, level: 0 });
 		expect(lookOf(100, 0, 49, 0, 0).level).toBe(RING_LEVELS - 1);
 		// Silent and ill count together: 30 + 20 is half.
-		expect(lookOf(100, 0, 20, 30, 0)).toEqual({ fill: State.SILENT, ring: NONE, level: 0 });
+		expect(lookOf(100, 0, 20, 30, 0)).toMatchObject({ fill: State.SILENT, ring: NONE, level: 0 });
 		expect(lookOf(100, 0, 25, 25, 0).fill).toBe(State.SYMPTOMATIC);
 	});
 
 	it('rings a dot filled as recovered when some of its people are infected', () => {
-		expect(lookOf(100, 0, 3, 0, 60)).toEqual({ fill: State.RECOVERED, ring: State.SYMPTOMATIC, level: 1 });
+		expect(lookOf(100, 0, 3, 0, 60)).toMatchObject({
+			fill: State.RECOVERED,
+			ring: State.SYMPTOMATIC,
+			level: 1
+		});
 	});
 
 	it('rings a dot with both dead and infected people in the infected colour, and grey only with none infected', () => {
 		expect(lookOf(100, 10, 0, 2, 0).ring).toBe(State.SILENT);
 		expect(lookOf(100, 10, 0, 0, 0).ring).toBe(State.DECEASED);
 		// Half dead fills it dead, with no ring, whoever else is infected.
-		expect(lookOf(100, 50, 5, 0, 0)).toEqual({ fill: State.DECEASED, ring: NONE, level: 0 });
+		expect(lookOf(100, 50, 5, 0, 0)).toMatchObject({ fill: State.DECEASED, ring: NONE, level: 0 });
 	});
 
 	it('works for one person per dot: that person fills it', () => {
-		expect(lookOf(1, 0, 0, 1, 0)).toEqual({ fill: State.SILENT, ring: NONE, level: 0 });
+		expect(lookOf(1, 0, 0, 1, 0)).toMatchObject({ fill: State.SILENT, ring: NONE, level: 0 });
 		expect(lookOf(1, 1, 0, 0, 0).fill).toBe(State.DECEASED);
 		expect(lookOf(1, 0, 0, 0, 1).fill).toBe(State.RECOVERED);
-		expect(lookOf(1, 0, 0, 0, 0)).toEqual({ fill: NONE, ring: NONE, level: 0 });
+		expect(lookOf(1, 0, 0, 0, 0)).toMatchObject({ fill: NONE, ring: NONE, level: 0 });
 	});
 
 	it('scales the levels to the dot size when it is not 100 people', () => {
@@ -51,6 +55,19 @@ describe('look E', () => {
 				last = level;
 			}
 		}
+	});
+
+	it('tints by the share of the dot, in even steps up to half', () => {
+		expect(lookOf(100, 0, 1, 0, 0).tint).toBe(0);
+		expect(lookOf(100, 0, 8, 0, 0).tint).toBe(0);
+		expect(lookOf(100, 0, 9, 0, 0).tint).toBe(1);
+		expect(lookOf(100, 0, 49, 0, 0).tint).toBe(TINT_STEPS - 1);
+		expect(lookOf(1000, 0, 1, 0, 0).tint).toBe(0);
+		expect(lookOf(10, 0, 4, 0, 0).tint).toBe(4);
+		// The faintest tint marks one case lightly; the strongest stays well short of a solid fill.
+		expect(TINT[0]).toBeGreaterThan(0);
+		expect(TINT[0]).toBeLessThan(0.2);
+		expect(TINT[TINT_STEPS - 1]).toBeLessThanOrEqual(0.8);
 	});
 
 	it('draws a ring only when it fits between neighbours and is a device pixel wide, else tints', () => {

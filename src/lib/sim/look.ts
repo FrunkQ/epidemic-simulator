@@ -2,8 +2,13 @@ import type { Agents } from './agents';
 import type { People } from './people';
 import { State } from './types';
 
-/** Ring (or tint) strength steps for look E: few, so the renderer draws each in one batch. */
+/** Ring brightness steps for look E: few, so the renderer draws each in one batch. */
 export const RING_LEVELS = 4;
+/** Tint steps, by the share of the dot's people, up to just under half (where it fills). */
+export const TINT_STEPS = 6;
+/** The faintest tint (one case) and the strongest (just under half), as shares of the way to the ring colour. */
+const TINT_FLOOR = 0.12;
+const TINT_TOP = 0.8;
 
 /** How one dot looks: its fill, and the ring (or tint) marking some of its people. */
 export interface Look {
@@ -13,6 +18,8 @@ export interface Look {
 	ring: number;
 	/** 0 to RING_LEVELS - 1: how many of the dot's people the ring stands for, on a log scale up to half the dot. */
 	level: number;
+	/** 0 to TINT_STEPS - 1: the same people as a share of the dot, in even steps up to half, for the tint. */
+	tint: number;
 }
 
 /**
@@ -22,6 +29,13 @@ export interface Look {
  * infected colour when anyone is infected, else in grey when anyone has died.
  */
 export function lookOf(n: number, dead: number, ill: number, silent: number, recovered: number): Look {
+	const out = { fill: 0, ring: 0, level: 0, tint: 0 };
+	writeLook(n, dead, ill, silent, recovered, out);
+	return out;
+}
+
+/** lookOf without allocating: the engine calls it for every active dot every tick. */
+function writeLook(n: number, dead: number, ill: number, silent: number, recovered: number, out: Look): void {
 	const infected = ill + silent;
 	const infectedState = ill >= silent ? State.SYMPTOMATIC : State.SILENT;
 	let fill: number = State.SUSCEPTIBLE;
@@ -39,25 +53,42 @@ export function lookOf(n: number, dead: number, ill: number, silent: number, rec
 			count = dead;
 		}
 	}
-	const level =
-		count === 0
-			? 0
-			: Math.min(RING_LEVELS - 1, Math.floor((RING_LEVELS * Math.log1p(count)) / Math.log1p(n / 2)));
-	return { fill, ring, level };
+	out.fill = fill;
+	out.ring = ring;
+	out.level = count === 0 ? 0 : levelsFor(n)[Math.min(count, n)];
+	out.tint = count === 0 ? 0 : Math.min(TINT_STEPS - 1, Math.floor((2 * TINT_STEPS * count) / n));
 }
+
+/** Ring level by people counted, for dots of n people (worked out once per dot size). */
+let levelsN = -1;
+let levels = new Uint8Array(0);
+function levelsFor(n: number): Uint8Array {
+	if (n !== levelsN) {
+		levelsN = n;
+		levels = new Uint8Array(n + 1);
+		const top = Math.log1p(n / 2);
+		for (let k = 1; k <= n; k++)
+			levels[k] = Math.min(RING_LEVELS - 1, Math.floor((RING_LEVELS * Math.log1p(k)) / top));
+	}
+	return levels;
+}
+
+const scratch: Look = { fill: 0, ring: 0, level: 0, tint: 0 };
 
 /** Sets agents.shown, ring and ringLevel for dot i from its people. */
 export function setLook(agents: Agents, p: People, i: number): void {
-	const l = lookOf(
+	writeLook(
 		p.perDot,
 		p.dead[i],
 		p.ill[i],
 		p.silentSymptomatic[i] + p.silentAsymptomatic[i],
-		p.recovered[i]
+		p.recovered[i],
+		scratch
 	);
-	agents.shown[i] = l.fill;
-	agents.ring[i] = l.ring;
-	agents.ringLevel[i] = l.level;
+	agents.shown[i] = scratch.fill;
+	agents.ring[i] = scratch.ring;
+	agents.ringLevel[i] = scratch.level;
+	agents.tintStep[i] = scratch.tint;
 }
 
 /**
@@ -68,12 +99,17 @@ export function setLook(agents: Agents, p: People, i: number): void {
  */
 export function ringWidth(spacing: number, size: number, dpr: number): number {
 	const room = spacing / 2 - size / 2;
-	const w = Math.min(Math.max(1, size * 0.4), room);
+	// A ring a little under half the dot's width, so its area stays near the dot's own.
+	const w = Math.min(size * 0.4, room);
 	return w * dpr >= 1 ? w : 0;
 }
 
 /**
- * A tinted dot's colour per level: this share of the way from the dark disc to the ring colour.
- * The lowest stands apart from every plain dot colour; the top stays short of a solid fill.
+ * How far a tinted dot's own colour moves toward the ring colour, per tint step: it follows the
+ * share of its people (finer-counts §5, "follow the share"), from a faint mark for one case to
+ * well short of the solid fill that half or more of them bring.
  */
-export const TINT = [0.45, 0.55, 0.65, 0.75] as const;
+export const TINT = Array.from(
+	{ length: TINT_STEPS },
+	(_, k) => TINT_FLOOR + ((TINT_TOP - TINT_FLOOR) * k) / (TINT_STEPS - 1)
+);

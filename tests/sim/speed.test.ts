@@ -25,18 +25,31 @@ describe('speed', () => {
 		expect(perTick).toBeLessThan(4);
 	});
 
-	it('steps 5,000 dots mid-outbreak in under 4 ms on average', () => {
+	it('steps 5,000 dots in under 4 ms on average through the busiest 5 days of a COVID-19 run', () => {
+		// COVID-19 peaks with every dot holding someone infected, the slowest case on people counts.
 		const sim = createSimulation(singleCity({ population: 500_000 }), {
 			seed: 3,
-			diseaseId: 'measles'
+			diseaseId: 'covid19'
 		});
 		expect(sim.agents.activeCount).toBe(5000);
-		sim.send({ type: 'seed', region: 0, count: 20 });
-		sim.step(12 * TICKS_PER_DAY);
-		const infectious = sim.snapshot().totals;
-		expect(infectious.silent + infectious.symptomatic).toBeGreaterThan(100);
-		const perTick = timeStep(sim);
-		console.log(`step(1) with 5,000 dots: ${perTick.toFixed(3)} ms`);
-		expect(perTick).toBeLessThan(4);
+		sim.send({ type: 'seed', region: 0, count: 1 });
+		const window = 5 * TICKS_PER_DAY;
+		let worst = 0;
+		let busiest = 0;
+		let peakActive = 0;
+		for (let day = 0; day < 150; day += 5) {
+			const t0 = performance.now();
+			sim.step(window);
+			const perTick = (performance.now() - t0) / window;
+			if (perTick > worst) {
+				worst = perTick;
+				busiest = day;
+			}
+			peakActive = Math.max(peakActive, sim.people.activeCount);
+		}
+		console.log(`busiest 5 days of COVID-19 (from day ${busiest}): ${worst.toFixed(3)} ms per step`);
+		// The run did reach a peak where nearly every dot holds someone infected.
+		expect(peakActive).toBeGreaterThan(4500);
+		expect(worst).toBeLessThan(4);
 	});
 });

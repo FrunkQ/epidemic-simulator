@@ -121,9 +121,21 @@ describe('every person is counted once, travellers included', () => {
 		let diedOnRoute = 0;
 		const counted = new Uint8Array(a.capacity);
 		const origins = new Set<number>();
+		// Dots mostly dead on the way, and the tick they were first seen so: they still finish the trip.
+		const deadOnRoute = new Map<number, number>();
+		const longestTrip = Math.max(...Object.values(TRAVEL_DAYS)) * TICKS_PER_DAY;
+		const stranded = new Set<number>();
+		let tick = 0;
 		for (let day = 1; day <= 150; day++) {
 			for (let t = 0; t < TICKS_PER_DAY; t++) {
 				sim.step(1);
+				tick++;
+				for (let i = 0; i < a.activeCount; i++) {
+					if (a.route[i] >= 0 && a.dead[i] === 1) {
+						if (!deadOnRoute.has(i)) deadOnRoute.set(i, tick);
+						if (tick - deadOnRoute.get(i)! > longestTrip) stranded.add(i);
+					} else if (a.route[i] < 0) deadOnRoute.delete(i);
+				}
 				for (let i = 0; i < a.activeCount; i++)
 					if (a.route[i] >= 0 && p.dead[i] > 0 && !counted[i]) {
 						counted[i] = 1;
@@ -140,6 +152,7 @@ describe('every person is counted once, travellers included', () => {
 				t.unprotected + t.full + t.partial + t.silent + t.symptomatic + t.recovered + t.deceased;
 			expect(everyone, `day ${day}`).toBe(a.activeCount * p.perDot);
 		}
+		expect([...stranded], 'mostly-dead dots stopped on the way').toEqual([]);
 		// The scenario that lost deaths before: some people did die on the way.
 		expect(diedOnRoute).toBeGreaterThan(0);
 		// Their deaths are counted in the region they set out from (6.6).
@@ -148,6 +161,50 @@ describe('every person is counted once, travellers included', () => {
 			expect(r).toBeGreaterThanOrEqual(0);
 			expect(snap.regions[r].deaths).toBeGreaterThan(0);
 		}
+	});
+});
+
+describe('boarding swaps keep every dot whole', () => {
+	it('keeps every dot at exactly its people, none negative, every tick of a busy travel run', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 3);
+		}
+		const sim = createSimulation(scenario, { seed: 2, diseaseId: 'measles' });
+		sim.send({ type: 'seed', region: 1, count: 20 });
+		const a = sim.agents;
+		const p = sim.people;
+		const N = p.perDot;
+		let swaps = 0;
+		const ready = sim.planes.readyToBoard;
+		sim.planes.readyToBoard = (dot) => {
+			if (p.ill[dot] > 0) swaps++;
+			return ready(dot);
+		};
+		const bad: string[] = [];
+		for (let tick = 0; tick < 60 * TICKS_PER_DAY && bad.length < 5; tick++) {
+			sim.step(1);
+			for (let i = 0; i < a.activeCount; i++) {
+				const parts = [
+					p.susceptible[i],
+					p.susceptibleAgain[i],
+					p.vaccineImmune[i],
+					p.recovered[i],
+					p.dead[i],
+					p.silentSymptomatic[i],
+					p.silentAsymptomatic[i],
+					p.ill[i]
+				];
+				const sum = parts.reduce((x, y) => x + y, 0);
+				if (sum !== N || parts.some((v) => v < 0) || p.latent[i] < 0)
+					bad.push(`tick ${tick}, dot ${i}: ${parts.join(' ')} (latent ${p.latent[i]})`);
+			}
+		}
+		expect(bad).toEqual([]);
+		// The run did swap ill people out of boarding dots.
+		expect(swaps).toBeGreaterThan(50);
 	});
 });
 

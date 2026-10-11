@@ -46,6 +46,8 @@ export class Agents {
 	readonly shown: Uint8Array;
 	readonly ring: Uint8Array;
 	readonly ringLevel: Uint8Array;
+	/** The same people as an even step of the dot's share, 0 to TINT_STEPS - 1, for a dot drawn tinted. */
+	readonly tintStep: Uint8Array;
 
 	constructor(capacity = MAX_AGENTS) {
 		this.capacity = capacity;
@@ -69,6 +71,7 @@ export class Agents {
 		this.shown = new Uint8Array(capacity);
 		this.ring = new Uint8Array(capacity);
 		this.ringLevel = new Uint8Array(capacity);
+		this.tintStep = new Uint8Array(capacity);
 	}
 
 	/** The state a dot is shown in (see `shown`). */
@@ -94,5 +97,6 @@ export class Agents {
 		this.shown.fill(0);
 		this.ring.fill(0);
 		this.ringLevel.fill(0);
+		this.tintStep.fill(0);
 	}
 }

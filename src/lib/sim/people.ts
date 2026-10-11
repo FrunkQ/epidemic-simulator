@@ -44,7 +44,11 @@ export class People {
 
 	/** Never infected, or vaccine protection waned: catchable, with the dot's vaccine protection against severe illness. */
 	readonly susceptible: Int32Array;
-	/** Had it before, immunity waned: catchable, with protection after infection (0 unless sourced). */
+	/**
+	 * Had it before, immunity waned: catchable again. Kept apart from people never infected so "ever
+	 * infected" counts each person once; only where an after-infection figure is sourced do they also
+	 * get that protection (otherwise they fall ill like anyone).
+	 */
 	readonly susceptibleAgain: Int32Array;
 	/** The vaccine worked: can't catch it until it wanes. */
 	readonly vaccineImmune: Int32Array;
@@ -167,9 +171,16 @@ export class People {
 		return silent + this.ill[i];
 	}
 
-	/** Living people who aren't ill. */
+	/** Living people who aren't ill, counted directly (mid-swap a dot briefly holds fewer than perDot). */
 	notIll(i: number): number {
-		return this.perDot - this.dead[i] - this.ill[i];
+		return (
+			this.susceptible[i] +
+			this.susceptibleAgain[i] +
+			this.vaccineImmune[i] +
+			this.recovered[i] +
+			this.silentSymptomatic[i] +
+			this.silentAsymptomatic[i]
+		);
 	}
 
 	private markChanged(i: number): void {
@@ -190,9 +201,14 @@ export class People {
 		this.active[this.activeCount++] = i;
 	}
 
+	/**
+	 * A ring-buffer entry: dot i's people infected `age` ticks before `tick`. Laid out slot by slot
+	 * (every dot's entry for one tick of the clock side by side), so the end-of-tick pass over the
+	 * active dots reads a few contiguous runs instead of one scattered entry per dot.
+	 */
 	private at(i: number, tick: number, age: number): number {
 		const L = this.length;
-		return i * L + ((((tick - age) % L) + L) % L);
+		return ((((tick - age) % L) + L) % L) * this.capacity + i;
 	}
 
 	/**
@@ -267,7 +283,6 @@ export class People {
 		const again = this.againBuf;
 		const asym = this.asymBuf;
 		// Every dot's clock is at the same place this tick, so the slots are worked out once.
-		const L = this.length;
 		const slot = (age: number) => this.at(0, tick, age);
 		const latSym = lat > 0 && S > 0 ? slot(Math.min(lat, S) - 1) : -1;
 		const latAsym = lat > 0 && asym ? slot(Math.min(lat, S + I) - 1) : -1;
@@ -275,14 +290,13 @@ export class People {
 		const finish = slot(S + I - 1);
 		for (let k = this.activeCount - 1; k >= 0; k--) {
 			const i = this.active[k];
-			const row = i * L;
 			if (latSym >= 0) {
-				const b = row + latSym;
+				const b = latSym + i;
 				this.latent[i] -= sym[b] + (again ? again[b] : 0);
 			}
-			if (latAsym >= 0) this.latent[i] -= asym![row + latAsym];
+			if (latAsym >= 0) this.latent[i] -= asym![latAsym + i];
 			if (onset >= 0) {
-				const b = row + onset;
+				const b = onset + i;
 				const first = sym[b];
 				const twice = again ? again[b] : 0;
 				if (first + twice > 0) {
@@ -291,7 +305,7 @@ export class People {
 					this.illAgain[i] += twice;
 				}
 			}
-			const end = row + finish;
+			const end = finish + i;
 			const first = sym[end];
 			const twice = again ? again[end] : 0;
 			const quiet = asym ? asym[end] : 0;
@@ -331,8 +345,8 @@ export class People {
 			}
 			while (this.nextRecoveredWane[i] <= tick) {
 				this.recovered[i]--;
-				if (this.againBuf) this.susceptibleAgain[i]++;
-				else this.susceptible[i]++;
+				// Kept apart from people never infected, so "ever infected" counts each person once.
+				this.susceptibleAgain[i]++;
 				this.markChanged(i);
 				this.scheduleRecoveredWane(i, this.nextRecoveredWane[i], rng);
 			}
