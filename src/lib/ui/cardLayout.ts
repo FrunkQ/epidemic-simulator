@@ -241,6 +241,26 @@ export function pickFrame<T>(tries: T[], layoutAt: (t: T) => Layout): T {
 
 /** The usual margin around the cities: framing never zooms in closer than this. */
 export const FRAME_MARGIN = 150;
+/**
+ * Cards dock in the strip below the map when the usual frame would draw the cities smaller than
+ * this share of the scale that fills the stage (11 Oct): a map a few dozen pixels across isn't
+ * usable. Measured on the stages: 1280x720 (348 px) frames at 0.14, 1240x720 (316 px) at 0.05.
+ */
+export const DOCK_SHARE = 0.1;
+
+/** The scale at which cities spanning `spanX` by `spanY` would fill a `width` by `height` stage. */
+export function fullScale(width: number, height: number, spanX: number, spanY: number): number {
+	return Math.min(width / Math.max(1, spanX), height / Math.max(1, spanY));
+}
+
+/** Whether the stage is too small for floating cards: the usual frame leaves the cities too small. */
+export function shouldDock(width: number, height: number, spanX: number, spanY: number): boolean {
+	const usual = Math.min(
+		(width - 2 * FRAME_MARGIN) / Math.max(1, spanX),
+		(height - 2 * FRAME_MARGIN) / Math.max(1, spanY)
+	);
+	return usual < DOCK_SHARE * fullScale(width, height, spanX, spanY);
+}
 /** Framing never zooms out below this share of the usual scale just to place the cards. */
 export const FRAME_FLOOR = 0.5;
 /** Other side and top margins tried when the usual frame leaves a card badly placed: this many of each. */

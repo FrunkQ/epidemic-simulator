@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+	DOCK_SHARE,
 	FRAME_FLOOR,
+	fullScale,
+	shouldDock,
 	discCover,
 	frameTries,
 	layoutCards,
@@ -145,6 +148,49 @@ describe('framing', () => {
 		const tries = frameTries(1024, 280, 300, 200);
 		expect(tries.length).toBeGreaterThan(0);
 		for (const t of tries) expect(t.scale).toBeGreaterThan(0);
+	});
+
+	// Stage sizes measured in the browser on #17 and #18 together (11 Oct), and the three start maps' spans.
+	const STAGES = [
+		[1400, 544],
+		[1366, 412],
+		[1280, 348],
+		[1920, 773]
+	];
+	const SPANS = [
+		[1071, 1071],
+		[1407, 783],
+		[927, 975]
+	];
+
+	it('keeps cards floating at the four target screens, with room to spare', () => {
+		for (const [w, h] of STAGES)
+			for (const [sx, sy] of SPANS) {
+				expect(shouldDock(w, h, sx, sy), `${w}x${h}`).toBe(false);
+				// The closest, 1280x720, frames at 0.14 of the full scale: well above the 0.1 line.
+				expect(frameTries(w, h, sx, sy)[0].scale).toBeGreaterThanOrEqual(
+					1.3 * DOCK_SHARE * fullScale(w, h, sx, sy)
+				);
+			}
+	});
+
+	it('docks the cards on a smaller stage: 1240x720, or a 600 px tall window', () => {
+		for (const [w, h] of [
+			[1240, 316],
+			[1280, 280]
+		])
+			for (const [sx, sy] of SPANS) expect(shouldDock(w, h, sx, sy), `${w}x${h}`).toBe(true);
+	});
+
+	it('never frames floating cards below a twentieth of the full scale', () => {
+		for (let h = 300; h <= 900; h += 20)
+			for (const w of [760, 1024, 1280, 1920])
+				for (const [sx, sy] of SPANS) {
+					if (shouldDock(w, h, sx, sy)) continue;
+					const full = fullScale(w, h, sx, sy);
+					for (const t of frameTries(w, h, sx, sy))
+						expect(t.scale, `${w}x${h}`).toBeGreaterThanOrEqual(FRAME_FLOOR * DOCK_SHARE * full - 1e-9);
+				}
 	});
 
 	it('takes the biggest clear frame, else the biggest with nothing covered, else the least covered', () => {

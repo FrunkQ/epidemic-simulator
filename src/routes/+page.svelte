@@ -15,6 +15,7 @@
 		offsetsOf,
 		openMaxHeight,
 		pickFrame,
+		shouldDock,
 		type Offset
 	} from '../lib/ui/cardLayout';
 	import Charts from '../lib/ui/Charts.svelte';
@@ -50,7 +51,14 @@
 	let size = $state({ width: 0, height: 0 });
 	/** Bumped whenever the camera moves, so cards follow their cities. */
 	let viewVersion = $state(0);
-	let compact = $derived(size.width < 760);
+	/**
+	 * Cards go in the strip below the map on a narrow screen, or on a stage too small to frame the
+	 * cities with floating cards around them, or when no frame keeps them off every city. Docked
+	 * that way, they float again once the window grows.
+	 */
+	let shortDock = $state(false);
+	let dockedAt = { width: 0, height: 0 };
+	let compact = $derived(size.width < 760 || shortDock);
 
 	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
 	let userMoved = false;
@@ -76,6 +84,19 @@
 		});
 		const { width, height } = size;
 		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
+		const dock = () => {
+			shortDock = true;
+			dockedAt = { width: window.innerWidth, height: window.innerHeight };
+		};
+		// Docked for a small stage: try floating cards again once the window is bigger than it was.
+		if (shortDock && (window.innerWidth > dockedAt.width || window.innerHeight > dockedAt.height)) {
+			shortDock = false;
+			return; // the strip goes, the stage grows, and its resize frames again
+		}
+		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
+			dock();
+			return; // the strip comes, the stage resizes, and its resize frames again
+		}
 		if (compact) {
 			fit(40, 40);
 			viewVersion++;
@@ -90,6 +111,11 @@
 			return layoutCards(discsOnScreen(), layoutSizes(), size);
 		});
 		fit(best.mx, best.my);
+		// A safety net: no frame keeps the cards off the cities.
+		if (layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
+			dock();
+			return;
+		}
 		lastPositions = undefined;
 		viewVersion++;
 	}
