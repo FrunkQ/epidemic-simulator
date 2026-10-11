@@ -149,6 +149,8 @@ describe('framing', () => {
 	it('takes the biggest clear frame, else the biggest with nothing covered, else the least covered', () => {
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 0)][t])).toBe(2);
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 2)][t])).toBe(1);
+		// The first with nothing covered wins even when a later one has fewer misplaced cards.
+		expect(pickFrame([0, 1], (t) => [layout(0, 2), layout(0, 1)][t])).toBe(0);
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(10, 2), layout(10, 1)][t])).toBe(2);
 	});
 });

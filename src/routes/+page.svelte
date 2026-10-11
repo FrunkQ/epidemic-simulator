@@ -168,9 +168,12 @@
 		await tick();
 		// Wait for the next paint too: some of a card's lines follow the new run's first telemetry.
 		await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+		const old = closedSizes;
 		closedSizes = scenario.regions.map((_, i) => {
 			const el = cardElements[i];
-			if (!el || cardOpen[i] || el.offsetWidth > CARD_W) return undefined;
+			// An open card can't be measured closed: keep its last closed size until it closes.
+			if (cardOpen[i]) return old[i];
+			if (!el || el.offsetWidth > CARD_W) return undefined;
 			return { w: el.offsetWidth, h: el.offsetHeight };
 		});
 	}
