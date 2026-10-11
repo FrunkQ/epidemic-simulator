@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { MAX_TICKS_PER_FRAME, TICKS_PER_SECOND } from '../sim/constants';
+	import { MAX_TICKS_PER_FRAME, TICKS_PER_SECOND, TICK_BUDGET_MS } from '../sim/constants';
 	import type { Simulation } from '../sim/engine';
 	import type { Telemetry } from '../sim/types';
 
@@ -112,8 +112,14 @@
 			let due = Math.floor(carry);
 			carry -= due;
 			if (due > MAX_TICKS_PER_FRAME) due = MAX_TICKS_PER_FRAME;
-			if (due > 0) sim.step(due);
-			sim.render(ctx, { width, height }, now);
+			// One tick at a time until the budget is spent; the ticks left over are dropped.
+			const start = performance.now();
+			for (let t = 0; t < due; t++) {
+				sim.step(1);
+				if (performance.now() - start >= TICK_BUDGET_MS) break;
+			}
+			// Part way to the next tick: the renderer glides dots between their last two positions.
+			sim.render(ctx, { width, height }, now, carry);
 			if (now - lastPublish >= 100) {
 				lastPublish = now;
 				ontelemetry(sim.snapshot());
