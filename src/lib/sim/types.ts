@@ -336,7 +336,7 @@ export interface Subsystems {
 	interventions: boolean;
 }
 
-export type Speed = 0 | 0.5 | 1 | 2 | 4;
+export type Speed = 0 | 0.25 | 0.5 | 1 | 2 | 4 | 8;
 
 export type Command =
 	| { type: 'lockdown'; region: number; on: boolean }

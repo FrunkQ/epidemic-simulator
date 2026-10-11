@@ -24,8 +24,8 @@ Owner: the project coordinator. Every build thread follows this file. Where it c
 8. Two modes. **Setup**: edit populations, map, disease, vaccination, travel. **Run**: the epidemic plays. Any Setup change restarts the run from day 0. Interventions (lockdown, flights, borders, testing, speed) are live during Run.
 
 ## 2. Time
-- `TICKS_PER_DAY = 30`. Normal speed is 60 ticks per real second (2 sim days per second). Speed control: pause, 0.5x, 1x, 2x, 4x.
-- Loop: one `requestAnimationFrame`. An accumulator turns elapsed real time into ticks due; run at most 8 ticks per frame (drop the rest); render once per frame.
+- `TICKS_PER_DAY = 30`. Normal speed is 60 ticks per real second (2 sim days per second). Speed control: pause, then 0.25x to 8x in doublings (ui/speeds.ts SPEEDS, each button's tooltip giving its days per second). A visit starts at the slowest, DEFAULT_SPEED (11 Oct: at Normal things looked too fast to follow).
+- Loop: one `requestAnimationFrame`. An accumulator turns elapsed real time into ticks due; run them one at a time, at most MAX_TICKS_PER_FRAME and only while TICK_BUDGET_MS lasts (drop the rest), so the fastest speed runs as fast as the device allows without stalling frames; render once per frame. Below one tick a frame, dots glide: the renderer draws them part way between their last two positions by the accumulator's fraction, except a dot that jumped (boarding or landing); a restart starts the glide afresh, even at the same tick. Pacing and gliding stay out of the engine's tick.
 - Disease durations come from the research sheet. Rough scale: measles contagious about 4 days before the rash and ill about 7; flu silent 1 to 2 days, ill about 5; polio sheds for weeks.
 - Travel times are set in days on each route: air 0.5 to 1 day; ferry and road long enough that a typical measles case burns out on the way (longer than silent + ill days, so 14 or more). Speed is derived: route length / (travelDays x TICKS_PER_DAY).
 
@@ -268,7 +268,7 @@ type Command =
   | { type: 'flights'; on: boolean }
   | { type: 'route'; route: number; open: boolean }
   | { type: 'massTest'; region: number }
-  | { type: 'speed'; value: 0 | 0.5 | 1 | 2 | 4 }
+  | { type: 'speed'; value: 0 | 0.25 | 0.5 | 1 | 2 | 4 | 8 }
   | { type: 'seed'; region: number; count: number }   // count infected people, each in their own dot
   | { type: 'policy'; region: number; policy: HealthPolicy };   // live: travel and beds
 ```

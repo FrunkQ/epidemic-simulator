@@ -620,8 +620,11 @@ export class Simulation {
 		return this.counters.regionHistory(region);
 	}
 
-	/** Draws the map; `now` is the frame's time (ms), which only the seed marker's fade uses. */
-	render(ctx: CanvasRenderingContext2D, viewport: Viewport, now: number): void {
+	/**
+	 * Draws the map; `now` is the frame's time (ms), which only the seed marker's fade uses, and
+	 * `alpha` how far the clock is towards the next tick (Scene.alpha), for gliding.
+	 */
+	render(ctx: CanvasRenderingContext2D, viewport: Viewport, now: number, alpha = 1): void {
 		this.renderer.draw(ctx, viewport, this.view, {
 			agents: this.agents,
 			regions: this.scenario.regions,
@@ -633,7 +636,8 @@ export class Simulation {
 			spacing: this.dotSpacing(),
 			seedMarks: this.seedMarks,
 			seedMarkTotal: this.seedMarkTotal,
-			now
+			now,
+			alpha
 		});
 	}
 

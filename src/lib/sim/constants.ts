@@ -2,8 +2,16 @@
 export const TICKS_PER_DAY = 30;
 /** Ticks per real second at 1x speed (2 sim days per second). */
 export const TICKS_PER_SECOND = 60;
-/** Most ticks the loop will run in one animation frame; the rest are dropped. */
-export const MAX_TICKS_PER_FRAME = 8;
+/**
+ * Most ticks the loop will run in one animation frame; the rest are dropped. 16 lets the fastest
+ * speed (8 ticks a frame at 60 frames a second) keep up on a 30 Hz screen.
+ */
+export const MAX_TICKS_PER_FRAME = 16;
+/**
+ * Milliseconds of ticks the loop runs in one frame before it stops and draws: the fastest speeds run
+ * as fast as fits instead of stalling frames. The rest of the frame (16.7 ms at 60 Hz) is drawing.
+ */
+export const TICK_BUDGET_MS = 8;
 
 /** Fixed size of the dot pool. */
 export const MAX_AGENTS = 6000;

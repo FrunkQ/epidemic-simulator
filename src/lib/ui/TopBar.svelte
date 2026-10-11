@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DISEASES, DISEASE_GROUPS } from '../config/diseases';
 	import type { DiseaseId, Speed } from '../sim/types';
+	import { SPEEDS, speedTitle } from './speeds';
 
 	interface Props {
 		diseaseId: DiseaseId;
@@ -15,13 +16,6 @@
 
 	/** The picker's headings, in DISEASE_GROUPS order. */
 	const groups = Object.entries(DISEASE_GROUPS);
-	const speeds: { value: Speed; label: string }[] = [
-		{ value: 0, label: 'Paused' },
-		{ value: 0.5, label: 'Slow' },
-		{ value: 1, label: 'Normal' },
-		{ value: 2, label: 'Fast' },
-		{ value: 4, label: 'Very fast' }
-	];
 </script>
 
 <header class="bar">
@@ -40,8 +34,14 @@
 	</label>
 	<p class="blurb">{DISEASES[diseaseId].blurb}</p>
 	<div class="speed" role="group" aria-label="Speed">
-		{#each speeds as s (s.value)}
-			<button class:active={speed === s.value} onclick={() => onspeed(s.value)}>{s.label}</button>
+		{#each SPEEDS as s (s.value)}
+			<button
+				class:active={speed === s.value}
+				aria-label={s.value === 0 ? s.label : `${s.label} (${s.short})`}
+				aria-pressed={speed === s.value}
+				title={speedTitle(s.value, s.label)}
+				onclick={() => onspeed(s.value)}>{s.short}</button
+			>
 		{/each}
 	</div>
 	<span class="day">Day {day}</span>
@@ -79,6 +79,7 @@
 		display: flex;
 	}
 	.speed button {
+		min-width: 32px;
 		border-radius: 0;
 	}
 	.speed button:first-child {
@@ -87,8 +88,11 @@
 	.speed button:last-child {
 		border-radius: 0 6px 6px 0;
 	}
+	/* The chosen speed stands out at 6.3:1 against the others (WCAG asks 3:1), its text at 9.5:1. */
 	.speed .active {
-		background: #3a6590;
+		background: #9cc3ea;
+		color: #0b1a2e;
+		font-weight: 600;
 	}
 	.day {
 		font-variant-numeric: tabular-nums;

@@ -22,7 +22,16 @@ export interface Scene {
 	seedMarkTotal: number;
 	/** The frame's time (ms, from requestAnimationFrame), for the seed marker's fade. */
 	now: number;
+	/**
+	 * How far the clock is towards the next tick, 0 to 1, from the canvas. When the map has moved
+	 * on by one tick since the last frame, dots are drawn that far between their last two
+	 * positions, so slow speeds glide instead of stepping. 1 draws the latest tick.
+	 */
+	alpha: number;
 }
+
+/** A dot that moved further than this in one tick (world units) boarded or landed: drawn there at once. Wandering and road travel move under 2. */
+const GLIDE_LIMIT = 4;
 
 export const MAP_COLOURS = {
 	sea: '#0b1a2e',
@@ -103,9 +112,32 @@ export class Renderer {
 	private readonly capacity: number;
 	private landPath: Path2D | null = null;
 	private landFor: World | null = null;
+	/** Positions at the latest tick drawn (last) and the tick before it (from), for gliding. */
+	private readonly lastX: Float32Array;
+	private readonly lastY: Float32Array;
+	private readonly fromX: Float32Array;
+	private readonly fromY: Float32Array;
+	/** Where each dot is drawn this frame, in world units. */
+	private readonly atX: Float32Array;
+	private readonly atY: Float32Array;
+	private readonly planeLast = new Float32Array(MAX_PLANES * 3);
+	private readonly planeFrom = new Float32Array(MAX_PLANES * 3);
+	/** The tick last drawn: NaN before the first, so a new run never glides from an old one. */
+	private lastTick = NaN;
+	/** The run the glide positions belong to: Scene.seedMarks is a new array after every setup. */
+	private glideRun: readonly number[] | null = null;
+	/** True when the map moved on by exactly one tick, so drawing glides between the two. */
+	private gliding = false;
+	private alpha = 1;
 
 	constructor(capacity: number) {
 		this.capacity = capacity;
+		this.lastX = new Float32Array(capacity);
+		this.lastY = new Float32Array(capacity);
+		this.fromX = new Float32Array(capacity);
+		this.fromY = new Float32Array(capacity);
+		this.atX = new Float32Array(capacity);
+		this.atY = new Float32Array(capacity);
 		this.order = new Int32Array(capacity);
 		this.orderStyle = new Uint8Array(capacity);
 		this.rings = new Int32Array(capacity * RING_BUCKETS);
@@ -115,6 +147,14 @@ export class Renderer {
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
 		const { agents, regions, radii, routes, transit, world, tick, spacing } = scene;
 		const { width, height } = viewport;
+		// A restart (even one landing on the same tick, while paused) starts the glide afresh.
+		if (scene.seedMarks !== this.glideRun) {
+			this.glideRun = scene.seedMarks;
+			this.lastTick = NaN;
+		}
+		this.place(agents, transit, tick, scene.alpha);
+		const ax = this.atX;
+		const ay = this.atY;
 		const s = camera.scale;
 		const ox = camera.x;
 		const oy = camera.y;
@@ -172,8 +212,8 @@ export class Renderer {
 			// Air passengers ride hidden inside their plane.
 			const route = agents.route[i];
 			if (route >= 0 && routes[route].kind === 'air') continue;
-			const sx = (agents.x[i] - ox) * s;
-			const sy = (agents.y[i] - oy) * s;
+			const sx = (ax[i] - ox) * s;
+			const sy = (ay[i] - oy) * s;
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const b = colourOf(agents, i);
 			let style = b;
@@ -199,7 +239,7 @@ export class Renderer {
 			ctx.beginPath();
 			for (let k = 0; k < len; k++) {
 				const i = list[from + k];
-				ctx.rect((agents.x[i] - ox) * s - h, (agents.y[i] - oy) * s - h, d, d);
+				ctx.rect((ax[i] - ox) * s - h, (ay[i] - oy) * s - h, d, d);
 			}
 			ctx.fill();
 		};
@@ -223,12 +263,12 @@ export class Renderer {
 				last = style;
 			}
 			const i = this.order[k];
-			ctx.fillRect((agents.x[i] - ox) * s - half, (agents.y[i] - oy) * s - half, d, d);
+			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, d, d);
 		}
 
 		// A faint pulsing ring around every dot filled as infected, only where it fits like a ring:
 		// where dots sit close, a pulse would cover many neighbours and paint the city red.
-		const pulse = 0.5 + 0.5 * Math.sin(tick * 0.2);
+		const pulse = 0.5 + 0.5 * Math.sin((this.gliding ? tick - 1 + scene.alpha : tick) * 0.2);
 		ctx.lineWidth = 1;
 		const showPulse = fits(spacing * s, size, size + 3 - half, dpr);
 		for (let k = 0; k < 2 && showPulse; k++) {
@@ -240,8 +280,8 @@ export class Renderer {
 			const rr = size + 1.5 + pulse * 1.5;
 			for (let j = 0; j < len; j++) {
 				const i = this.pulsing[k * cap + j];
-				const sx = (agents.x[i] - ox) * s;
-				const sy = (agents.y[i] - oy) * s;
+				const sx = (ax[i] - ox) * s;
+				const sy = (ay[i] - oy) * s;
 				ctx.moveTo(sx + rr, sy);
 				ctx.arc(sx, sy, rr, 0, Math.PI * 2);
 			}
@@ -301,9 +341,55 @@ export class Renderer {
 			ctx.lineWidth = fading > 0 ? 2 : 1;
 			ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
 			ctx.beginPath();
-			ctx.arc((agents.x[dot] - camera.x) * s, (agents.y[dot] - camera.y) * s, r, 0, Math.PI * 2);
+			ctx.arc((this.atX[dot] - camera.x) * s, (this.atY[dot] - camera.y) * s, r, 0, Math.PI * 2);
 			ctx.stroke();
 		}
+	}
+
+	/**
+	 * Works out where each dot is drawn this frame. A new tick moves the latest positions to `from`,
+	 * when it is the next tick; otherwise (a jump of several ticks, or a new run) nothing glides.
+	 */
+	private place(agents: Agents, transit: Transit, tick: number, alpha: number): void {
+		if (tick !== this.lastTick) {
+			this.gliding = tick === this.lastTick + 1;
+			if (this.gliding) {
+				this.fromX.set(this.lastX);
+				this.fromY.set(this.lastY);
+				this.planeFrom.set(this.planeLast);
+			}
+			this.lastX.set(agents.x);
+			this.lastY.set(agents.y);
+			for (let p = 0; p < MAX_PLANES; p++) {
+				this.planeLast[p * 3] = transit.planeX[p];
+				this.planeLast[p * 3 + 1] = transit.planeY[p];
+				this.planeLast[p * 3 + 2] = transit.planeRoute[p];
+			}
+			this.lastTick = tick;
+		}
+		this.alpha = alpha;
+		const n = agents.activeCount;
+		if (!this.gliding) {
+			this.atX.set(this.lastX);
+			this.atY.set(this.lastY);
+			return;
+		}
+		const k = 1 - alpha;
+		for (let i = 0; i < n; i++) {
+			const dx = this.lastX[i] - this.fromX[i];
+			const dy = this.lastY[i] - this.fromY[i];
+			const jump = dx * dx + dy * dy > GLIDE_LIMIT * GLIDE_LIMIT;
+			this.atX[i] = jump ? this.lastX[i] : this.lastX[i] - dx * k;
+			this.atY[i] = jump ? this.lastY[i] : this.lastY[i] - dy * k;
+		}
+	}
+
+	/** A plane's drawn x (axis 0) or y (1): gliding like the dots while it stays on the same route. */
+	private planeAt(transit: Transit, p: number, axis: number): number {
+		const now = axis === 0 ? transit.planeX[p] : transit.planeY[p];
+		if (!this.gliding || this.planeFrom[p * 3 + 2] !== transit.planeRoute[p]) return now;
+		const from = this.planeFrom[p * 3 + axis];
+		return now - (now - from) * (1 - this.alpha);
 	}
 
 	private drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number, camera: Camera): void {
@@ -367,12 +453,14 @@ export class Renderer {
 			const r = transit.planeRoute[p];
 			if (r < 0) continue;
 			const route = routes[r];
-			const x = (transit.planeX[p] - camera.x) * s;
-			const y = (transit.planeY[p] - camera.y) * s;
+			const px = this.planeAt(transit, p, 0);
+			const py = this.planeAt(transit, p, 1);
+			const x = (px - camera.x) * s;
+			const y = (py - camera.y) * s;
 			// Heading: a little further along the route.
 			const ahead = Math.min(route.length, Math.max(0, transit.planeS[p] + transit.planeDir[p] * 10));
-			const hx = pointX(route, ahead) - transit.planeX[p];
-			const hy = pointY(route, ahead) - transit.planeY[p];
+			const hx = pointX(route, ahead) - px;
+			const hy = pointY(route, ahead) - py;
 			const a = Math.atan2(hy, hx);
 			ctx.save();
 			ctx.translate(x, y);
