@@ -143,9 +143,10 @@
 				>
 			{/each}
 		{:else if combined}
-			<!-- By the highest line, from the plot's right edge, and only when it fits the plot. -->
+			<!-- By the highest line, from the plot's right edge, and only when it fits the plot; a
+				shortened label gives the full wording on hover. -->
 			<text class="reference-label" x={MARGIN.left + plotW} y={labelY(ys(highest))} text-anchor="end"
-				>{combined}</text
+				>{#if combined !== combinedLabel}<title>{combinedLabel}</title>{/if}{combined}</text
 			>
 		{/if}
 		{#if hover !== null}
