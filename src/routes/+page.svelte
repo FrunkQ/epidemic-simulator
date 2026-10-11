@@ -120,11 +120,12 @@
 		// work out the stage the cards would float on (the one they docked from, less any growth of
 		// the header above it, plus any growth of the window) and float them only if it is big
 		// enough, so the map never shows floating cards for a frame before docking again.
-		// Both wait until the cards have been measured, so neither goes by a guessed card size.
+		// It waits for a new disease's or map's cards to be measured (a docked card may not be yet:
+		// layoutSizes stands in for it); the fallback dock below waits for every card's size.
 		if (resized || dockRecheck) fallbackPending = true;
 		const measured = !sizesStale && scenario.regions.every((_, i) => closedSizes[i]);
 		const windowChanged = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
-		if (shortDock && measured && (dockRecheck || windowChanged)) {
+		if (shortDock && !sizesStale && (dockRecheck || windowChanged)) {
 			const floatHeight = dockedAt.stage - (top() - dockedAt.top) + (window.innerHeight - dockedAt.height);
 			const span = [maxX - minX, maxY - minY] as const;
 			if (!shouldDock(width, floatHeight, ...span) && coverAt(width, floatHeight) === 0) {
@@ -134,7 +135,7 @@
 			}
 			dockedAt = { width: window.innerWidth, height: window.innerHeight, stage: floatHeight, top: top() };
 		}
-		if (measured) dockRecheck = false;
+		if (!sizesStale) dockRecheck = false;
 		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
 			dock();
 			return; // the strip comes, the stage resizes, and its resize frames again
