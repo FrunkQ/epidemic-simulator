@@ -1,5 +1,4 @@
 import { Agents } from './agents';
-import { bedChanceOf, type IllnessRules } from './disease';
 import type { People } from './people';
 import { HISTORY_DAYS, MAX_DISEASES } from './constants';
 import {
@@ -10,10 +9,8 @@ import {
 	type Bands,
 	type Counts,
 	type HistoryChannel,
-	type RegionHistory,
-	type Route
+	type RegionHistory
 } from './types';
-import { originOf } from './transit';
 
 /** Counter slots per region, in a flat Int32Array. */
 const C_UNPROTECTED = 0;
@@ -67,6 +64,11 @@ export class TelemetryCounters {
 	readonly died: Int32Array;
 	private readonly history: Float64Array;
 	private readonly ageHistory: Float64Array;
+	/** Expected patients by the tick their symptoms started: a ring of bedRing ticks x regions x bands. */
+	private admitted = new Float64Array(0);
+	private bedRing = 1;
+	private bedDelay = 0;
+	private bedStay = 0;
 	private historyLen = 0;
 	private historyHead = 0;
 	private readonly historyDay: Int32Array;
@@ -131,32 +133,48 @@ export class TelemetryCounters {
 	}
 
 	/**
-	 * Expected outbreak patients per region and age band, in people (6.6), every tick for pressure.
-	 * Only dots with someone infected can have anyone ill. A traveller's bed is in the trip's origin (6.8).
+	 * Set how long after symptoms start a bed fills (`delay` ticks) and how long it stays full
+	 * (`stay` ticks), and clear the beds. Called once per run.
 	 */
-	countPatients(agents: Agents, people: People, routes: readonly Route[], rules: IllnessRules): void {
-		const { patients, agesInHospital } = this;
-		patients.fill(0);
-		agesInHospital.fill(0);
-		if (!rules.hospital) return;
-		const disease = people.disease;
-		for (let k = 0; k < people.activeCount; k++) {
-			const i = people.active[k];
-			const ill = people.ill[i];
-			if (ill === 0) continue;
-			let home = agents.region[i];
-			if (home < 0) {
-				const route = agents.route[i];
-				if (route < 0) continue;
-				home = originOf(routes[route], agents.routeDir[i]);
-			}
-			const band = agents.ageBand[i];
-			const again = people.illAgain[i];
-			const need =
-				(ill - again) * bedChanceOf(disease, band, people.severe[i], rules) +
-				again * bedChanceOf(disease, band, people.severeAgain(i), rules);
-			patients[home] += need;
-			agesInHospital[home * BANDS + band] += need;
+	setBedTiming(delay: number, stay: number): void {
+		this.bedDelay = delay;
+		this.bedStay = stay;
+		this.bedRing = delay + stay + 1;
+		this.admitted = new Float64Array(this.bedRing * this.regionCount * BANDS);
+		this.patients.fill(0);
+		this.agesInHospital.fill(0);
+	}
+
+	/**
+	 * Expected patients whose symptoms started this tick, in people (6.6): `need` in a region's age
+	 * band. A patient's bed is in the region where symptoms started (a traveller's at the trip's
+	 * origin, 6.8), for the whole stay.
+	 */
+	admit(region: number, band: number, need: number, tick: number): void {
+		this.admitted[(tick % this.bedRing) * this.regionCount * BANDS + region * BANDS + band] += need;
+	}
+
+	/**
+	 * Expected outbreak patients in a bed per region and age band, every tick for pressure, after
+	 * that tick's symptoms started: those whose symptoms started between `delay + stay - 1` and
+	 * `delay` ticks ago. With no delay and a stay as long as the illness, these are the people ill now.
+	 */
+	countPatients(tick: number): void {
+		const { patients, agesInHospital, admitted, bedRing } = this;
+		const width = this.regionCount * BANDS;
+		const slot = (t: number) => (((t % bedRing) + bedRing) % bedRing) * width;
+		const into = slot(tick - this.bedDelay);
+		// The slot leaving the window is the one the next tick's symptoms go in, so it is cleared here.
+		const out = slot(tick - this.bedDelay - this.bedStay);
+		for (let k = 0; k < width; k++) {
+			agesInHospital[k] += admitted[into + k] - admitted[out + k];
+			// Running sums can drift a hair below zero once the beds empty.
+			if (agesInHospital[k] < 1e-9) agesInHospital[k] = 0;
+			admitted[out + k] = 0;
+		}
+		for (let r = 0; r < this.regionCount; r++) {
+			const b = r * BANDS;
+			patients[r] = agesInHospital[b] + agesInHospital[b + 1] + agesInHospital[b + 2];
 		}
 	}
 

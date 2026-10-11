@@ -47,6 +47,9 @@ import {
 	WORLD_BANK_AGES_2025,
 	YOUNG,
 	fmt,
+	ALIMOHAMADI_EUROPE_STAY,
+	IULIANO_MEAN_STAY,
+	OMICRON_STAY,
 	EBOLA_VACCINE,
 	EICHNER_PROTECTED_CASES,
 	FLU_VACCINE,
@@ -4680,6 +4683,120 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-10',
 			ok: true,
 			note: 'OUP article page (abstract and Results), cross-checked against the University of Iowa repository copy.'
+		}
+	},
+	{
+		id: 'alimohamadi-2022-covid-hospital-stay',
+		authors: 'Alimohamadi Y, Yekta EM, Sepandi M, Sharafoddin M, Arshadi M, Hesari E',
+		title: 'Hospital length of stay for COVID-19 patients: a systematic review and meta-analysis',
+		journal: 'Multidisciplinary Respiratory Medicine 17(1):856',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.4081/mrm.2022.856',
+		usedFor: ['covid19.hospitalStayDays', 'covid19omicron.hospitalStayDays'],
+		quote: 'Europe | 24 | 15.31 | 9.03 – 21.59 | p<0.001 | 89.4',
+		location: 'Table 2, Continent block, Europe row (overall: 15.35 days, 126 records)',
+		why: `The pooled mean hospital stay for Europe, ${ALIMOHAMADI_EUROPE_STAY} days, matching the European default areas. The Omicron stay scales it by Iuliano's like-for-like drop.`,
+		context: 'Adults in hospital with COVID-19 worldwide, studies to January 2021 (before Delta).',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-11',
+			ok: true,
+			note: 'PMC9472334 full text: Table 2 Europe 15.31 (9.03-21.59), I² 89.4%. Called a mean, but the review pooled studies giving a mean or a median with no stated conversion.'
+		}
+	},
+	{
+		id: 'faes-2020-covid-onset-to-admission',
+		authors:
+			'Faes C, Abrams S, Van Beckhoven D, Meyfroidt G, Vlieghe E, Hens N; Belgian Collaborative Group on COVID-19 Hospital Surveillance',
+		title:
+			'Time between Symptom Onset, Hospitalisation and Recovery or Death: Statistical Analysis of Belgian COVID-19 Patients',
+		journal: 'International Journal of Environmental Research and Public Health 17(20):7560',
+		year: 2020,
+		evidence: 'study',
+		noReviewReason:
+			'The one pooled review found (Du 2021) gives two different figures (5.27 and 4.89 days outside China) and its journal DOI could not be confirmed, so it is only a cross-check; both of its figures are within a day of this national study.',
+		doi: '10.3390/ijerph17207560',
+		usedFor: ['covid19.admissionDelayDays'],
+		quote: 'In Belgium, the mean time from symptom onset to hospitalization overall is 5.74 days',
+		location:
+			'Discussion (Section 4); appendix Table A2 gives an observed mean of 5.6 and median of 5.0 days',
+		why: 'A national registry of 14,618 hospital patients with the time from symptoms to admission, in a European country.',
+		context: 'Belgium, March to June 2020: the first wave, before vaccines.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-11',
+			ok: true,
+			note: 'MDPI article page: quote verbatim in the Discussion; it appears to be the mean of a fitted model (observed mean 5.6, median 5.0, N = 12,364).'
+		}
+	},
+	{
+		id: 'buitrago-garcia-2022-asymptomatic-transmission',
+		authors: 'Buitrago-Garcia D, Ipekci AM, Heron L, Imeri H, Araujo-Chaveron L, Arevalo-Rodriguez I, et al.',
+		title:
+			'Occurrence and transmission potential of asymptomatic and presymptomatic SARS-CoV-2 infections: Update of a living systematic review and meta-analysis',
+		journal: 'PLoS Medicine 19(5):e1003987',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1371/journal.pmed.1003987',
+		usedFor: ['covid19.noSymptomInfectiousness', 'covid19omicron.noSymptomInfectiousness'],
+		quote:
+			'The secondary attack rate in contacts of people with asymptomatic infection compared with symptomatic infection was 0.32 (95% CI 0.16 to 0.64, prediction interval 0.11 to 0.95, 8 studies).',
+		location: 'Abstract, Methods and findings, item 2',
+		why: 'A risk ratio: contacts of people who never get symptoms were infected about a third as often as contacts of people who do, so people who never get symptoms spread at 0.32 of the rate.',
+		context:
+			'Studies published up to July 2021, mostly the original strain and unvaccinated people; the review notes limited information about variants of concern.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-11',
+			ok: true,
+			note: 'PMC9135333 full text: quote verbatim. The Results say 7 of the 8 studies made this comparison.'
+		}
+	},
+	{
+		id: 'pormohammad-2021-flu-covid-comparison',
+		authors: 'Pormohammad A, Ghorbani S, Khatami A, Razizadeh MH, Alborzi E, Zarei M, Idrovo J-P, Turner RJ',
+		title:
+			'Comparison of influenza type A and B with COVID-19: A global systematic review and meta-analysis on clinical, laboratory and radiographic findings',
+		journal: 'Reviews in Medical Virology 31(3):e2179',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1002/rmv.2179',
+		usedFor: ['flu.hospitalStayDays'],
+		quote:
+			'The mean duration of hospitalization among 3674 COVID-19 confirmed cases was 14 days (95% CI 12–16, p < 0.001), 6.5 days (95% CI 6–8, p < 0.001) in 23,510 influenza type A cases',
+		location: 'Results, Section 3.6; Table 1, "Duration of hospitalization (mean) (day)"',
+		why: 'The pooled mean stay for influenza A, the default flu strain, across 82 studies.',
+		context: 'Influenza studies from 2000 to 2020 worldwide; published online October 2020.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-11',
+			ok: true,
+			note: 'PMC7646051 article page, three consistent reads: a pooled mean (Table 1 row label); the word median does not appear.'
+		}
+	},
+	{
+		id: 'iuliano-2022-omicron-severity',
+		authors: 'Iuliano AD, Brunkard JM, Boehmer TK, Peterson E, Adjei S, Binder AM, et al.',
+		title:
+			'Trends in Disease Severity and Health Care Utilization During the Early Omicron Variant Period Compared with Previous SARS-CoV-2 High Transmission Periods — United States, December 2020–January 2022',
+		journal: 'MMWR Morbidity and Mortality Weekly Report 71(4):146-152',
+		year: 2022,
+		evidence: 'official',
+		publisher: 'CDC',
+		doi: '10.15585/mmwr.mm7104e4',
+		url: 'https://www.cdc.gov/mmwr/volumes/71/wr/mm7104e4.htm',
+		usedFor: ['covid19omicron.hospitalStayDays'],
+		quote:
+			'Mean length of hospital stay during Omicron (5.5 days) was 31.0% lower than during the winter 2020–21 (8.0 days)',
+		location: 'Results; Table 2, length of stay, mean (SD)',
+		why: `The drop in stay from the 2020 virus to Omicron in the same hospitals (${IULIANO_MEAN_STAY.omicron} against ${IULIANO_MEAN_STAY.winter2020} days), used as a ratio on the European COVID-19 stay so both COVID-19 entries are on the same footing: ${fmt(OMICRON_STAY, 2)} days.`,
+		context: '199 US hospitals, by discharge date, winter 2020-21 against December 2021 to January 2022.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-11',
+			ok: true,
+			note: 'PMC9351529 full text: quote verbatim; Table 2 means 8.0 and 5.5 days.'
 		}
 	}
 ];

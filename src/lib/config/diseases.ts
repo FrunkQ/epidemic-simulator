@@ -1,6 +1,7 @@
 import type { Banded, Bands, DiseaseConfig, Sourced, Vaccine, VaccineDeathRate } from '../sim/types';
 import { covid19BandsPerInfection, covid19SevereBandsPerInfection } from './covidAgeIfr';
 import {
+	ALIMOHAMADI_EUROPE_STAY,
 	BOBROVITZ,
 	CHIT,
 	CHO,
@@ -24,6 +25,7 @@ import {
 	OPV_RISK,
 	OPV_INTESTINAL_IMMUNITY,
 	OMICRON_ONE_DOSE,
+	OMICRON_STAY,
 	FLU_VACCINE,
 	LEWNARD_TAKE,
 	COCHRANE_MMR,
@@ -100,6 +102,14 @@ const COVID19_HOSPITAL_BY_AGE: Banded = {
  */
 const OMICRON_SEVERITY_RATIO = 0.7 / 1.2;
 const OMICRON_ASYMPTOMATIC: Sourced = { value: 0.324, sources: ['shang-2022-omicron-asymptomatic'] };
+/**
+ * Secondary attack rate from people who never get symptoms, relative to people who do. Pre-Omicron
+ * studies; the Omicron era uses it too (ASSUMPTIONS.omicronNoSymptom).
+ */
+const COVID19_NO_SYMPTOM: Sourced = {
+	value: 0.32,
+	sources: ['buitrago-garcia-2022-asymptomatic-transmission']
+};
 const OMICRON_IFR: Sourced = {
 	value: COVID19_IFR.value * OMICRON_SEVERITY_RATIO,
 	sources: ['meyerowitzkatz2020-covid-ifr', 'perez-guzman-2023-omicron']
@@ -489,6 +499,7 @@ export const DISEASES = {
 			sources: ['memoli2015-flu-challenge', 'suess2012-flu-shedding-germany', 'lau2010-flu-shedding-hk']
 		},
 		illDays: { value: 4, sources: ['carrat2008-flu-timelines-review', 'suess2012-flu-shedding-germany'] },
+		hospitalStayDays: { value: 6.5, sources: ['pormohammad-2021-flu-covid-comparison'] },
 		asymptomaticFraction: {
 			value: 0.2,
 			sources: [
@@ -542,6 +553,9 @@ export const DISEASES = {
 		silentDays: { value: 2, sources: ['alene2021-covid-serial-incubation', 'byrne-2020-infectious-period'] },
 		illDays: { value: 7.3, sources: ['rahmani-a-2022-covid-shedding'] },
 		asymptomaticFraction: COVID19_ASYMPTOMATIC,
+		noSymptomInfectiousness: COVID19_NO_SYMPTOM,
+		admissionDelayDays: { value: 5.74, sources: ['faes-2020-covid-onset-to-admission'] },
+		hospitalStayDays: { value: ALIMOHAMADI_EUROPE_STAY, sources: ['alimohamadi-2022-covid-hospital-stay'] },
 		infectionFatalityRate: COVID19_IFR,
 		mortalityBasis: 'modern-care',
 		mortality: {
@@ -588,6 +602,13 @@ export const DISEASES = {
 		},
 		illDays: { value: 5, sources: ['wu-2023-omicron-shedding'] },
 		asymptomaticFraction: OMICRON_ASYMPTOMATIC,
+		noSymptomInfectiousness: COVID19_NO_SYMPTOM,
+		// No published onset-to-admission figure for Omicron: the bed starts with the symptoms
+		// (ASSUMPTIONS.omicronAdmission).
+		hospitalStayDays: {
+			value: OMICRON_STAY,
+			sources: ['alimohamadi-2022-covid-hospital-stay', 'iuliano-2022-omicron-severity']
+		},
 		infectionFatalityRate: OMICRON_IFR,
 		mortalityBasis: 'modern-care',
 		mortality: {

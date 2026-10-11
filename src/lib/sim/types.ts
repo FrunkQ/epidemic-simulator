@@ -139,6 +139,21 @@ export interface DiseaseConfig {
 	illDays: Sourced;
 	/** Share of infections that never show symptoms. */
 	asymptomaticFraction: Sourced;
+	/**
+	 * How infectious someone who never gets symptoms is, compared with someone who does (0 to 1).
+	 * People who go on to get symptoms are fully infectious before they start. Left out means 1.
+	 */
+	noSymptomInfectiousness?: Sourced;
+	/**
+	 * Mean days from symptoms starting to a bed, for those who need one. Left out means 0: the bed
+	 * starts with the symptoms.
+	 */
+	admissionDelayDays?: Sourced;
+	/**
+	 * Mean days in a hospital bed. It may be longer than `illDays` (8 Oct): a bed stays full after
+	 * its patient stops being infectious, recovers or dies. Left out means `illDays`.
+	 */
+	hospitalStayDays?: Sourced;
 	/** Chance that a symptomatic case dies. */
 	mortality: Sourced;
 	/**
@@ -234,6 +249,12 @@ export interface DiseaseRuntime {
 	latentTicks: number;
 	illTicks: number;
 	asymptomaticFraction: number;
+	/** How infectious people who never get symptoms are, compared with those who do (1 = as infectious). */
+	noSymptomInfectiousness: number;
+	/** Ticks from symptoms starting to a bed (0: the bed starts with the symptoms). */
+	admissionDelayTicks: number;
+	/** Ticks a patient stays in a bed. */
+	hospitalStayTicks: number;
 	/** All-ages deaths per symptomatic case: the fallback when age bands are switched off. */
 	mortality: number;
 	/** Deaths per symptomatic case in each age band (the all-ages figure where none is sourced). */

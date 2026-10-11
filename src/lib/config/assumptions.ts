@@ -54,6 +54,9 @@ const eraNames = list(
 const plagueDefaultMix = PLAGUE_MORTALITY_BANDS.reduce((a, d, b) => a + d * POPULATION.ageMix.value[b], 0);
 const surfaceWeeks = Math.round(Math.min(TRAVEL_DAYS.road, TRAVEL_DAYS.ferry) / 7);
 const occupancyCountries = Object.keys(EU_CURATIVE_OCCUPANCY_2023).length;
+const allDiseases = Object.values(DISEASES as Record<string, DiseaseConfig>);
+const noStay = list(allDiseases.filter((d) => !d.hospitalStayDays).map((d) => d.proseName));
+const noDelay = list(allDiseases.filter((d) => !d.admissionDelayDays).map((d) => d.proseName));
 const missingCountries = list(EU_OCCUPANCY_MISSING.map((c) => countryName.of(c) ?? c));
 
 /**
@@ -107,6 +110,18 @@ export const ASSUMPTIONS = {
 	strainSlope: `No study measures how fast the risk rises between ${Math.round(STRAIN.threshold * 100)}% and ${Math.round(STRAIN.capAt * 100)}%; the model draws a straight line between the sourced starting point and the sourced cap.`,
 	englandOnly:
 		'The England preset uses NHS England’s beds and how full they normally are, with UK ages. It is England’s NHS, not the whole UK, because no UK-wide figure for short-term hospital beds is published.',
+	hospitalStay:
+		'A hospital stay can last longer than the infectious illness, so beds stay full with people the charts already count as recovered or dead, just as real patients stay in hospital to recover after they stop being infectious.',
+	stayUnsourced: `No pooled figure for how long patients stay in hospital was found for ${noStay}, so for them a bed lasts as long as the illness.`,
+	admissionUnsourced: `No pooled figure for how long patients wait between their symptoms starting and a hospital bed was found for ${noDelay}, so for them the bed starts when the symptoms do.`,
+	omicronAdmission:
+		'No published figure gives how long Omicron patients waited between symptoms and hospital, so in this model their bed starts when symptoms start.',
+	omicronNoSymptom:
+		'How much less people who never get symptoms pass on COVID-19 in the Omicron era comes from studies of the earlier virus; the review behind it had little information on the newer variants.',
+	noSymptomUnsourced:
+		'Only for COVID-19 is there a figure for how much less people who never get symptoms pass it on. For every other disease they are as infectious as anyone, even where, as for flu, studies suggest they spread it less, because no study gives a number.',
+	bedWhereIll:
+		'A patient’s bed is in the city where their symptoms started, for the whole stay. Someone who falls ill on a trip has their bed in the city they set out from.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`
 } as const;
 

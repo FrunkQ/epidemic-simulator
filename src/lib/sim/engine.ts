@@ -190,6 +190,18 @@ export class Simulation {
 					return;
 				}
 				this.counters.addDeaths(region, 0, this.agents.ageBand[dot], died);
+			},
+			onSymptoms: (dot, first, again) => {
+				const rules = this.rules;
+				if (!rules.hospital) return;
+				const region = hospitalRegion(this.agents, this.routeList, dot);
+				if (region < 0) return;
+				const p = this.people;
+				const band = this.agents.ageBand[dot];
+				const need =
+					first * bedChanceOf(this.disease, band, p.severe[dot], rules) +
+					again * bedChanceOf(this.disease, band, p.severeAgain(dot), rules);
+				this.counters.admit(region, band, need, this.tick);
 			}
 		};
 		this.diseaseOverride = options.disease ?? null;
@@ -259,6 +271,7 @@ export class Simulation {
 		this.events = [];
 		const regions = scenario.regions;
 		this.counters = new TelemetryCounters(regions.length);
+		this.counters.setBedTiming(disease.admissionDelayTicks, disease.hospitalStayTicks);
 		this.pressure = new Float32Array(regions.length);
 		this.strain = new Float32Array(regions.length).fill(1);
 		this.overloadSeen = new Uint8Array(regions.length);
@@ -281,7 +294,7 @@ export class Simulation {
 			disease.transmissionRadius,
 			this.agents.capacity
 		);
-		this.counters.countPatients(this.agents, this.people, this.routeList, this.rules);
+		this.counters.countPatients(this.tick);
 		this.updatePressure();
 		this.countsStale = true;
 		this.sample(0);
@@ -403,7 +416,7 @@ export class Simulation {
 		if (sub.waning) this.people.wane(a.activeCount, this.tick, this.rng);
 		// 8. Dot flags, telemetry counters, then pressure for the next tick.
 		this.refreshDots();
-		this.counters.countPatients(a, this.people, this.routeList, this.rules);
+		this.counters.countPatients(this.tick);
 		this.updatePressure();
 		this.countsStale = true;
 		if (this.tick % TICKS_PER_DAY === 0) this.sample(this.day);
