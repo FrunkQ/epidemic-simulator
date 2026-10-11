@@ -185,39 +185,110 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(after.pressure - before.pressure).toBeCloseTo(h / after.beds, 6);
 	});
 
-	it('counts every ill dot’s expected beds in its region, and an ill traveller’s bed and strain in its origin', () => {
+	it('fills a bed from the day after symptoms start plus the admission delay, for the hospital stay (6.6)', () => {
+		const h = 0.2;
+		const delay = 3 * TICKS_PER_DAY;
+		const stay = 5 * TICKS_PER_DAY;
+		const sim = createSimulation(singleCity({ population: 500_000, policy: policy(3, 0.3) }), {
+			seed: 9,
+			diseaseId: 'flu',
+			disease: counted(0, h, { admissionDelayTicks: delay, hospitalStayTicks: stay })
+		});
+		sim.seedNow(0, 1);
+		let onset = -1;
+		const seen: number[] = [];
+		for (let t = 1; t <= 400; t++) {
+			sim.step(1);
+			const r = sim.snapshot().regions[0];
+			if (onset < 0 && r.counts.symptomatic === 1) onset = t;
+			seen.push(r.patients);
+		}
+		expect(onset).toBeGreaterThan(0);
+		seen.forEach((patients, k) => {
+			const t = k + 1;
+			const inBed = t >= onset + delay && t < onset + delay + stay;
+			expect(patients, `tick ${t}`).toBeCloseTo(inBed ? h : 0, 6);
+		});
+	});
+
+	it('keeps a bed for its whole stay, even after the illness is over', () => {
+		const h = 0.2;
+		const disease = counted(0, h);
+		const stay = disease.illTicks + 10 * TICKS_PER_DAY;
+		const sim = createSimulation(singleCity({ population: 500_000, policy: policy(3, 0.3) }), {
+			seed: 9,
+			diseaseId: 'flu',
+			disease: { ...disease, hospitalStayTicks: stay }
+		});
+		sim.seedNow(0, 1);
+		sim.step(disease.silentTicks + disease.illTicks + 2);
+		const r = sim.snapshot().regions[0];
+		expect(r.counts.symptomatic).toBe(0);
+		expect(r.patients).toBeCloseTo(h, 6);
+	});
+
+	it('with no timing figures, counts every ill dot’s expected beds in its region, as before', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 0);
+		}
+		const disease = loadDisease('measles');
+		expect(disease.admissionDelayTicks).toBe(0);
+		expect(disease.hospitalStayTicks).toBe(disease.illTicks);
+		const sim = createSimulation(scenario, { seed: 10, diseaseId: 'measles' });
+		sim.send({ type: 'seed', region: 0, count: 50 });
+		const a = sim.agents;
+		const p = sim.people;
+		let ill = 0;
+		for (let day = 0; day < 40; day++) {
+			sim.step(TICKS_PER_DAY);
+			const expected = new Array(scenario.regions.length).fill(0);
+			for (let i = 0; i < a.activeCount; i++) {
+				if (p.ill[i] === 0) continue;
+				ill += p.ill[i];
+				const h = disease.hospitalByBand[a.ageBand[i]];
+				const again = p.illAgain[i];
+				expected[a.region[i]] +=
+					h * ((p.ill[i] - again) * (1 - p.severe[i]) + again * (1 - p.severeAgain(i)));
+			}
+			sim.snapshot().regions.forEach((r, k) => expect(r.patients, `region ${k}`).toBeCloseTo(expected[k], 4));
+		}
+		expect(ill).toBeGreaterThan(0);
+	});
+
+	it('loses and doubles no bed when ill travellers land, and counts a traveller’s strain in its origin', () => {
 		const scenario = microcosm(0);
 		for (const r of scenario.regions) {
 			r.vaccinatedFull = 0;
 			r.vaccinatedPartial = 0;
 			r.policy = withValue(r.policy, 'travelFrequency', 3);
 		}
-		const sim = createSimulation(scenario, { seed: 10, diseaseId: 'covid19' });
-		const disease = loadDisease('covid19');
+		const disease = loadDisease('measles');
+		const sim = createSimulation(scenario, { seed: 10, diseaseId: 'measles' });
 		sim.send({ type: 'seed', region: 0, count: 50 });
 		const a = sim.agents;
 		const p = sim.people;
 		const routes = sim.routes;
 		let travellersIll = 0;
-		for (let day = 0; day < 40; day++) {
-			sim.step(TICKS_PER_DAY);
-			const expected = new Array(scenario.regions.length).fill(0);
+		for (let t = 0; t < 40 * TICKS_PER_DAY; t++) {
+			sim.step(1);
+			let total = 0;
 			for (let i = 0; i < a.activeCount; i++) {
 				if (p.ill[i] === 0) continue;
-				let home = a.region[i];
-				if (home < 0) {
+				if (a.region[i] < 0) {
 					// Worked out here from the route, not with the engine's helper.
 					const route = routes[a.route[i]];
-					home = a.routeDir[i] > 0 ? route.from : route.to;
 					travellersIll++;
-					// Its strain comes from the same region its bed is counted in.
-					expect(hospitalRegion(a, routes, i)).toBe(home);
+					expect(hospitalRegion(a, routes, i)).toBe(a.routeDir[i] > 0 ? route.from : route.to);
 				}
 				const h = disease.hospitalByBand[a.ageBand[i]];
 				const again = p.illAgain[i];
-				expected[home] += h * ((p.ill[i] - again) * (1 - p.severe[i]) + again * (1 - p.severeAgain(i)));
+				total += h * ((p.ill[i] - again) * (1 - p.severe[i]) + again * (1 - p.severeAgain(i)));
 			}
-			sim.snapshot().regions.forEach((r, k) => expect(r.patients, `region ${k}`).toBeCloseTo(expected[k], 4));
+			const patients = sim.snapshot().regions.reduce((s, r) => s + r.patients, 0);
+			expect(patients, `tick ${t}`).toBeCloseTo(total, 4);
 		}
 		expect(travellersIll).toBeGreaterThan(0);
 	});

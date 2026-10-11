@@ -15,6 +15,7 @@ import { Protection, type DiseaseRuntime, type VaccineRuntime } from './types';
  * with symptoms fall ill at the end of age S - 1 and finish at the end of age S + I - 1 (at once, for
  * a disease with no silent phase); people without symptoms stay silent until the end of age S + I - 1.
  * Someone still in the latent days (6.1) doesn't spread: silent people under `latentTicks` old.
+ * People who never get symptoms spread at `noSymptomInfectiousness` of the rate of those who do.
  */
 
 /** Counts of people that fit in each ring-buffer entry. */
@@ -30,6 +31,8 @@ export interface PeopleHooks {
 	onInfected(dot: number, people: number): void;
 	/** `people` with symptoms in dot `dot` finished their illness; `died` of them died. */
 	onIllnessEnd(dot: number, people: number, died: number): void;
+	/** Symptoms started for `first` people in dot `dot` and `again` who had had it before (for beds). */
+	onSymptoms(dot: number, first: number, again: number): void;
 }
 
 export class People {
@@ -63,6 +66,8 @@ export class People {
 	readonly illAgain: Int32Array;
 	/** Silent people still in their latent days: not yet contagious. */
 	readonly latent: Int32Array;
+	/** Of `latent`, those who will never get symptoms. */
+	readonly latentQuiet: Int32Array;
 	/** Protection against severe illness for someone in this dot infected despite the vaccine (6.2). */
 	readonly severe: Float32Array;
 	/** Mean ticks until this dot's vaccine protection fades; 0 when it doesn't. */
@@ -115,6 +120,7 @@ export class People {
 		this.ill = counts();
 		this.illAgain = counts();
 		this.latent = counts();
+		this.latentQuiet = counts();
 		this.severe = new Float32Array(cap);
 		this.vaccineWaneMean = new Float32Array(cap);
 		this.nextVaccineWane = new Float64Array(cap).fill(Infinity);
@@ -165,10 +171,17 @@ export class People {
 		return this.silentSymptomatic[i] + this.silentAsymptomatic[i] + this.ill[i];
 	}
 
-	/** People who can pass it on now: ill, and silent past their latent days (unless only ill people spread). */
+	/**
+	 * How many people can pass it on now, each weighted by how infectious they are: ill people, and
+	 * silent people past their latent days (unless only ill people spread), those who will never get
+	 * symptoms at `noSymptomInfectiousness`. A whole number when that is 1.
+	 */
 	infectious(i: number, silentSpread: boolean): number {
-		const silent = silentSpread ? this.silentSymptomatic[i] + this.silentAsymptomatic[i] - this.latent[i] : 0;
-		return silent + this.ill[i];
+		if (!silentSpread) return this.ill[i];
+		const quiet = this.latentQuiet[i];
+		const willBeIll = this.silentSymptomatic[i] - (this.latent[i] - quiet);
+		const never = this.silentAsymptomatic[i] - quiet;
+		return willBeIll + never * this.disease.noSymptomInfectiousness + this.ill[i];
 	}
 
 	/** Living people who aren't ill, counted directly (mid-swap a dot briefly holds fewer than perDot). */
@@ -257,10 +270,14 @@ export class People {
 			// No silent phase (e.g. Ebola): symptoms start at once.
 			this.ill[i] += symFirst + symAgain;
 			this.illAgain[i] += symAgain;
+			if (symFirst + symAgain > 0) hooks.onSymptoms(i, symFirst, symAgain);
 		} else {
 			this.silentSymptomatic[i] += symFirst + symAgain;
 		}
-		if (this.latentTicks > 0) this.latent[i] += asym + (this.silentTicks > 0 ? symFirst + symAgain : 0);
+		if (this.latentTicks > 0) {
+			this.latent[i] += asym + (this.silentTicks > 0 ? symFirst + symAgain : 0);
+			this.latentQuiet[i] += asym;
+		}
 		this.activate(i);
 	}
 
@@ -294,7 +311,11 @@ export class People {
 				const b = latSym + i;
 				this.latent[i] -= sym[b] + (again ? again[b] : 0);
 			}
-			if (latAsym >= 0) this.latent[i] -= asym![latAsym + i];
+			if (latAsym >= 0) {
+				const n = asym![latAsym + i];
+				this.latent[i] -= n;
+				this.latentQuiet[i] -= n;
+			}
 			if (onset >= 0) {
 				const b = onset + i;
 				const first = sym[b];
@@ -303,6 +324,7 @@ export class People {
 					this.silentSymptomatic[i] -= first + twice;
 					this.ill[i] += first + twice;
 					this.illAgain[i] += twice;
+					hooks.onSymptoms(i, first, twice);
 				}
 			}
 			const end = finish + i;
@@ -443,6 +465,10 @@ export class People {
 				if (stillLatent) {
 					this.latent[from]--;
 					this.latent[to]++;
+					if (!symptomatic) {
+						this.latentQuiet[from]--;
+						this.latentQuiet[to]++;
+					}
 				}
 				this.activate(to);
 				return true;

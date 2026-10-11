@@ -122,6 +122,20 @@ export const KH03_Q2_2023 = { beds: 102922, occupancyPct: 89.7 };
 export const ENGLAND_POPULATION_MID_2023 = 57690300;
 export const ENGLAND_ACUTE_BEDS_PER_1000 = (KH03_Q2_2023.beds / ENGLAND_POPULATION_MID_2023) * 1000;
 
+// --- Hospital timing (research/disease-timing.md) ---
+
+/** Alimohamadi 2022, Table 2: pooled mean hospital stay for COVID-19 in Europe, days. */
+export const ALIMOHAMADI_EUROPE_STAY = 15.31;
+/** Iuliano 2022 (MMWR): mean hospital stay in the same US hospitals, days. */
+export const IULIANO_MEAN_STAY = { omicron: 5.5, winter2020: 8.0 };
+/**
+ * Omicron's mean stay on the same footing as COVID-19's: the European mean scaled by the like-for-
+ * like fall in the US. Using 5.5 days directly would mix two footings (those US hospitals averaged
+ * 8.0 in winter 2020-21, about half the European mean).
+ */
+export const OMICRON_STAY =
+	ALIMOHAMADI_EUROPE_STAY * (IULIANO_MEAN_STAY.omicron / IULIANO_MEAN_STAY.winter2020);
+
 // --- Protection after infection (6.2) ---
 
 /**

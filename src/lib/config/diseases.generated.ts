@@ -3,8 +3,8 @@
 //   measles: target R0 15, measured 15 ± 0.257 over 60 seeds, 240 index cases
 //   polio: target R0 6, measured 5.998 ± 0.111 over 50 seeds, 500 index cases
 //   flu: target R0 1.3, measured 1.3 ± 0.0234 over 50 seeds, 2300 index cases
-//   covid19: target R0 3.32, measured 3.32 ± 0.0589 over 60 seeds, 1080 index cases
-//   covid19omicron: target R0 8.4, measured 8.398 ± 0.149 over 70 seeds, 490 index cases
+//   covid19: target R0 3.32, measured 3.32 ± 0.056 over 80 seeds, 1440 index cases
+//   covid19omicron: target R0 8.4, measured 8.4 ± 0.153 over 140 seeds, 980 index cases
 //   chickenpox: target R0 5, measured 4.998 ± 0.0932 over 50 seeds, 600 index cases
 //   mumps: target R0 11, measured 11 ± 0.188 over 80 seeds, 400 index cases
 //   rubella: target R0 5, measured 4.998 ± 0.0902 over 50 seeds, 600 index cases
@@ -42,20 +42,20 @@ export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {
 		indexCases: 2300
 	},
 	covid19: {
-		beta: 0.00495,
+		beta: 0.005798,
 		transmissionRadius: 8,
 		measuredR0: 3.32,
-		standardError: 0.0589,
-		seeds: 60,
-		indexCases: 1080
+		standardError: 0.056,
+		seeds: 80,
+		indexCases: 1440
 	},
 	covid19omicron: {
-		beta: 0.02241,
+		beta: 0.02843,
 		transmissionRadius: 8,
-		measuredR0: 8.398,
-		standardError: 0.149,
-		seeds: 70,
-		indexCases: 490
+		measuredR0: 8.4,
+		standardError: 0.153,
+		seeds: 140,
+		indexCases: 980
 	},
 	chickenpox: {
 		beta: 0.009458,
