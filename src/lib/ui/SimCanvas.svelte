@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { MAX_TICKS_PER_FRAME, TICKS_PER_SECOND, TICK_BUDGET_MS } from '../sim/constants';
 	import type { Simulation } from '../sim/engine';
 	import type { Telemetry } from '../sim/types';
@@ -77,6 +77,8 @@
 		const ctx = canvas.getContext('2d')!;
 		let width = 0;
 		let height = 0;
+		/** Part way to the next tick, for gliding dots (see the loop). */
+		let carry = 0;
 		const resize = () => {
 			const dpr = window.devicePixelRatio || 1;
 			width = host.clientWidth;
@@ -85,6 +87,14 @@
 			canvas.height = Math.round(height * dpr);
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 			onresize?.(width, height);
+			// Resizing clears the canvas after this frame's map was drawn: draw it again once the page
+			// has laid out for the new size (still before the paint), so no frame shows a blank or
+			// stale map.
+			// (The simulation is read now: a prop read in the promise's callback isn't the object.)
+			const simulation = sim;
+			tick().then(() => {
+				if (width > 0 && height > 0) simulation.render(ctx, { width, height }, performance.now(), carry);
+			});
 		};
 		const observer = new ResizeObserver(resize);
 		observer.observe(host);
@@ -92,7 +102,6 @@
 
 		let last = performance.now();
 		let lastPublish = 0;
-		let carry = 0;
 		let frame = 0;
 		let fpsFrames = 0;
 		let fpsSince = last;
