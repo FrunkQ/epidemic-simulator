@@ -66,6 +66,13 @@
 	let stageElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
 	let dockRecheck = false;
+	/**
+	 * Set by a disease, map or window change: once every card has been measured, the next frame
+	 * docks the cards if no frame keeps them off the cities. Never set by a card growing or ⌂.
+	 */
+	let fallbackPending = false;
+	/** True from a disease or map change until the cards are measured again. */
+	let sizesStale = false;
 	let compact = $derived(size.width < 760 || shortDock);
 
 	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
@@ -111,11 +118,11 @@
 		// work out the stage the cards would float on (the one they docked from, less any growth of
 		// the header above it, plus any growth of the window) and float them only if it is big
 		// enough, so the map never shows floating cards for a frame before docking again.
-		// The fallback dock (cards covering a city on every frame) is decided only on a disease, map
-		// or window change, never when a card grows or ⌂ is pressed.
-		const mayDock = resized || dockRecheck;
+		// Both wait until the cards have been measured, so neither goes by a guessed card size.
+		if (resized || dockRecheck) fallbackPending = true;
+		const measured = !sizesStale && scenario.regions.every((_, i) => closedSizes[i]);
 		const windowChanged = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
-		if (shortDock && (dockRecheck || windowChanged)) {
+		if (shortDock && measured && (dockRecheck || windowChanged)) {
 			const floatHeight = dockedAt.stage - (top() - dockedAt.top) + (window.innerHeight - dockedAt.height);
 			const span = [maxX - minX, maxY - minY] as const;
 			if (!shouldDock(width, floatHeight, ...span) && coverAt(width, floatHeight) === 0) {
@@ -125,7 +132,7 @@
 			}
 			dockedAt = { width: window.innerWidth, height: window.innerHeight, stage: floatHeight, top: top() };
 		}
-		dockRecheck = false;
+		if (measured) dockRecheck = false;
 		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
 			dock();
 			return; // the strip comes, the stage resizes, and its resize frames again
@@ -145,9 +152,12 @@
 		});
 		fit(best.mx, best.my);
 		// A safety net: no frame keeps the cards off the cities.
-		if (mayDock && layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
-			dock();
-			return;
+		if (fallbackPending && measured) {
+			fallbackPending = false;
+			if (layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
+				dock();
+				return;
+			}
 		}
 		lastPositions = undefined;
 		viewVersion++;
@@ -231,12 +241,14 @@
 	 * the map for them.
 	 */
 	async function forgetCardSizes() {
+		sizesStale = true;
 		userMoved = false;
 		lastPositions = undefined;
 		await tick();
 		// Wait for the next paint too: some of a card's lines follow the new run's first telemetry.
 		await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
 		const old = closedSizes;
+		sizesStale = false;
 		closedSizes = scenario.regions.map((_, i) => {
 			const el = cardElements[i];
 			// An open card can't be measured closed: keep its last closed size until it closes.
