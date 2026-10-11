@@ -10,8 +10,13 @@
 		lines: Line[];
 		/** Labelled horizontal lines, e.g. hospital capacity. */
 		references?: Reference[];
-		/** One label for all the references, shown instead of theirs when they would crowd each other or the day axis. */
+		/**
+		 * One label for all the references, shown instead of theirs when they would crowd each other or
+		 * the day axis, or are too wide. `shortLabel` is used when even that is too wide, and the
+		 * references' values alone when both are.
+		 */
 		combinedLabel?: string;
+		shortLabel?: string;
 		/** Top of the y axis; defaults to the highest value or reference. Rounded up to a nice number. */
 		max?: number;
 		yLabel?: string;
@@ -27,6 +32,7 @@
 		lines,
 		references = [],
 		combinedLabel,
+		shortLabel,
 		max,
 		yLabel = 'People',
 		unit,
@@ -42,14 +48,38 @@
 	const value = (v: number) => (unit === '%' ? `${Math.round(v).toLocaleString()}%` : short(v));
 	/** A label needs this much height (px): references closer together, or to the day axis, are crowded. */
 	const LABEL_ROOM = 12;
+	/** Roughly how wide a 10px label is per character (px), on the wide side so a label never overruns. */
+	const CHAR_W = 5.3;
+	const fits = (text: string) => text.length * CHAR_W <= plotW - 4;
+	/** Above its line, unless that would leave the plot's top: then below it. */
+	const labelY = (y: number) => (y - MARGIN.top < LABEL_ROOM ? y + 10 : y - 3);
+	/** Where a reference's own label sits: its baseline and its left and right edges. */
+	const labelBox = (r: Reference) => {
+		const w = r.label.length * CHAR_W;
+		const x0 = r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW - w;
+		return { x0, x1: x0 + w, y: r.labelStart ? ys(r.value) + 10 : labelY(ys(r.value)) };
+	};
 	const crowded = $derived.by(() => {
 		if (!combinedLabel) return false;
-		const at = references.map((r) => ys(r.value)).sort((a, b) => a - b);
+		const boxes = references.map(labelBox);
+		// Two labels whose boxes (a 10px line, with a little room) meet, or one too wide or too low.
 		return (
-			at.some((y, k) => k > 0 && y - at[k - 1] < LABEL_ROOM) ||
-			at.some((y) => MARGIN.top + plotH - y < LABEL_ROOM)
+			boxes.some((p, k) =>
+				boxes.some((q, j) => j > k && p.x0 < q.x1 && q.x0 < p.x1 && Math.abs(p.y - q.y) < LABEL_ROOM + 2)
+			) ||
+			boxes.some((p) => p.y > MARGIN.top + plotH - 2) ||
+			references.some((r) => !fits(r.label))
 		);
 	});
+	/**
+	 * The one label shown when the references' own labels are crowded: the first that fits, ending
+	 * with just their values ("85% · 100%"), which fits any chart.
+	 */
+	const combined = $derived(
+		[combinedLabel, shortLabel, references.map((r) => value(r.value)).join(' · ')].find(
+			(t): t is string => t !== undefined && fits(t)
+		)
+	);
 	const highest = $derived(Math.max(...references.map((r) => r.value)));
 	const first = $derived(days[0] ?? 0);
 	const span = $derived(Math.max(30, (days[days.length - 1] ?? 0) - first));
@@ -98,25 +128,26 @@
 		<text x={MARGIN.left + plotW / 2} y={height - 8} text-anchor="middle">Day</text>
 		{#each references as r (r.label)}
 			<line class="reference" x1={MARGIN.left} y1={ys(r.value)} x2={MARGIN.left + plotW} y2={ys(r.value)} />
-			{#if !crowded}
-				<text
-					class="reference-label"
-					x={r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW}
-					y={r.labelStart ? ys(r.value) + 10 : ys(r.value) - 3}
-					text-anchor={r.labelStart ? 'start' : 'end'}>{r.label}</text
-				>
-			{/if}
 		{/each}
-		{#if crowded}
-			<!-- Above the highest line, so it clears the other line and the day axis; from the plot's
-			left edge, so on a narrow chart it runs into the margin rather than over the axis numbers. -->
-			<text class="reference-label" x={MARGIN.left + 2} y={ys(highest) - 3} text-anchor="start"
-				>{combinedLabel}</text
-			>
-		{/if}
 		{#each lines as l (l.key)}
 			<polyline points={points(l.values)} stroke={l.colour} stroke-dasharray={l.dash} />
 		{/each}
+		<!-- Labels after the lines, with a halo, so no line runs through the text. -->
+		{#if !crowded}
+			{#each references as r (r.label)}
+				<text
+					class="reference-label"
+					x={r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW}
+					y={labelBox(r).y}
+					text-anchor={r.labelStart ? 'start' : 'end'}>{r.label}</text
+				>
+			{/each}
+		{:else if combined}
+			<!-- By the highest line, from the plot's right edge, and only when it fits the plot. -->
+			<text class="reference-label" x={MARGIN.left + plotW} y={labelY(ys(highest))} text-anchor="end"
+				>{combined}</text
+			>
+		{/if}
 		{#if hover !== null}
 			<line class="cross" x1={xs(days[hover])} y1={MARGIN.top} x2={xs(days[hover])} y2={MARGIN.top + plotH} />
 		{/if}
@@ -185,6 +216,11 @@
 	}
 	.reference-label {
 		fill: #e6edf5;
+		/* A halo in the panel's colour, so lines crossing the label don't run through the text. */
+		paint-order: stroke;
+		stroke: #11233a;
+		stroke-width: 3px;
+		stroke-linejoin: round;
 	}
 	.key {
 		display: flex;

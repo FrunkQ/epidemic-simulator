@@ -138,6 +138,7 @@
 					{ label: '100%: full', value: 100 }
 				]}
 				combinedLabel="{threshold}% {mortalityBasis === 'era' ? 'under pressure' : 'strain'} · 100% full"
+				shortLabel="{threshold}% {mortalityBasis === 'era' ? 'pressure' : 'strain'} · 100% full"
 			/>
 		{/if}
 		<!-- Held in place, hidden, until someone dies, so the row's height never changes mid-run. -->

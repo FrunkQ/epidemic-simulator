@@ -139,24 +139,25 @@
 	/** Until a card has been measured. */
 	const CARD_W = 210;
 	const CARD_H = 120;
-	/** Each card's measured size (bigger while a panel is open). */
+	/** Each card's measured width, for an open card kept on the stage. */
 	let cardWidths: number[] = $state([]);
-	let cardHeights: number[] = $state([]);
 	/** Which cards have a settings panel open. */
 	let cardOpen: boolean[] = $state([]);
+	/** Each card's size as measured with its panel shut (RegionCard closedSize). */
+	let cardClosed: ({ w: number; h: number } | undefined)[] = $state([]);
 	/**
 	 * Each card's tallest size while closed, for this disease and map. Layout and framing use only
 	 * these, so opening a panel moves nothing (the open card grows on top) and a card that grows
-	 * during a run doesn't shuffle the others. Measured only while the card is closed (an open
-	 * card is the same 210px wide, but taller).
+	 * during a run doesn't shuffle the others. Measured only while the card's panel is shut, by
+	 * the card itself (an open card is the same 210px wide, but taller).
 	 */
 	let closedSizes: ({ w: number; h: number } | undefined)[] = $state([]);
 	const GROW_SLACK = 3;
 	$effect(() => {
 		scenario.regions.forEach((_, i) => {
-			const w = cardWidths[i];
-			const h = cardHeights[i];
-			if (cardOpen[i] || !w || !h) return;
+			const closed = cardClosed[i];
+			if (!closed) return;
+			const { w, h } = closed;
 			const old = untrack(() => closedSizes[i]);
 			// A pixel or two is font rounding (the warning sign's glyph), not a new line.
 			if (!old || h > old.h + GROW_SLACK) closedSizes[i] = { w, h };
@@ -280,8 +281,8 @@
 					maxHeight={pos.maxHeight}
 					bind:element={cardElements[i]}
 					bind:width={cardWidths[i]}
-					bind:height={cardHeights[i]}
 					bind:open={cardOpen[i]}
+					bind:closedSize={cardClosed[i]}
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}

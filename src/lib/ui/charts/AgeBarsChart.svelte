@@ -73,7 +73,11 @@
 				opacity={shown[b] > 0 ? 1 : 0}
 				pointer-events="none"
 			/>
-			<text class="value" x={x + barW / 2} y={y - 3} text-anchor="middle">{label(b)}</text>
+			<!-- Above the bar, or just inside its top when the bar reaches the top of the chart. -->
+			{@const inside = y - MARGIN.top < 12}
+			<text class="value" class:inside x={x + barW / 2} y={inside ? y + 11 : y - 3} text-anchor="middle"
+				>{label(b)}</text
+			>
 			<text x={x + barW / 2} y={height - 8} text-anchor="middle">{band.short}</text>
 		{/each}
 	</svg>
@@ -86,6 +90,13 @@
 </figure>
 
 <style>
+	.value.inside {
+		/* Inside the bar: a halo in the panel's colour keeps it readable on any bar colour. */
+		paint-order: stroke;
+		stroke: #11233a;
+		stroke-width: 3px;
+		stroke-linejoin: round;
+	}
 	figure {
 		position: relative;
 		margin: 0;
