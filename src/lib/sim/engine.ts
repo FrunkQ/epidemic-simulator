@@ -177,9 +177,10 @@ export class Simulation {
 					this.pushEvent({ kind: 'firstCase', region: r, day: this.day });
 				}
 			},
-			onIllnessEnd: (dot, _people, died) => {
+			onIllnessEnd: (dot, _people, died, bedRegion) => {
 				if (died === 0) return;
-				const region = hospitalRegion(this.agents, this.routeList, dot);
+				// People die in the hospital that took them: for symptoms that started on a trip, its origin.
+				const region = bedRegion >= 0 ? bedRegion : hospitalRegion(this.agents, this.routeList, dot);
 				// Every dot has a home region, so this can't happen; skipping would lose deaths from the
 				// counts, so fail loudly in development and tests, and say so once per run anywhere else.
 				if (region < 0) {
@@ -191,17 +192,20 @@ export class Simulation {
 				}
 				this.counters.addDeaths(region, 0, this.agents.ageBand[dot], died);
 			},
-			onSymptoms: (dot, first, again) => {
-				const rules = this.rules;
-				if (!rules.hospital) return;
+			onSymptoms: (dot, first, again, tick) => {
 				const region = hospitalRegion(this.agents, this.routeList, dot);
 				if (region < 0) return;
 				const p = this.people;
+				// Ill on a trip: that hospital keeps them, after landing too, until their illness ends (6.8).
+				if (this.agents.route[dot] >= 0) p.markAway(dot, tick, first, again, region);
+				const rules = this.rules;
+				if (!rules.hospital) return;
 				const band = this.agents.ageBand[dot];
 				const need =
 					first * bedChanceOf(this.disease, band, p.severe[dot], rules) +
 					again * bedChanceOf(this.disease, band, p.severeAgain(dot), rules);
-				this.counters.admit(region, band, need, this.tick);
+				// At the tick symptoms started: an index case seeded between ticks falls ill in the next one.
+				this.counters.admit(region, band, need, tick);
 			}
 		};
 		this.diseaseOverride = options.disease ?? null;
@@ -436,10 +440,11 @@ export class Simulation {
 	}
 
 	/**
-	 * Chance of dying for someone in dot i finishing their illness (6.6), with the strain of the dot's
-	 * hospital region. An 'era' death rate predates modern hospital care, so strain never applies to it.
+	 * Chance of dying for someone in dot i finishing their illness (6.6), with the strain of the
+	 * hospital that took them (`region`, or -1 for the dot's own). An 'era' death rate predates modern
+	 * hospital care, so strain never applies to it.
 	 */
-	private readonly deathChance = (i: number, again: boolean): number => {
+	private readonly deathChance = (i: number, again: boolean, region: number): number => {
 		const rules = this.rules;
 		if (!rules.deaths) return 0;
 		const p = this.people;
@@ -447,7 +452,7 @@ export class Simulation {
 		const band = this.agents.ageBand[i];
 		const d = deathChanceOf(this.disease, band, severe, rules);
 		const h = bedChanceOf(this.disease, band, severe, rules);
-		const home = hospitalRegion(this.agents, this.routeList, i);
+		const home = region >= 0 ? region : hospitalRegion(this.agents, this.routeList, i);
 		const m = this.disease.strainApplies && rules.hospital && home >= 0 ? this.strain[home] : 1;
 		return deathChanceAtEnd(d, h, m);
 	};

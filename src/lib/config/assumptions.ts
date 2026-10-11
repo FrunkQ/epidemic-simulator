@@ -56,7 +56,10 @@ const surfaceWeeks = Math.round(Math.min(TRAVEL_DAYS.road, TRAVEL_DAYS.ferry) / 
 const occupancyCountries = Object.keys(EU_CURATIVE_OCCUPANCY_2023).length;
 const allDiseases = Object.values(DISEASES as Record<string, DiseaseConfig>);
 const noStay = list(allDiseases.filter((d) => !d.hospitalStayDays).map((d) => d.proseName));
-const noDelay = list(allDiseases.filter((d) => !d.admissionDelayDays).map((d) => d.proseName));
+// Omicron has its own line (omicronAdmission).
+const noDelay = list(
+	allDiseases.filter((d) => !d.admissionDelayDays && d.id !== 'covid19omicron').map((d) => d.proseName)
+);
 const missingCountries = list(EU_OCCUPANCY_MISSING.map((c) => countryName.of(c) ?? c));
 
 /**

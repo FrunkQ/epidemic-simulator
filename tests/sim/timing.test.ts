@@ -5,6 +5,7 @@ import { singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import { TelemetryCounters } from '../../src/lib/sim/telemetry';
+import type { Rng } from '../../src/lib/sim/rng';
 
 describe('disease timing (6.1, 6.6)', () => {
 	it('scales the European COVID-19 stay by the US Omicron to winter 2020 ratio', () =>
@@ -72,4 +73,53 @@ describe('disease timing (6.1, 6.6)', () => {
 			expect(infectious).toBeCloseTo(20 * factor, 6);
 		});
 	}
+
+	for (const id of ['ebola', 'marburg', 'smallpox'] as const)
+		it(`gives index cases seeded between ticks their beds when there is no silent phase (${id})`, () => {
+			const disease = loadDisease(id);
+			expect(disease.silentTicks).toBe(0);
+			const sim = createSimulation(singleCity({ population: 500_000 }), {
+				seed: 4,
+				diseaseId: id,
+				disease: { ...disease, beta: 0 }
+			});
+			const dots = sim.seedNow(0, 20);
+			const a = sim.agents;
+			const p = sim.people;
+			sim.step(1);
+			let need = 0;
+			for (const i of dots) {
+				const h = disease.hospitalByBand[a.ageBand[i]];
+				need += h * (p.ill[i] - p.illAgain[i]) * (1 - p.severe[i]);
+			}
+			expect(need).toBeGreaterThan(0);
+			expect(sim.snapshot().regions[0].patients).toBeCloseTo(need, 9);
+			// And the beds empty when the illness ends, never below zero for anyone else.
+			sim.step(disease.illTicks + 1);
+			expect(sim.snapshot().regions[0].patients).toBeCloseTo(0, 9);
+		});
+
+	it('moves people who will never get symptoms with their latent days in the boarding swap', () => {
+		const real = loadDisease('covid19');
+		const disease = { ...real, beta: 0, asymptomaticFraction: 1, latentTicks: TICKS_PER_DAY };
+		const sim = createSimulation(singleCity({ population: 500_000 }), {
+			seed: 3,
+			diseaseId: 'covid19',
+			disease
+		});
+		const [from] = sim.seedNow(0, 1);
+		sim.step(1);
+		const p = sim.people;
+		const to = from === 0 ? 1 : 0;
+		const rng = (sim as unknown as { rng: Rng }).rng;
+		expect(p.latentQuiet[from]).toBe(1);
+		// Move people until the latent one goes: only they are silent, so their counts move together.
+		while (p.silentAsymptomatic[from] > 0) p.moveOneNotIll(from, to, sim.tick, rng);
+		expect([p.latent[from], p.latentQuiet[from]]).toEqual([0, 0]);
+		expect([p.latent[to], p.latentQuiet[to], p.silentAsymptomatic[to]]).toEqual([1, 1, 1]);
+		expect(p.infectious(to, true)).toBe(0);
+		sim.step(TICKS_PER_DAY);
+		expect(p.latentQuiet[to]).toBe(0);
+		expect(p.infectious(to, true)).toBeCloseTo(disease.noSymptomInfectiousness, 9);
+	});
 });
