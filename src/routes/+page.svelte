@@ -312,7 +312,7 @@
 	/>
 </svelte:head>
 
-<main>
+<main class:docked={compact}>
 	<TopBar
 		{diseaseId}
 		{speed}
@@ -431,11 +431,14 @@
 	}
 	main {
 		display: grid;
-		/* max-content: the strip's row never shrinks below its cards (it scrolls sideways), so the page
-		   scrolls instead when the window is too short for all of it. */
-		grid-template-rows: auto 1fr max-content auto;
+		grid-template-rows: auto 1fr auto auto;
 		grid-template-columns: minmax(0, 1fr);
 		height: 100dvh;
+	}
+	/* Docked, the strip's row never shrinks below its cards (it scrolls sideways): the page scrolls
+	   instead when the window is too short for all of it. */
+	main.docked {
+		grid-template-rows: auto 1fr max-content auto;
 	}
 	.stage {
 		position: relative;
