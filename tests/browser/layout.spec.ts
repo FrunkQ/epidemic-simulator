@@ -38,6 +38,16 @@ const probe = (page: Page) =>
 const frameCount = (page: Page) =>
 	page.evaluate(() => (window as unknown as { __layoutLog: Frame[] }).__layoutLog.length);
 
+/**
+ * Run the page's CPU six times slower: a layout that needs several steps in one frame then spills
+ * into the next as on a slow machine (CI caught a wrong frame on widening this way that a fast
+ * machine never showed).
+ */
+async function slowDown(page: Page) {
+	const cdp = await page.context().newCDPSession(page);
+	await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+}
+
 /** Wait until 30 frames in a row drew the same layout and every card has its final size. */
 async function settle(page: Page) {
 	await page.waitForFunction(() => {
@@ -192,33 +202,40 @@ const PATHS: { name: string; sizes: (readonly [number, number])[] }[] = [
 	}
 ];
 
-for (const { name, sizes } of PATHS) {
-	test(`${name} (${sizes.map((s) => s.join('x')).join(' → ')}): same layout as a fresh load, no wrong frame`, async ({
-		page,
-		browser
-	}) => {
-		const [w0, h0] = sizes[0];
-		await open(page, w0, h0);
-		for (const [w, h] of sizes.slice(1)) {
-			const from = await frameCount(page);
-			await page.setViewportSize({ width: w, height: h });
-			await settle(page);
-			expectStraightToFinal(await paintedSince(page, from), `${w}x${h}`);
-		}
-		const [w, h] = sizes[sizes.length - 1];
-		const fresh = await browser.newPage();
-		await open(fresh, w, h);
-		const want = await probe(fresh);
-		const got = await probe(page);
-		expect(got.docked).toBe(want.docked);
-		expect(got.scale).toBeCloseTo(want.scale, 6);
-		await fresh.close();
-	});
+// In the default font, and in DejaVu Sans, whose wider text changes where the bar and blurb wrap.
+for (const font of [undefined, 'DejaVu Sans']) {
+	for (const { name, sizes } of PATHS) {
+		test(`${name} (${sizes.map((s) => s.join('x')).join(' → ')})${font ? ` in ${font}` : ''}: same layout as a fresh load, no wrong frame`, async ({
+			page,
+			browser
+		}) => {
+			if (font) await forceFont(page, font);
+			await slowDown(page);
+			const [w0, h0] = sizes[0];
+			await open(page, w0, h0);
+			for (const [w, h] of sizes.slice(1)) {
+				const from = await frameCount(page);
+				await page.setViewportSize({ width: w, height: h });
+				await settle(page);
+				expectStraightToFinal(await paintedSince(page, from), `${w}x${h}`);
+			}
+			const [w, h] = sizes[sizes.length - 1];
+			const fresh = await browser.newPage();
+			if (font) await forceFont(fresh, font);
+			await open(fresh, w, h);
+			const want = await probe(fresh);
+			const got = await probe(page);
+			expect(got.docked).toBe(want.docked);
+			expect(got.scale).toBeCloseTo(want.scale, 6);
+			await fresh.close();
+		});
+	}
 }
 
 test('1280x720: switching to plague and back keeps the cards floating, with no wrong frame', async ({
 	page
 }) => {
+	await slowDown(page);
 	await open(page, 1280, 720);
 	for (const disease of ['plague', 'measles']) {
 		const from = await frameCount(page);
@@ -231,6 +248,7 @@ test('1280x720: switching to plague and back keeps the cards floating, with no w
 });
 
 test('the first painted frame is already the final layout', async ({ page }) => {
+	await slowDown(page);
 	for (const [w, h] of [...TARGETS, [1280, 600] as const, [390, 844] as const]) {
 		await open(page, w, h);
 		expectStraightToFinal((await paintedSince(page, 0)).slice(0, 3), `${w}x${h} load`);

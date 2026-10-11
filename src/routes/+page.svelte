@@ -66,6 +66,7 @@
 	/** When the cards docked: the window, the floating stage's height and the stage's top. */
 	let dockedAt = { width: 0, height: 0, stage: 0, top: 0 };
 	let stageElement: HTMLElement | undefined = $state();
+	let mapCanvas: SimCanvas | undefined = $state();
 	/** The docked cards' strip while it is on the page. */
 	let stripElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
@@ -107,6 +108,7 @@
 				});
 			size = { width: stageElement.clientWidth, height: stageElement.clientHeight };
 			frame(resized);
+			mapCanvas?.redraw();
 		});
 	}
 
@@ -417,6 +419,7 @@
 
 	<div class="stage" bind:this={stageElement}>
 		<SimCanvas
+			bind:this={mapCanvas}
 			{sim}
 			ontelemetry={setTelemetry}
 			onresize={(w, h) => {
