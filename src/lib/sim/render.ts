@@ -122,7 +122,10 @@ export class Renderer {
 	private readonly atY: Float32Array;
 	private readonly planeLast = new Float32Array(MAX_PLANES * 3);
 	private readonly planeFrom = new Float32Array(MAX_PLANES * 3);
-	private lastTick = -1;
+	/** The tick last drawn: NaN before the first, so a new run never glides from an old one. */
+	private lastTick = NaN;
+	/** The run the glide positions belong to: Scene.seedMarks is a new array after every setup. */
+	private glideRun: readonly number[] | null = null;
 	/** True when the map moved on by exactly one tick, so drawing glides between the two. */
 	private gliding = false;
 	private alpha = 1;
@@ -144,6 +147,11 @@ export class Renderer {
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
 		const { agents, regions, radii, routes, transit, world, tick, spacing } = scene;
 		const { width, height } = viewport;
+		// A restart (even one landing on the same tick, while paused) starts the glide afresh.
+		if (scene.seedMarks !== this.glideRun) {
+			this.glideRun = scene.seedMarks;
+			this.lastTick = NaN;
+		}
 		this.place(agents, transit, tick, scene.alpha);
 		const ax = this.atX;
 		const ay = this.atY;

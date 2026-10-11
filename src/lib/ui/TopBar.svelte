@@ -37,7 +37,8 @@
 		{#each SPEEDS as s (s.value)}
 			<button
 				class:active={speed === s.value}
-				aria-label={s.label}
+				aria-label={s.value === 0 ? s.label : `${s.label} (${s.short})`}
+				aria-pressed={speed === s.value}
 				title={speedTitle(s.value, s.label)}
 				onclick={() => onspeed(s.value)}>{s.short}</button
 			>
@@ -79,8 +80,6 @@
 	}
 	.speed button {
 		min-width: 32px;
-	}
-	.speed button {
 		border-radius: 0;
 	}
 	.speed button:first-child {
@@ -89,8 +88,11 @@
 	.speed button:last-child {
 		border-radius: 0 6px 6px 0;
 	}
+	/* The chosen speed stands out at 6.3:1 against the others (WCAG asks 3:1), its text at 9.5:1. */
 	.speed .active {
-		background: #3a6590;
+		background: #9cc3ea;
+		color: #0b1a2e;
+		font-weight: 600;
 	}
 	.day {
 		font-variant-numeric: tabular-nums;
