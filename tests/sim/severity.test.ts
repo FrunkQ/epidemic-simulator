@@ -7,7 +7,7 @@ import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { DISEASES } from '../../src/lib/config/diseases';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation, strainMultiplier } from '../../src/lib/sim/engine';
-import { hospitalRegion } from '../../src/lib/sim/disease';
+import { bedChanceOf, deathChanceAtEnd, deathChanceOf, hospitalRegion } from '../../src/lib/sim/disease';
 import {
 	Protection,
 	type Bands,
@@ -18,6 +18,7 @@ import {
 	type Scenario
 } from '../../src/lib/sim/types';
 import type { PeopleHooks } from '../../src/lib/sim/people';
+import type { IllnessRules } from '../../src/lib/sim/disease';
 
 /** Everyone aged 15-64, so one band's chances apply to every case. */
 const WORKING_AGE: Bands = [0, 1, 0];
@@ -334,6 +335,29 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 			deaths[region >= 0 ? region : hospitalRegion(a, routes, dot)] += died;
 			onIllnessEnd(dot, people, died, region);
 		};
+		// The death chance of people who fell ill on a trip uses their hospital's strain, even once
+		// they have landed in another city.
+		const engine = sim as unknown as {
+			deathChance: (i: number, again: boolean, region: number) => number;
+			strain: Float32Array;
+			rules: IllnessRules;
+		};
+		const deathChance = engine.deathChance;
+		let landedEnds = 0;
+		let strainDiffers = 0;
+		engine.deathChance = (i, again, region) => {
+			const chance = deathChance(i, again, region);
+			if (region >= 0 && a.region[i] >= 0 && a.region[i] !== region) {
+				landedEnds++;
+				if (engine.strain[region] !== engine.strain[a.region[i]]) strainDiffers++;
+				const severe = again ? p.severeAgain(i) : p.severe[i];
+				const band = a.ageBand[i];
+				const d = deathChanceOf(disease, band, severe, engine.rules);
+				const h = bedChanceOf(disease, band, severe, engine.rules);
+				expect(chance).toBe(deathChanceAtEnd(d, h, engine.strain[region]));
+			}
+			return chance;
+		};
 		sim.send({ type: 'seed', region: 0, count: 50 });
 		let landedIll = 0;
 		for (let t = 1; t <= 120 * TICKS_PER_DAY; t++) {
@@ -349,6 +373,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(onTrips).toBeGreaterThan(0);
 		// Some landed while still ill, and every one of them ended their illness in the trip's hospital.
 		expect(landedIll).toBeGreaterThan(0);
+		expect(strainDiffers, `of ${landedEnds} illnesses ended after landing`).toBeGreaterThan(0);
 		expect(sim.anyInfected()).toBe(false);
 		expect(endedAway).toBe(onTrips);
 	});

@@ -124,7 +124,7 @@ export const ASSUMPTIONS = {
 	noSymptomUnsourced:
 		'Only for COVID-19 is there a figure for how much less people who never get symptoms pass it on. For every other disease they are as infectious as anyone, even where, as for flu, studies suggest they spread it less, because no study gives a number.',
 	bedWhereIll:
-		'A patient’s bed is in the city where their symptoms started, for the whole stay. Someone who falls ill on a trip has their bed in the city they set out from.',
+		'A patient’s bed is in the city where their symptoms started, for the whole stay, and that city’s hospital strain and any death count there too. Someone who falls ill on a trip has their bed in the city they set out from, even after they arrive somewhere else.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`
 } as const;
 

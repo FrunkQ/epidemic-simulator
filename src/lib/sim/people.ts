@@ -426,6 +426,8 @@ export class People {
 	 */
 	markAway(i: number, onset: number, first: number, again: number, region: number): void {
 		// Symptoms start at age S - 1 (at once with no silent phase) and the illness ends at age S + I - 1.
+		// With no silent phase symptoms start at infection, which happens only in a city, so that case
+		// never reaches here; it is kept so the end stays right if trips ever carry infections.
 		const end = onset + this.illTicks - (this.silentTicks > 0 ? 0 : 1);
 		const group = { end, first, again, region };
 		const list = this.away.get(i);
