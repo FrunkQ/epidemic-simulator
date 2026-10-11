@@ -176,10 +176,8 @@ export class Transit {
 			const r = agents.route[i];
 			if (r < 0) continue;
 			const route = routes[r];
-			if (agents.dead[i] === 1) {
-				this.diedOnTheWay(agents, i, route);
-				continue;
-			}
+			// A dot whose people mostly died on the way still completes its trip, so its survivors
+			// arrive; the stop for mostly-dead dots applies only inside a city.
 			if (route.kind === 'air') continue;
 			// Ill or isolated travellers stop where they are; their clock keeps running.
 			if (agents.isolated[i] === 1 || (this.illStops && agents.ill[i] === 1)) continue;
@@ -249,24 +247,6 @@ export class Transit {
 		agents.region[i] = dest;
 		agents.route[i] = -1;
 		agents.planeOf[i] = -1;
-	}
-
-	/**
-	 * Someone who died on the way: the death counts in the trip's origin, and the dot stays where it
-	 * died (on a plane, where the plane is).
-	 */
-	private diedOnTheWay(agents: Agents, i: number, route: Route): void {
-		const p = agents.planeOf[i];
-		if (p >= 0) {
-			agents.x[i] = this.planeX[p];
-			agents.y[i] = this.planeY[p];
-			if (this.planeLoad[p] > 0) this.planeLoad[p]--;
-		}
-		agents.region[i] = originOf(route, agents.routeDir[i]);
-		agents.route[i] = -1;
-		agents.planeOf[i] = -1;
-		agents.vx[i] = 0;
-		agents.vy[i] = 0;
 	}
 
 	/** Living travellers currently on the way (for telemetry). */

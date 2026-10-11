@@ -43,6 +43,7 @@ describe('subsystem switches (6.14)', () => {
 			const p = sim.people;
 			let moved = 0;
 			let still = 0;
+			let flagWrong = 0;
 			for (let t = 0; t < 20 * TICKS_PER_DAY; t++) {
 				const x = Float32Array.from(a.x);
 				const y = Float32Array.from(a.y);
@@ -50,15 +51,16 @@ describe('subsystem switches (6.14)', () => {
 				sim.step(1);
 				for (let i = 0; i < a.activeCount; i++) {
 					// The flag is the majority rule (finer-counts §0).
-					expect(a.ill[i]).toBe(2 * p.ill[i] >= p.perDot ? 1 : 0);
+					if (a.ill[i] !== (2 * p.ill[i] >= p.perDot ? 1 : 0)) flagWrong++;
 					if (flagged[i] === 0 || a.region[i] < 0) continue;
 					if (a.x[i] === x[i] && a.y[i] === y[i]) still++;
 					else moved++;
 				}
 			}
-			return { moved, still };
+			return { moved, still, flagWrong };
 		};
 		const on = run(true);
+		expect(on.flagWrong).toBe(0);
 		expect(on.still).toBeGreaterThan(0);
 		expect(on.moved).toBe(0);
 		expect(run(false).moved).toBeGreaterThan(0);

@@ -113,7 +113,7 @@
 			carry -= due;
 			if (due > MAX_TICKS_PER_FRAME) due = MAX_TICKS_PER_FRAME;
 			if (due > 0) sim.step(due);
-			sim.render(ctx, { width, height });
+			sim.render(ctx, { width, height }, now);
 			if (now - lastPublish >= 100) {
 				lastPublish = now;
 				ontelemetry(sim.snapshot());

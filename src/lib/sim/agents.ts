@@ -39,13 +39,13 @@ export class Agents {
 	 * `shown` is its fill (a State): dead, infected (silent or ill, whichever is more) or recovered
 	 * when half or more of its people are, otherwise SUSCEPTIBLE, drawn in its vaccination colour.
 	 * `ring` is the State of a ring around a dot that isn't filled that way, when some of its people
-	 * are infected (or, with none infected, dead); SUSCEPTIBLE means no ring. `ringLevel` is how
-	 * bright the ring is, 0 to RING_LEVELS - 1, on a log scale of those people, so one person is
-	 * faint and half the dot is full. A dot's people live in People.
+	 * are infected (or, with none infected, dead); SUSCEPTIBLE means no ring. `shareStep` is how
+	 * strongly the ring (or, where rings don't fit, the dot's tint) is drawn: those people as a
+	 * share of the dot, 0 to SHARE_STEPS - 1, in even steps up to half. A dot's people live in People.
 	 */
 	readonly shown: Uint8Array;
 	readonly ring: Uint8Array;
-	readonly ringLevel: Uint8Array;
+	readonly shareStep: Uint8Array;
 
 	constructor(capacity = MAX_AGENTS) {
 		this.capacity = capacity;
@@ -68,7 +68,7 @@ export class Agents {
 		this.planeOf = new Int16Array(capacity);
 		this.shown = new Uint8Array(capacity);
 		this.ring = new Uint8Array(capacity);
-		this.ringLevel = new Uint8Array(capacity);
+		this.shareStep = new Uint8Array(capacity);
 	}
 
 	/** The state a dot is shown in (see `shown`). */
@@ -93,6 +93,6 @@ export class Agents {
 		this.vy.fill(0);
 		this.shown.fill(0);
 		this.ring.fill(0);
-		this.ringLevel.fill(0);
+		this.shareStep.fill(0);
 	}
 }

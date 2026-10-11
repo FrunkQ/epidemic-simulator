@@ -65,16 +65,18 @@ describe('latentDays (6.1)', () => {
 		const a = sim.agents;
 		const p = sim.people;
 		let checked = 0;
-		for (let t = 0; t < 30 * TICKS_PER_DAY; t++) {
+		const wrong: string[] = [];
+		for (let t = 0; t < 30 * TICKS_PER_DAY && wrong.length < 5; t++) {
 			sim.step(1);
 			// Every silent person is still latent, so only the ill can spread it.
 			for (let i = 0; i < a.activeCount; i++) {
 				const silent = p.silentSymptomatic[i] + p.silentAsymptomatic[i];
-				expect(p.latent[i], `dot ${i} at tick ${t}`).toBe(silent);
-				expect(p.infectious(i, true)).toBe(p.ill[i]);
+				if (p.latent[i] !== silent || p.infectious(i, true) !== p.ill[i])
+					wrong.push(`dot ${i} at tick ${t}: latent ${p.latent[i]}, silent ${silent}`);
 				checked += silent;
 			}
 		}
+		expect(wrong).toEqual([]);
 		expect(checked).toBeGreaterThan(100);
 		expect(plague.latentTicks).toBe(plague.silentTicks);
 	});

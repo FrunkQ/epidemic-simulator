@@ -108,6 +108,9 @@ export function allocateDots(regions: Region[], capacity: number): { dots: numbe
 	return { dots, peoplePerDot };
 }
 
+/** The seed marks kept for the map: the latest presses, a person each. */
+const SEED_MARKS = 50;
+
 export class Simulation {
 	readonly agents: Agents;
 	/** The people inside the dots, for the one disease circulating (6.12: one per disease from 3c). */
@@ -139,8 +142,10 @@ export class Simulation {
 	private subsystems: Subsystems = ALL_SUBSYSTEMS;
 	private rules!: IllnessRules;
 	private readonly renderer: Renderer;
-	/** Dots the seed button just brought someone into, for the map's one-off marker (display only). */
-	private seedMarks: { dot: number; at: number }[] = [];
+	/** Dots the seed button brought someone into, for the map's marker (display only, latest SEED_MARKS). */
+	private seedMarks: number[] = [];
+	/** Marks made this run, counting those dropped from seedMarks. */
+	private seedMarkTotal = 0;
 	private readonly queue: Command[] = [];
 	private events: SimEvent[] = [];
 	private firstCaseSeen!: Uint8Array;
@@ -235,6 +240,7 @@ export class Simulation {
 		this.diseaseId = diseaseId;
 		this.lostDeathReported = false;
 		this.seedMarks = [];
+		this.seedMarkTotal = 0;
 		const disease = this.diseaseOverride ?? loadDisease(diseaseId);
 		this.disease = disease;
 		this.agents.diseaseCount = 1;
@@ -489,7 +495,7 @@ export class Simulation {
 		let best = -1;
 		let bestD = Infinity;
 		for (let j = 0; j < a.activeCount; j++) {
-			if (j === i || a.region[j] !== r) continue;
+			if (j === i || a.region[j] !== r || a.route[j] >= 0) continue;
 			if (a.ageBand[j] !== a.ageBand[i] || a.protection[j] !== a.protection[i]) continue;
 			if (p.notIll(j) < k) continue;
 			const d = (a.x[j] - a.x[i]) ** 2 + (a.y[j] - a.y[i]) ** 2;
@@ -499,8 +505,12 @@ export class Simulation {
 			}
 		}
 		if (best < 0) return false;
+		// Pick the people who aren't ill first, while the partner's own counts still say who they are.
+		for (let n = 0; n < k; n++) {
+			if (!p.moveOneNotIll(best, i, this.tick, this.rng))
+				throw new Error('boarding swap: partner ran out of people');
+		}
 		p.moveIll(i, best, this.tick);
-		for (let n = 0; n < k; n++) p.moveOneNotIll(best, i, this.tick, this.rng);
 		if (this.subsystems.waning) {
 			for (const d of [i, best]) {
 				p.scheduleVaccineWane(d, this.tick, this.rng);
@@ -527,9 +537,11 @@ export class Simulation {
 	private applyCommands(): void {
 		for (const c of this.queue) {
 			if (c.type === 'seed') {
-				const at = performance.now();
-				this.seedMarks = this.seedMarks.filter((m) => at - m.at < 10_000);
-				for (const dot of this.seedCases(c.region, c.count)) this.seedMarks.push({ dot, at });
+				for (const dot of this.seedCases(c.region, c.count)) {
+					this.seedMarks.push(dot);
+					this.seedMarkTotal++;
+				}
+				if (this.seedMarks.length > SEED_MARKS) this.seedMarks.splice(0, this.seedMarks.length - SEED_MARKS);
 			} else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
 			// lockdown, flights, route and massTest arrive with step 3 of the build.
 		}
@@ -559,17 +571,21 @@ export class Simulation {
 		for (let i = 0; i < a.activeCount; i++) {
 			if (a.region[i] === region && p.catchable(i) > 0) pool.push(i);
 		}
+		// Unvaccinated dots first; when there are fewer of them than people asked for, the rest go
+		// to the other dots, so the button always brings in as many as it says while any are catchable.
 		const unprotected = pool.filter((i) => a.protection[i] === Protection.NONE);
-		const from = unprotected.length > 0 ? unprotected : pool;
+		const others = pool.filter((i) => a.protection[i] !== Protection.NONE);
 		const chosen: number[] = [];
-		for (let k = 0; k < count && from.length > 0; k++) {
-			const pick = this.rng.int(from.length);
-			const i = from[pick];
-			from[pick] = from[from.length - 1];
-			from.pop();
-			// Index cases spread from `tick` (latent days aside), as if caught in that tick's spread.
-			p.infect(i, 1, tick, this.rng, this.hooks, false);
-			chosen.push(i);
+		for (const from of [unprotected, others]) {
+			while (chosen.length < count && from.length > 0) {
+				const pick = this.rng.int(from.length);
+				const i = from[pick];
+				from[pick] = from[from.length - 1];
+				from.pop();
+				// Index cases spread from `tick` on (latent days aside).
+				p.infect(i, 1, tick, this.rng, this.hooks, false);
+				chosen.push(i);
+			}
 		}
 		this.refreshDots();
 		return chosen;
@@ -604,7 +620,8 @@ export class Simulation {
 		return this.counters.regionHistory(region);
 	}
 
-	render(ctx: CanvasRenderingContext2D, viewport: Viewport): void {
+	/** Draws the map; `now` is the frame's time (ms), which only the seed marker's fade uses. */
+	render(ctx: CanvasRenderingContext2D, viewport: Viewport, now: number): void {
 		this.renderer.draw(ctx, viewport, this.view, {
 			agents: this.agents,
 			regions: this.scenario.regions,
@@ -614,7 +631,9 @@ export class Simulation {
 			world: this.world,
 			tick: this.tick,
 			spacing: this.dotSpacing(),
-			seedMarks: this.seedMarks
+			seedMarks: this.seedMarks,
+			seedMarkTotal: this.seedMarkTotal,
+			now
 		});
 	}
 
