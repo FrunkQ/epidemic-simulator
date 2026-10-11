@@ -17,6 +17,7 @@ import {
 	type HealthPolicy,
 	type Scenario
 } from '../../src/lib/sim/types';
+import type { PeopleHooks } from '../../src/lib/sim/people';
 
 /** Everyone aged 15-64, so one band's chances apply to every case. */
 const WORKING_AGE: Bands = [0, 1, 0];
@@ -185,7 +186,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		expect(after.pressure - before.pressure).toBeCloseTo(h / after.beds, 6);
 	});
 
-	it('fills a bed from the day after symptoms start plus the admission delay, for the hospital stay (6.6)', () => {
+	it('fills a bed from the tick symptoms start plus the admission delay, for the hospital stay (6.6)', () => {
 		const h = 0.2;
 		const delay = 3 * TICKS_PER_DAY;
 		const stay = 5 * TICKS_PER_DAY;
@@ -291,6 +292,65 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 			expect(patients, `tick ${t}`).toBeCloseTo(total, 4);
 		}
 		expect(travellersIll).toBeGreaterThan(0);
+	});
+
+	it('keeps a bed, strain and any death in the city where symptoms started, a trip’s origin on the way (6.8)', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 3);
+		}
+		const disease = loadDisease('measles');
+		const sim = createSimulation(scenario, { seed: 10, diseaseId: 'measles' });
+		const a = sim.agents;
+		const p = sim.people;
+		const routes = sim.routes;
+		const stay = disease.hospitalStayTicks;
+		// Recounted from each start of symptoms, with the city worked out here from the route.
+		const onsets: { tick: number; region: number; need: number }[] = [];
+		let onTrips = 0;
+		let endedAway = 0;
+		const deaths = new Array(scenario.regions.length).fill(0);
+		const hooks = (sim as unknown as { hooks: PeopleHooks }).hooks;
+		const { onSymptoms, onIllnessEnd } = hooks;
+		hooks.onSymptoms = (dot, first, again, tick) => {
+			let region = a.region[dot];
+			if (region < 0) {
+				const route = routes[a.route[dot]];
+				region = a.routeDir[dot] > 0 ? route.from : route.to;
+				onTrips += first + again;
+			}
+			const h = disease.hospitalByBand[a.ageBand[dot]];
+			onsets.push({
+				tick,
+				region,
+				need: h * (first * (1 - p.severe[dot]) + again * (1 - p.severeAgain(dot)))
+			});
+			onSymptoms(dot, first, again, tick);
+		};
+		hooks.onIllnessEnd = (dot, people, died, region) => {
+			if (region >= 0) endedAway += people;
+			deaths[region >= 0 ? region : hospitalRegion(a, routes, dot)] += died;
+			onIllnessEnd(dot, people, died, region);
+		};
+		sim.send({ type: 'seed', region: 0, count: 50 });
+		let landedIll = 0;
+		for (let t = 1; t <= 120 * TICKS_PER_DAY; t++) {
+			sim.step(1);
+			const expected = new Array(scenario.regions.length).fill(0);
+			for (const o of onsets) if (o.tick > t - stay && o.tick <= t) expected[o.region] += o.need;
+			const regions = sim.snapshot().regions;
+			regions.forEach((r, k) => expect(r.patients, `region ${k}, tick ${t}`).toBeCloseTo(expected[k], 6));
+			for (let i = 0; i < a.activeCount; i++) if (a.region[i] >= 0) landedIll += p.awayCount(i);
+		}
+		const regions = sim.snapshot().regions;
+		regions.forEach((r, k) => expect(r.deaths, `region ${k}`).toBe(deaths[k]));
+		expect(onTrips).toBeGreaterThan(0);
+		// Some landed while still ill, and every one of them ended their illness in the trip's hospital.
+		expect(landedIll).toBeGreaterThan(0);
+		expect(sim.anyInfected()).toBe(false);
+		expect(endedAway).toBe(onTrips);
 	});
 
 	it('starts the general default Coping and the England (NHS) preset Under pressure', () => {

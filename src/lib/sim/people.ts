@@ -29,10 +29,23 @@ function buffer(size: number, perDot: number): Buffer {
 export interface PeopleHooks {
 	/** `people` caught it for the first time in dot `dot` (index cases included; reinfections are not counted). */
 	onInfected(dot: number, people: number): void;
-	/** `people` with symptoms in dot `dot` finished their illness; `died` of them died. */
-	onIllnessEnd(dot: number, people: number, died: number): void;
-	/** Symptoms started for `first` people in dot `dot` and `again` who had had it before (for beds). */
-	onSymptoms(dot: number, first: number, again: number): void;
+	/**
+	 * `people` with symptoms in dot `dot` finished their illness; `died` of them died. `region` is
+	 * the hospital that admitted them when it isn't the dot's own (symptoms that started on a trip),
+	 * else -1.
+	 */
+	onIllnessEnd(dot: number, people: number, died: number, region: number): void;
+	/** On tick `tick`, symptoms started for `first` people in dot `dot` and `again` who had had it before. */
+	onSymptoms(dot: number, first: number, again: number, tick: number): void;
+}
+
+/** People in a dot whose symptoms started on a trip: their hospital is the trip's origin (6.8). */
+interface Away {
+	/** The tick their illness ends. */
+	end: number;
+	first: number;
+	again: number;
+	region: number;
 }
 
 export class People {
@@ -68,6 +81,8 @@ export class People {
 	readonly latent: Int32Array;
 	/** Of `latent`, those who will never get symptoms. */
 	readonly latentQuiet: Int32Array;
+	/** Per dot, ill people whose symptoms started on a trip, so they keep that hospital (rare). */
+	private readonly away = new Map<number, Away[]>();
 	/** Protection against severe illness for someone in this dot infected despite the vaccine (6.2). */
 	readonly severe: Float32Array;
 	/** Mean ticks until this dot's vaccine protection fades; 0 when it doesn't. */
@@ -270,7 +285,7 @@ export class People {
 			// No silent phase (e.g. Ebola): symptoms start at once.
 			this.ill[i] += symFirst + symAgain;
 			this.illAgain[i] += symAgain;
-			if (symFirst + symAgain > 0) hooks.onSymptoms(i, symFirst, symAgain);
+			if (symFirst + symAgain > 0) hooks.onSymptoms(i, symFirst, symAgain, tick);
 		} else {
 			this.silentSymptomatic[i] += symFirst + symAgain;
 		}
@@ -282,15 +297,16 @@ export class People {
 	}
 
 	/**
-	 * End of a tick: move every active dot's people along their clocks. `deathChance(i, again)` is
-	 * the chance of dying for someone in dot i finishing their illness, with protection after
-	 * infection when `again`. Recovered people start waning when `waning` is on.
+	 * End of a tick: move every active dot's people along their clocks. `deathChance(i, again, region)`
+	 * is the chance of dying for someone in dot i finishing their illness, with protection after
+	 * infection when `again`, in hospital `region` (-1: the dot's own). Recovered people start waning
+	 * when `waning` is on.
 	 */
 	advance(
 		tick: number,
 		rng: Rng,
 		hooks: PeopleHooks,
-		deathChance: (i: number, again: boolean) => number,
+		deathChance: (i: number, again: boolean, region: number) => number,
 		waning: boolean
 	): void {
 		const S = this.silentTicks;
@@ -324,7 +340,7 @@ export class People {
 					this.silentSymptomatic[i] -= first + twice;
 					this.ill[i] += first + twice;
 					this.illAgain[i] += twice;
-					hooks.onSymptoms(i, first, twice);
+					hooks.onSymptoms(i, first, twice, tick);
 				}
 			}
 			const end = finish + i;
@@ -334,12 +350,23 @@ export class People {
 			if (first + twice > 0) {
 				this.ill[i] -= first + twice;
 				this.illAgain[i] -= twice;
-				let died = 0;
-				if (first > 0) died += rng.binomial(first, deathChance(i, false));
-				if (twice > 0) died += rng.binomial(twice, deathChance(i, true));
-				this.dead[i] += died;
-				this.recovered[i] += first + twice - died;
-				hooks.onIllnessEnd(i, first + twice, died);
+				let localFirst = first;
+				let localTwice = twice;
+				const away = this.away.size > 0 ? this.away.get(i) : undefined;
+				if (away) {
+					// Those whose symptoms started on a trip end their illness in the hospital that took them.
+					for (let e = away.length - 1; e >= 0; e--) {
+						const g = away[e];
+						if (g.end !== tick) continue;
+						localFirst -= g.first;
+						localTwice -= g.again;
+						this.endIllness(i, g.first, g.again, g.region, rng, hooks, deathChance);
+						away.splice(e, 1);
+					}
+					if (away.length === 0) this.away.delete(i);
+				}
+				if (localFirst + localTwice > 0)
+					this.endIllness(i, localFirst, localTwice, -1, rng, hooks, deathChance);
 			}
 			if (quiet > 0) {
 				this.silentAsymptomatic[i] -= quiet;
@@ -394,12 +421,55 @@ export class People {
 	}
 
 	/**
+	 * Note that `first` and `again` people in dot `i`, whose symptoms started on tick `onset` on a
+	 * trip, are patients of hospital `region` until their illness ends (6.8).
+	 */
+	markAway(i: number, onset: number, first: number, again: number, region: number): void {
+		// Symptoms start at age S - 1 (at once with no silent phase) and the illness ends at age S + I - 1.
+		const end = onset + this.illTicks - (this.silentTicks > 0 ? 0 : 1);
+		const group = { end, first, again, region };
+		const list = this.away.get(i);
+		if (list) list.push(group);
+		else this.away.set(i, [group]);
+	}
+
+	/** People in a dot whose symptoms started on a trip, still ill (for tests). */
+	awayCount(i: number): number {
+		return (this.away.get(i) ?? []).reduce((n, g) => n + g.first + g.again, 0);
+	}
+
+	private endIllness(
+		i: number,
+		first: number,
+		twice: number,
+		region: number,
+		rng: Rng,
+		hooks: PeopleHooks,
+		deathChance: (i: number, again: boolean, region: number) => number
+	): void {
+		let died = 0;
+		if (first > 0) died += rng.binomial(first, deathChance(i, false, region));
+		if (twice > 0) died += rng.binomial(twice, deathChance(i, true, region));
+		this.dead[i] += died;
+		this.recovered[i] += first + twice - died;
+		hooks.onIllnessEnd(i, first + twice, died, region);
+	}
+
+	/**
 	 * Move everyone ill in dot `from` to dot `to`, each on their own clock. Done between ticks (before
 	 * departures), so an entry's age is the ticks since its infection.
 	 */
 	moveIll(from: number, to: number, tick: number): number {
 		const moved = this.ill[from];
 		if (moved === 0) return 0;
+		const away = this.away.get(from);
+		if (away) {
+			// They keep the hospital that took them.
+			const into = this.away.get(to);
+			if (into) into.push(...away);
+			else this.away.set(to, away);
+			this.away.delete(from);
+		}
 		const [lo, hi] = this.illAges();
 		for (let a = lo; a <= hi; a++) {
 			this.moveEntry(this.symBuf, from, to, tick, a);
