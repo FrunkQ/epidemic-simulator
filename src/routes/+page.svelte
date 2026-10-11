@@ -66,6 +66,8 @@
 	/** When the cards docked: the window, the floating stage's height and the stage's top. */
 	let dockedAt = { width: 0, height: 0, stage: 0, top: 0 };
 	let stageElement: HTMLElement | undefined = $state();
+	/** The docked cards' strip while it is on the page. */
+	let stripElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
 	let dockRecheck = false;
 	/**
@@ -102,6 +104,18 @@
 			maxY = Math.max(maxY, r.cy + rad);
 		});
 		const { width, height } = size;
+		if (width <= 0 || height <= 0) return; // not laid out yet: its resize frames it
+		// Widened past the narrow-screen width: the strip is still on the page until the DOM
+		// updates, so this stage is the narrow layout's. Measure it again once the strip has gone,
+		// before the next paint, and decide then (a stage that ends the same size fires no resize).
+		if (!compact && stripElement) {
+			tick().then(() => {
+				if (!stageElement || stripElement) return;
+				size = { width: stageElement.clientWidth, height: stageElement.clientHeight };
+				frame(resized);
+			});
+			return;
+		}
 		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
 		/** How much the closed cards would cover the cities on the best frame of a w × h stage. */
 		const coverAt = (w: number, h: number) => {
@@ -396,7 +410,7 @@
 	</div>
 
 	{#if compact}
-		<div class="strip">
+		<div class="strip" bind:this={stripElement}>
 			{#each scenario.regions as region, i (region.id)}
 				<RegionCard
 					{region}
@@ -470,6 +484,7 @@
 	}
 	.strip {
 		display: flex;
+		align-items: flex-start;
 		gap: 8px;
 		overflow-x: auto;
 		padding: 8px 16px;

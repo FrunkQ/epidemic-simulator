@@ -178,7 +178,7 @@ describe('framing', () => {
 		for (const [sx, sy] of SPANS) expect(shouldDock(1240, 348, sx, sy)).toBe(false);
 	});
 
-	it('docks the cards on a smaller stage: 1240x720 with plague, or a 600 px tall window', () => {
+	it('docks the cards on a smaller stage: 1240x688 (316 px), or a 600 px tall window', () => {
 		for (const [w, h] of [
 			[1240, 316],
 			[1280, 280]

@@ -97,6 +97,8 @@
 		let fpsFrames = 0;
 		let fpsSince = last;
 		const loop = (now: number) => {
+			// The next frame is asked for first, so one frame that throws can't stop the map for good.
+			frame = requestAnimationFrame(loop);
 			if (showFps) {
 				fpsFrames++;
 				if (now - fpsSince >= 500) {
@@ -124,7 +126,6 @@
 				lastPublish = now;
 				ontelemetry(sim.snapshot());
 			}
-			frame = requestAnimationFrame(loop);
 		};
 		frame = requestAnimationFrame(loop);
 		return () => {
