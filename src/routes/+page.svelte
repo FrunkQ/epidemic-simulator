@@ -58,7 +58,9 @@
 	 * size (never for a pan, zoom, open panel or a card growing during a run).
 	 */
 	let shortDock = $state(false);
-	let dockedAt = { width: 0, height: 0 };
+	/** When the cards docked: the window, the floating stage's height and the stage's top. */
+	let dockedAt = { width: 0, height: 0, stage: 0, top: 0 };
+	let stageElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
 	let dockRecheck = false;
 	let compact = $derived(size.width < 760 || shortDock);
@@ -87,17 +89,24 @@
 		});
 		const { width, height } = size;
 		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
+		const top = () => stageElement?.getBoundingClientRect().top ?? 0;
 		const dock = () => {
 			shortDock = true;
-			dockedAt = { width: window.innerWidth, height: window.innerHeight };
+			dockedAt = { width: window.innerWidth, height: window.innerHeight, stage: height, top: top() };
 		};
-		// Docked for a small stage: float the cards again to check, after another disease or map, or
-		// in a window of another size. If the stage is still too small they dock again at once.
+		// Docked for a small stage: after another disease or map, or in a window of another size,
+		// work out the stage the cards would float on (the one they docked from, less any growth of
+		// the header above it, plus any growth of the window) and float them only if it is big
+		// enough, so the map never shows floating cards for a frame before docking again.
 		const resized = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
 		if (shortDock && (dockRecheck || resized)) {
-			dockRecheck = false;
-			shortDock = false;
-			return; // the strip goes, the stage grows, and its resize frames again
+			const floatHeight = dockedAt.stage - (top() - dockedAt.top) + (window.innerHeight - dockedAt.height);
+			if (!shouldDock(width, floatHeight, maxX - minX, maxY - minY)) {
+				dockRecheck = false;
+				shortDock = false;
+				return; // the strip goes, the stage grows, and its resize frames again
+			}
+			dockedAt = { width: window.innerWidth, height: window.innerHeight, stage: floatHeight, top: top() };
 		}
 		dockRecheck = false;
 		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
@@ -296,7 +305,7 @@
 		onnewmap={newMap}
 	/>
 
-	<div class="stage">
+	<div class="stage" bind:this={stageElement}>
 		<SimCanvas
 			{sim}
 			ontelemetry={setTelemetry}
