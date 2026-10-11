@@ -73,7 +73,9 @@
 	let fallbackPending = false;
 	/** True from a disease or map change until the cards are measured again. */
 	let sizesStale = false;
-	let compact = $derived(size.width < 760 || shortDock);
+	// Before the stage is first measured, go by the window, so a wide window never paints the strip
+	// (which would shrink the stage and dock the cards on a screen that has room for them).
+	let compact = $derived((size.width || window.innerWidth) < 760 || shortDock);
 
 	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
 	let userMoved = false;
