@@ -48,14 +48,39 @@
 	const value = (v: number) => (unit === '%' ? `${Math.round(v).toLocaleString()}%` : short(v));
 	/** A label needs this much height (px): references closer together, or to the day axis, are crowded. */
 	const LABEL_ROOM = 12;
-	/** Roughly how wide a 10px label is per character (px), on the wide side so a label never overruns. */
-	const CHAR_W = 5.3;
-	const fits = (text: string) => text.length * CHAR_W <= plotW - 4;
+	/**
+	 * Every label this chart might show, drawn hidden so each is measured in the font actually used
+	 * (a wider fallback font can't overrun). Until they are measured, a generous estimate per
+	 * character stands in.
+	 */
+	const candidates = $derived([
+		...new Set(
+			[
+				...references.map((r) => r.label),
+				combinedLabel,
+				shortLabel,
+				references.map((r) => value(r.value)).join(' · ')
+			].filter((t): t is string => !!t)
+		)
+	]);
+	let measuring: (SVGTextElement | undefined)[] = $state([]);
+	let widths: Record<string, number> = $state({});
+	$effect(() => {
+		const next: Record<string, number> = {};
+		candidates.forEach((t, k) => {
+			const el = measuring[k];
+			if (el) next[t] = el.getComputedTextLength();
+		});
+		widths = next;
+	});
+	const CHAR_W = 6;
+	const textWidth = (text: string) => widths[text] ?? text.length * CHAR_W;
+	const fits = (text: string) => textWidth(text) <= plotW - 4;
 	/** Above its line, unless that would leave the plot's top: then below it. */
 	const labelY = (y: number) => (y - MARGIN.top < LABEL_ROOM ? y + 10 : y - 3);
 	/** Where a reference's own label sits: its baseline and its left and right edges. */
 	const labelBox = (r: Reference) => {
-		const w = r.label.length * CHAR_W;
+		const w = textWidth(r.label);
 		const x0 = r.labelStart ? MARGIN.left + 2 : MARGIN.left + plotW - w;
 		return { x0, x1: x0 + w, y: r.labelStart ? ys(r.value) + 10 : labelY(ys(r.value)) };
 	};
@@ -131,6 +156,9 @@
 		{/each}
 		{#each lines as l (l.key)}
 			<polyline points={points(l.values)} stroke={l.colour} stroke-dasharray={l.dash} />
+		{/each}
+		{#each candidates as t, k (t)}
+			<text class="reference-label measure" bind:this={measuring[k]} aria-hidden="true">{t}</text>
 		{/each}
 		<!-- Labels after the lines, with a halo, so no line runs through the text. -->
 		{#if !crowded}
@@ -214,6 +242,9 @@
 	text {
 		fill: #9fb3c8;
 		font-size: 10px;
+	}
+	.measure {
+		visibility: hidden;
 	}
 	.reference-label {
 		fill: #e6edf5;

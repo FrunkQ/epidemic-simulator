@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+	DOCK_SHARE,
 	FRAME_FLOOR,
+	fullScale,
+	shouldDock,
 	discCover,
 	frameTries,
 	layoutCards,
@@ -147,6 +150,53 @@ describe('framing', () => {
 		for (const t of tries) expect(t.scale).toBeGreaterThan(0);
 	});
 
+	// Stage sizes measured in the browser on #17 and #18 together (11 Oct), and the three start maps' spans.
+	const STAGES = [
+		[1400, 544],
+		[1366, 412],
+		[1280, 348],
+		[1920, 773]
+	];
+	const SPANS = [
+		[1071, 1071],
+		[1407, 783],
+		[927, 975]
+	];
+
+	it('keeps cards floating at the four target screens, with room to spare', () => {
+		for (const [w, h] of STAGES)
+			for (const [sx, sy] of SPANS) {
+				expect(shouldDock(w, h, sx, sy), `${w}x${h}`).toBe(false);
+				// The closest, 1280x720, frames at 0.14 of the full scale: well above the 0.1 line.
+				expect(frameTries(w, h, sx, sy)[0].scale).toBeGreaterThanOrEqual(
+					1.3 * DOCK_SHARE * fullScale(w, h, sx, sy)
+				);
+			}
+	});
+
+	it('keeps them floating at 1240x720 when the header leaves a 348 px stage (most diseases)', () => {
+		for (const [sx, sy] of SPANS) expect(shouldDock(1240, 348, sx, sy)).toBe(false);
+	});
+
+	it('docks the cards on a smaller stage: 1240x720 with plague, or a 600 px tall window', () => {
+		for (const [w, h] of [
+			[1240, 316],
+			[1280, 280]
+		])
+			for (const [sx, sy] of SPANS) expect(shouldDock(w, h, sx, sy), `${w}x${h}`).toBe(true);
+	});
+
+	it('never frames floating cards below a twentieth of the full scale', () => {
+		for (let h = 300; h <= 900; h += 20)
+			for (const w of [760, 1024, 1280, 1920])
+				for (const [sx, sy] of SPANS) {
+					if (shouldDock(w, h, sx, sy)) continue;
+					const full = fullScale(w, h, sx, sy);
+					for (const t of frameTries(w, h, sx, sy))
+						expect(t.scale, `${w}x${h}`).toBeGreaterThanOrEqual(FRAME_FLOOR * DOCK_SHARE * full - 1e-9);
+				}
+	});
+
 	it('takes the biggest clear frame, else the biggest with nothing covered, else the least covered', () => {
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 0)][t])).toBe(2);
 		expect(pickFrame([0, 1, 2], (t) => [layout(50, 0), layout(0, 1), layout(0, 2)][t])).toBe(1);
@@ -201,10 +251,15 @@ describe('open cards', () => {
 			const sizes = ds.map(() => closed);
 			const { positions } = layoutCards(ds, sizes, stage);
 			positions.forEach((p) => {
-				const cap = openMaxHeight({ x: p.x, y: p.y, w: closed.w }, closed.h, ds, stage.height);
+				const others = positions.filter((q) => q !== p).map((q) => ({ ...q, w: closed.w }));
+				const cap = openMaxHeight({ x: p.x, y: p.y, w: closed.w }, closed.h, ds, stage.height, others);
 				expect(cap).toBeGreaterThanOrEqual(closed.h);
 				const open = { x: p.x, y: p.y, w: closed.w, h: Math.min(TALLEST_PANEL, cap) };
 				for (const d of ds) expect(discCover(open, d)).toBe(0);
+				// Nor the top of any card below it, where that card's buttons are.
+				for (const q of others)
+					if (q.y >= p.y + closed.h && q.x < p.x + closed.w && p.x < q.x + closed.w)
+						expect(open.y + open.h).toBeLessThanOrEqual(q.y);
 				expect(open.y + open.h).toBeLessThanOrEqual(stage.height);
 			});
 		});
@@ -215,6 +270,13 @@ describe('open cards', () => {
 		expect(openMaxHeight({ x: 50, y: 100, w: 210 }, 200, [d], 900)).toBe(500 - 50 - 8 - 100);
 		// A city off to the side of the card's width doesn't limit it.
 		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900)).toBe(900 - 8 - 100);
+		// Another card below, under the card's width, stops it too; one off to the side doesn't.
+		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900, [{ x: 400, y: 400, w: 210 }])).toBe(
+			400 - 8 - 100
+		);
+		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900, [{ x: 600, y: 400, w: 210 }])).toBe(
+			900 - 8 - 100
+		);
 		// Never shorter than the closed card, even when it already ends inside the clearance.
 		expect(openMaxHeight({ x: 50, y: 300, w: 210 }, 145, [d], 900)).toBe(145);
 	});
