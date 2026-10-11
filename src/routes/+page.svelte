@@ -48,6 +48,9 @@
 		historyVersion = t.historyVersion;
 		histories = t.regions.map((_, r) => sim.history(r));
 	}
+	// The charts and legend are there from the first paint, so the stage is measured at its real
+	// height and a short window docks straight away rather than after a frame of floating cards.
+	setTelemetry(sim.snapshot());
 	let size = $state({ width: 0, height: 0 });
 	/** Bumped whenever the camera moves, so cards follow their cities. */
 	let viewVersion = $state(0);
@@ -74,7 +77,7 @@
 	 * first, until none does (or pick the one that does least), so on a short screen the cards
 	 * move beside the cities.
 	 */
-	function frame() {
+	function frame(resized = false) {
 		userMoved = false;
 		let minX = Infinity;
 		let minY = Infinity;
@@ -89,6 +92,16 @@
 		});
 		const { width, height } = size;
 		const fit = (mx: number, my: number) => sim.view.fit(minX, minY, maxX, maxY, width, height, mx, my);
+		/** How much the closed cards would cover the cities on the best frame of a w × h stage. */
+		const coverAt = (w: number, h: number) => {
+			const at = { width: w, height: h };
+			const cover = (mx: number, my: number) => {
+				sim.view.fit(minX, minY, maxX, maxY, w, h, mx, my);
+				return layoutCards(discsOnScreen(), layoutSizes(), at);
+			};
+			const best = pickFrame(frameTries(w, h, maxX - minX, maxY - minY), (t) => cover(t.mx, t.my));
+			return cover(best.mx, best.my).cover;
+		};
 		const top = () => stageElement?.getBoundingClientRect().top ?? 0;
 		const dock = () => {
 			shortDock = true;
@@ -98,10 +111,14 @@
 		// work out the stage the cards would float on (the one they docked from, less any growth of
 		// the header above it, plus any growth of the window) and float them only if it is big
 		// enough, so the map never shows floating cards for a frame before docking again.
-		const resized = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
-		if (shortDock && (dockRecheck || resized)) {
+		// The fallback dock (cards covering a city on every frame) is decided only on a disease, map
+		// or window change, never when a card grows or ⌂ is pressed.
+		const mayDock = resized || dockRecheck;
+		const windowChanged = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
+		if (shortDock && (dockRecheck || windowChanged)) {
 			const floatHeight = dockedAt.stage - (top() - dockedAt.top) + (window.innerHeight - dockedAt.height);
-			if (!shouldDock(width, floatHeight, maxX - minX, maxY - minY)) {
+			const span = [maxX - minX, maxY - minY] as const;
+			if (!shouldDock(width, floatHeight, ...span) && coverAt(width, floatHeight) === 0) {
 				dockRecheck = false;
 				shortDock = false;
 				return; // the strip goes, the stage grows, and its resize frames again
@@ -128,7 +145,7 @@
 		});
 		fit(best.mx, best.my);
 		// A safety net: no frame keeps the cards off the cities.
-		if (layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
+		if (mayDock && layoutCards(discsOnScreen(), layoutSizes(), size).cover > 0) {
 			dock();
 			return;
 		}
@@ -311,7 +328,7 @@
 			ontelemetry={setTelemetry}
 			onresize={(w, h) => {
 				size = { width: w, height: h };
-				frame();
+				frame(true);
 			}}
 			onview={() => {
 				userMoved = true;
@@ -357,7 +374,7 @@
 					viewVersion++;
 				}}>−</button
 			>
-			<button aria-label="Back to the start view" onclick={frame}>⌂</button>
+			<button aria-label="Back to the start view" onclick={() => frame()}>⌂</button>
 		</div>
 	</div>
 
@@ -402,7 +419,9 @@
 	}
 	main {
 		display: grid;
-		grid-template-rows: auto 1fr auto auto;
+		/* max-content: the strip's row never shrinks below its cards (it scrolls sideways), so the page
+		   scrolls instead when the window is too short for all of it. */
+		grid-template-rows: auto 1fr max-content auto;
 		grid-template-columns: minmax(0, 1fr);
 		height: 100dvh;
 	}

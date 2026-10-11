@@ -174,7 +174,11 @@ describe('framing', () => {
 			}
 	});
 
-	it('docks the cards on a smaller stage: 1240x720, or a 600 px tall window', () => {
+	it('keeps them floating at 1240x720 when the header leaves a 348 px stage (most diseases)', () => {
+		for (const [sx, sy] of SPANS) expect(shouldDock(1240, 348, sx, sy)).toBe(false);
+	});
+
+	it('docks the cards on a smaller stage: 1240x720 with plague, or a 600 px tall window', () => {
 		for (const [w, h] of [
 			[1240, 316],
 			[1280, 280]
