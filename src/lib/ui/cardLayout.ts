@@ -283,15 +283,23 @@ export const OPEN_CLEARANCE = 8;
 /**
  * How tall an open card at `rect` (its top-left and width) may grow before it scrolls inside:
  * down to the stage bottom, or to just above the first city disc below it that its width
- * overlaps, whichever comes first, and never shorter than `closedH`, the height it had closed.
+ * overlaps, or to just above the top of another card below it that its width overlaps (so that
+ * card's buttons stay in reach), whichever comes first, and never shorter than `closedH`, the
+ * height it had closed.
  */
 export function openMaxHeight(
 	rect: { x: number; y: number; w: number },
 	closedH: number,
 	discs: Disc[],
-	stageHeight: number
+	stageHeight: number,
+	cards: { x: number; y: number; w: number }[] = []
 ): number {
 	let bottom = stageHeight - EDGE;
+	for (const c of cards) {
+		if (c.x >= rect.x + rect.w || c.x + c.w <= rect.x) continue;
+		if (c.y < rect.y + closedH) continue;
+		bottom = Math.min(bottom, c.y - OPEN_CLEARANCE);
+	}
 	for (const d of discs) {
 		// The disc's highest point within the card's width.
 		const nx = Math.min(Math.max(d.x, rect.x), rect.x + rect.w);

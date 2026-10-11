@@ -201,10 +201,15 @@ describe('open cards', () => {
 			const sizes = ds.map(() => closed);
 			const { positions } = layoutCards(ds, sizes, stage);
 			positions.forEach((p) => {
-				const cap = openMaxHeight({ x: p.x, y: p.y, w: closed.w }, closed.h, ds, stage.height);
+				const others = positions.filter((q) => q !== p).map((q) => ({ ...q, w: closed.w }));
+				const cap = openMaxHeight({ x: p.x, y: p.y, w: closed.w }, closed.h, ds, stage.height, others);
 				expect(cap).toBeGreaterThanOrEqual(closed.h);
 				const open = { x: p.x, y: p.y, w: closed.w, h: Math.min(TALLEST_PANEL, cap) };
 				for (const d of ds) expect(discCover(open, d)).toBe(0);
+				// Nor the top of any card below it, where that card's buttons are.
+				for (const q of others)
+					if (q.y >= p.y + closed.h && q.x < p.x + closed.w && p.x < q.x + closed.w)
+						expect(open.y + open.h).toBeLessThanOrEqual(q.y);
 				expect(open.y + open.h).toBeLessThanOrEqual(stage.height);
 			});
 		});
@@ -215,6 +220,13 @@ describe('open cards', () => {
 		expect(openMaxHeight({ x: 50, y: 100, w: 210 }, 200, [d], 900)).toBe(500 - 50 - 8 - 100);
 		// A city off to the side of the card's width doesn't limit it.
 		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900)).toBe(900 - 8 - 100);
+		// Another card below, under the card's width, stops it too; one off to the side doesn't.
+		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900, [{ x: 400, y: 400, w: 210 }])).toBe(
+			400 - 8 - 100
+		);
+		expect(openMaxHeight({ x: 300, y: 100, w: 210 }, 200, [d], 900, [{ x: 600, y: 400, w: 210 }])).toBe(
+			900 - 8 - 100
+		);
 		// Never shorter than the closed card, even when it already ends inside the clearance.
 		expect(openMaxHeight({ x: 50, y: 300, w: 210 }, 145, [d], 900)).toBe(145);
 	});

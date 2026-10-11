@@ -221,7 +221,13 @@
 			const w = cardWidths[i] || sizes[i].w;
 			const x = Math.max(8, Math.min(p.x, size.width - w - 8));
 			// Stop above any city below it, so the city stays in view while its settings change.
-			return { x, y: p.y, maxHeight: openMaxHeight({ x, y: p.y, w }, sizes[i].h, discs, size.height) };
+			// ...and above any card below it, so that card's buttons stay in reach.
+			const others = placed.flatMap((q, j) => (j === i ? [] : [{ x: q.x, y: q.y, w: sizes[j].w }]));
+			return {
+				x,
+				y: p.y,
+				maxHeight: openMaxHeight({ x, y: p.y, w }, sizes[i].h, discs, size.height, others)
+			};
 		});
 	});
 </script>
