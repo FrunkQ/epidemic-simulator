@@ -54,10 +54,13 @@
 	/**
 	 * Cards go in the strip below the map on a narrow screen, or on a stage too small to frame the
 	 * cities with floating cards around them, or when no frame keeps them off every city. Docked
-	 * that way, they float again once the window grows.
+	 * that way, they are checked again on the next re-frame for another disease, map or window
+	 * size (never for a pan, zoom, open panel or a card growing during a run).
 	 */
 	let shortDock = $state(false);
 	let dockedAt = { width: 0, height: 0 };
+	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
+	let dockRecheck = false;
 	let compact = $derived(size.width < 760 || shortDock);
 
 	/** Set once the user pans or zooms: from then on the map is only re-framed when they ask. */
@@ -88,11 +91,15 @@
 			shortDock = true;
 			dockedAt = { width: window.innerWidth, height: window.innerHeight };
 		};
-		// Docked for a small stage: try floating cards again once the window is bigger than it was.
-		if (shortDock && (window.innerWidth > dockedAt.width || window.innerHeight > dockedAt.height)) {
+		// Docked for a small stage: float the cards again to check, after another disease or map, or
+		// in a window of another size. If the stage is still too small they dock again at once.
+		const resized = window.innerWidth !== dockedAt.width || window.innerHeight !== dockedAt.height;
+		if (shortDock && (dockRecheck || resized)) {
+			dockRecheck = false;
 			shortDock = false;
 			return; // the strip goes, the stage grows, and its resize frames again
 		}
+		dockRecheck = false;
 		if (!compact && shouldDock(width, height, maxX - minX, maxY - minY)) {
 			dock();
 			return; // the strip comes, the stage resizes, and its resize frames again
@@ -159,6 +166,7 @@
 		});
 		forgetCardSizes();
 		restart();
+		dockRecheck = true;
 		frame();
 	}
 
@@ -273,6 +281,7 @@
 		day={telemetry?.day ?? 0}
 		ondisease={(id) => {
 			diseaseId = id;
+			dockRecheck = true;
 			forgetCardSizes();
 			restart();
 		}}
