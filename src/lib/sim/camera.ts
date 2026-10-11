@@ -30,7 +30,10 @@ export class Camera {
 	): void {
 		const w = Math.max(1, maxX - minX);
 		const h = Math.max(1, maxY - minY);
-		this.scale = Math.min((width - 2 * margin) / w, (height - 2 * marginY) / h);
+		const scale = Math.min((width - 2 * margin) / w, (height - 2 * marginY) / h);
+		// No room inside the margins (e.g. a stage not laid out yet): keep the current view.
+		if (!(scale > 0) || !Number.isFinite(scale)) return;
+		this.scale = scale;
 		this.x = minX - (width / this.scale - w) / 2;
 		this.y = minY - (height / this.scale - h) / 2;
 	}

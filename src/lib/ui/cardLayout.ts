@@ -244,7 +244,8 @@ export const FRAME_MARGIN = 150;
 /**
  * Cards dock in the strip below the map when the usual frame would draw the cities smaller than
  * this share of the scale that fills the stage (11 Oct): a map a few dozen pixels across isn't
- * usable. Measured on the stages: 1280x720 (348 px) frames at 0.14, 1240x720 (316 px) at 0.05.
+ * usable. Measured on the stages: 1280x720 and 1240x720 (348 px) frame at 0.14, and 1240x688
+ * (316 px) at 0.05.
  */
 export const DOCK_SHARE = 0.1;
 
