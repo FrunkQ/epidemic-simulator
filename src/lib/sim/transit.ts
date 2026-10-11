@@ -17,6 +17,11 @@ const scratch = { x: 0, y: 0 };
 export class Transit {
 	/** People with symptoms don't board and stop on the way (the illStopsMovement subsystem). */
 	illStops = true;
+	/**
+	 * Called with illStops on before a dot boards, so its ill people can stay behind (4.4 of
+	 * research/finer-counts.md); false keeps the dot at home this time.
+	 */
+	readyToBoard: (dot: number) => boolean = () => true;
 	readonly planeRoute = new Int16Array(MAX_PLANES).fill(-1);
 	readonly planeDir = new Int8Array(MAX_PLANES);
 	readonly planeS = new Float32Array(MAX_PLANES);
@@ -128,7 +133,10 @@ export class Transit {
 		return load;
 	}
 
-	/** A random dot in the region who can travel: alive, not ill, not isolated. -1 if none found. */
+	/**
+	 * A random dot in the region who can travel: not mostly dead or ill, not isolated, and with nobody
+	 * ill left in it. -1 if none found.
+	 */
 	private pickTraveller(agents: Agents, region: number, rng: Rng): number {
 		const start = this.regionStart[region];
 		const count = this.regionCursor[region] - start;
@@ -138,7 +146,7 @@ export class Transit {
 			const i = this.regionItems[k];
 			if (agents.region[i] !== region) continue; // already left this tick
 			if (agents.dead[i] === 1 || agents.isolated[i] === 1) continue;
-			if (this.illStops && agents.ill[i] === 1) continue;
+			if (this.illStops && (agents.ill[i] === 1 || !this.readyToBoard(i))) continue;
 			return i;
 		}
 		return -1;

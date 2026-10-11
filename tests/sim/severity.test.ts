@@ -10,7 +10,6 @@ import { createSimulation, strainMultiplier } from '../../src/lib/sim/engine';
 import { hospitalRegion } from '../../src/lib/sim/disease';
 import {
 	Protection,
-	State,
 	type Bands,
 	type DiseaseConfig,
 	type DiseaseId,
@@ -197,13 +196,14 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 		const disease = loadDisease('covid19');
 		sim.send({ type: 'seed', region: 0, count: 50 });
 		const a = sim.agents;
+		const p = sim.people;
 		const routes = sim.routes;
 		let travellersIll = 0;
 		for (let day = 0; day < 40; day++) {
 			sim.step(TICKS_PER_DAY);
 			const expected = new Array(scenario.regions.length).fill(0);
 			for (let i = 0; i < a.activeCount; i++) {
-				if (a.state[i] !== State.SYMPTOMATIC) continue;
+				if (p.ill[i] === 0) continue;
 				let home = a.region[i];
 				if (home < 0) {
 					// Worked out here from the route, not with the engine's helper.
@@ -213,7 +213,9 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 					// Its strain comes from the same region its bed is counted in.
 					expect(hospitalRegion(a, routes, i)).toBe(home);
 				}
-				expected[home] += disease.hospitalByBand[a.ageBand[i]] * (1 - a.severe[i]);
+				const h = disease.hospitalByBand[a.ageBand[i]];
+				const again = p.illAgain[i];
+				expected[home] += h * ((p.ill[i] - again) * (1 - p.severe[i]) + again * (1 - p.severeAgain(i)));
 			}
 			sim.snapshot().regions.forEach((r, k) => expect(r.patients, `region ${k}`).toBeCloseTo(expected[k], 4));
 		}
@@ -234,7 +236,7 @@ describe('who gets seriously ill (6.2, 6.6)', () => {
 	});
 });
 
-describe('waning, one step per dot (6.3)', () => {
+describe('waning, person by person (6.3)', () => {
 	it('has half of a working vaccine cohort catchable again at the half-life', () => {
 		const base = counted(0, 0);
 		const halfLifeDays = 20;
@@ -252,23 +254,23 @@ describe('waning, one step per dot (6.3)', () => {
 		const a = sim.agents;
 		sim.step(halfLifeDays * TICKS_PER_DAY);
 		let works = 0;
-		for (let i = 0; i < a.activeCount; i++) works += a.vaccineWorks[i];
-		expect(Math.abs(works / a.activeCount - 0.5)).toBeLessThan(0.03);
+		for (let i = 0; i < a.activeCount; i++) works += sim.people.vaccineImmune[i];
+		expect(Math.abs(works / (a.activeCount * sim.people.perDot) - 0.5)).toBeLessThan(0.03);
 		// The vaccination level stays: they are still counted as vaccinated.
 		for (let i = 0; i < a.activeCount; i++) expect(a.protection[i]).toBe(Protection.FULL);
 	});
 
-	it('makes recovered dots catchable again, keeping protection against severe illness', () => {
+	it('makes recovered people catchable again, keeping protection against severe illness', () => {
 		const base = counted(0, 0, { waningMeanTicks: 1, afterInfectionSevere: 0.6 });
 		const sim = createSimulation(singleCity({ population: 100_000 }), {
 			seed: 7,
 			diseaseId: 'flu',
 			disease: base
 		});
-		const a = sim.agents;
+		const p = sim.people;
 		const cases = sim.seedNow(0, 200);
 		sim.step(base.silentTicks + base.illTicks + 20);
-		expect(cases.every((i) => a.state[i] === State.SUSCEPTIBLE)).toBe(true);
-		expect(cases.every((i) => Math.abs(a.severe[i] - 0.6) < 1e-6)).toBe(true);
+		expect(cases.every((i) => p.susceptibleAgain[i] === 1 && p.recovered[i] === 0)).toBe(true);
+		expect(cases.every((i) => Math.abs(p.severeAgain(i) - 0.6) < 1e-6)).toBe(true);
 	});
 });

@@ -73,4 +73,61 @@ export class Rng {
 		}
 		return k;
 	}
+
+	/**
+	 * Binomial draw: how many of `n` people an event with chance `p` happens to. Inversion for small
+	 * means, a rounded normal for large ones (where its error is far below the draw's own spread).
+	 */
+	binomial(n: number, p: number): number {
+		if (n <= 0 || p <= 0) return 0;
+		if (p >= 1) return n;
+		if (p > 0.5) return n - this.binomial(n, 1 - p);
+		const mean = n * p;
+		if (mean > 30) {
+			const k = Math.round(mean + Math.sqrt(mean * (1 - p)) * this.normal());
+			return k < 0 ? 0 : k > n ? n : k;
+		}
+		const q = 1 - p;
+		const s = p / q;
+		const a = (n + 1) * s;
+		let r = Math.pow(q, n);
+		let u = this.next();
+		let x = 0;
+		while (u > r) {
+			u -= r;
+			x++;
+			if (x > n) return n;
+			r *= a / x - s;
+		}
+		return x;
+	}
+
+	/**
+	 * binomial(n, 1 - e^logEscape), for spread, where each of n people escapes with chance
+	 * e^logEscape. Nobody is infected far more often than not, and that case costs one exp.
+	 */
+	binomialEscape(n: number, logEscape: number): number {
+		if (n <= 0 || logEscape >= 0) return 0;
+		const p = -Math.expm1(logEscape);
+		if (p > 0.5 || n * p > 30) return this.binomial(n, p);
+		let r = Math.exp(n * logEscape);
+		let u = this.next();
+		if (u <= r) return 0;
+		const q = 1 - p;
+		const s = p / q;
+		const a = (n + 1) * s;
+		let x = 0;
+		while (u > r) {
+			u -= r;
+			x++;
+			if (x > n) return n;
+			r *= a / x - s;
+		}
+		return x;
+	}
+
+	/** Exponential draw with the given mean. */
+	exponential(mean: number): number {
+		return -Math.log(1 - this.next()) * mean;
+	}
 }

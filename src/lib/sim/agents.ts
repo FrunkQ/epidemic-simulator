@@ -1,13 +1,9 @@
-import { MAX_AGENTS, MAX_DISEASES } from './constants';
-import { State } from './types';
+import { MAX_AGENTS } from './constants';
 
 /**
  * The dot pool: one fixed set of typed arrays, allocated once (structure of arrays).
- * Slots [0, activeCount) are in use.
- *
- * Illness arrays are per disease (6.12): MAX_DISEASES blocks of `capacity`, so disease slot s of
- * dot i is at `s * capacity + i` (`offset(s) + i`). Slot 0 is the first block, so code that only
- * knows one disease can index slot 0 with `i` alone. Movement, age and region are per dot.
+ * Slots [0, activeCount) are in use. Movement, age, vaccination level and region are per dot; the
+ * dot's people, and their illness, are in People, one per disease (6.12).
  */
 export class Agents {
 	readonly capacity: number;
@@ -26,9 +22,9 @@ export class Agents {
 	readonly ageBand: Uint8Array;
 	readonly isolated: Uint8Array;
 	readonly essential: Uint8Array;
-	/** 1 once the dot has died of any disease. */
+	/** 1 once half or more of the dot's people have died: it stops and is drawn dead. */
 	readonly dead: Uint8Array;
-	/** 1 while the dot has symptoms of any disease, so it stops moving and doesn't travel. */
+	/** 1 while half or more of the dot's people are ill (with any disease): it stops and doesn't travel. */
 	readonly ill: Uint8Array;
 	readonly region: Int16Array;
 	readonly fatigueTicks: Int32Array;
@@ -38,29 +34,21 @@ export class Agents {
 	/** The plane an air traveller rides in, or -1. */
 	readonly planeOf: Int16Array;
 
-	// Per disease slot (MAX_DISEASES x capacity).
-	readonly state: Uint8Array;
-	readonly stateTicks: Int32Array;
-	readonly asymptomatic: Uint8Array;
-	/** 1 when this dot's vaccine against this disease works, so it cannot catch it. */
-	readonly vaccineWorks: Uint8Array;
-	/** Ticks until this dot's vaccine protection or immunity fades; -1 when it won't. */
-	readonly waneTicks: Int32Array;
-	readonly infectedTick: Int32Array;
-	/** Who infected this dot (-1 for none or an index case), so the wizard can draw the chain. */
-	readonly infectedBy: Int32Array;
-	/** Protection against severe illness if this dot is infected despite its vaccine (6.2), 0 to 1. */
-	readonly severe: Float32Array;
 	/**
-	 * Hospital beds this case fills while it has symptoms, in dots: its band's share needing a bed,
-	 * cut by its severe protection (6.6). A dot stands for many people, so this is the expected
-	 * share of them in a bed, not a draw; 0 when not ill or when hospitals are switched off.
+	 * How a dot is drawn (look E, finer-counts §5), set by the engine whenever its people change.
+	 * `shown` is its fill (a State): dead, infected (silent or ill, whichever is more) or recovered
+	 * when half or more of its people are, otherwise SUSCEPTIBLE, drawn in its vaccination colour.
+	 * `ring` is the State of a ring around a dot that isn't filled that way, when some of its people
+	 * are infected (or, with none infected, dead); SUSCEPTIBLE means no ring. `ringLevel` is how
+	 * bright the ring is, 0 to RING_LEVELS - 1, on a log scale of those people, so one person is
+	 * faint and half the dot is full. A dot's people live in People.
 	 */
-	readonly bedNeed: Float32Array;
+	readonly shown: Uint8Array;
+	readonly ring: Uint8Array;
+	readonly ringLevel: Uint8Array;
 
 	constructor(capacity = MAX_AGENTS) {
 		this.capacity = capacity;
-		const perSlot = capacity * MAX_DISEASES;
 		this.x = new Float32Array(capacity);
 		this.y = new Float32Array(capacity);
 		this.vx = new Float32Array(capacity);
@@ -78,35 +66,14 @@ export class Agents {
 		this.routeS = new Float32Array(capacity);
 		this.routeDir = new Int8Array(capacity);
 		this.planeOf = new Int16Array(capacity);
-		this.state = new Uint8Array(perSlot);
-		this.stateTicks = new Int32Array(perSlot);
-		this.asymptomatic = new Uint8Array(perSlot);
-		this.vaccineWorks = new Uint8Array(perSlot);
-		this.waneTicks = new Int32Array(perSlot);
-		this.infectedTick = new Int32Array(perSlot);
-		this.infectedBy = new Int32Array(perSlot);
-		this.severe = new Float32Array(perSlot);
-		this.bedNeed = new Float32Array(perSlot);
+		this.shown = new Uint8Array(capacity);
+		this.ring = new Uint8Array(capacity);
+		this.ringLevel = new Uint8Array(capacity);
 	}
 
-	/**
-	 * The state a dot is shown in: the most serious across its diseases (8): dead, then ill, then
-	 * silent, then recovered, else susceptible.
-	 */
+	/** The state a dot is shown in (see `shown`). */
 	displayState(i: number): number {
-		if (this.dead[i] === 1) return State.DECEASED;
-		let best: number = State.SUSCEPTIBLE;
-		for (let s = 0; s < this.diseaseCount; s++) {
-			const v = this.state[s * this.capacity + i];
-			if (v === State.SYMPTOMATIC) return v;
-			if (v === State.SILENT || (v === State.RECOVERED && best === State.SUSCEPTIBLE)) best = v;
-		}
-		return best;
-	}
-
-	/** Start of disease slot s in the per-disease arrays. */
-	offset(slot: number): number {
-		return slot * this.capacity;
+		return this.shown[i];
 	}
 
 	reset(): void {
@@ -124,14 +91,8 @@ export class Agents {
 		this.planeOf.fill(-1);
 		this.vx.fill(0);
 		this.vy.fill(0);
-		this.state.fill(0);
-		this.stateTicks.fill(0);
-		this.asymptomatic.fill(0);
-		this.vaccineWorks.fill(0);
-		this.waneTicks.fill(-1);
-		this.infectedTick.fill(-1);
-		this.infectedBy.fill(-1);
-		this.severe.fill(0);
-		this.bedNeed.fill(0);
+		this.shown.fill(0);
+		this.ring.fill(0);
+		this.ringLevel.fill(0);
 	}
 }

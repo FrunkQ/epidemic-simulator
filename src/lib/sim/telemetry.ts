@@ -1,10 +1,11 @@
 import { Agents } from './agents';
+import { bedChanceOf, type IllnessRules } from './disease';
+import type { People } from './people';
 import { HISTORY_DAYS, MAX_DISEASES } from './constants';
 import {
 	AGE_CHANNELS,
 	HISTORY_CHANNELS,
 	Protection,
-	State,
 	type AgeChannel,
 	type Bands,
 	type Counts,
@@ -26,7 +27,7 @@ const C_EVER = 7;
 const C_SLOTS = 8;
 const CHANNELS = HISTORY_CHANNELS.length;
 
-/** Hospital channels are expected values (6.6), so history stores them in thousandths of a dot. */
+/** Hospital channels are expected values (6.6), so history stores them in thousandths of a person. */
 export const HOSPITAL_SCALE = 1000;
 
 /** Age counters per region: AGE_CHANNELS x 3 bands, channel-major. */
@@ -34,7 +35,6 @@ const A_SUSCEPTIBLE = 0;
 const A_INFECTED = 1;
 const A_IN_HOSPITAL = 2;
 const A_RECOVERED = 3;
-/** In people (the deaths tally), while the other age channels are in dots. */
 const A_DECEASED = 4;
 const A_VACCINATED = 5;
 const BANDS = 3;
@@ -42,30 +42,29 @@ const A_SLOTS = AGE_CHANNELS.length * BANDS;
 
 /**
  * Running counters per region plus one in-transit bucket (index regionCount), and a ring buffer
- * with one sample per region per day: counts by colour, hospital use and pressure, and the same
- * people by age band.
+ * with one sample per region per day: people by state, hospital use and pressure, and the same
+ * people by age band. Every count is whole people.
  */
 export class TelemetryCounters {
 	readonly regionCount: number;
 	/** (regionCount + 1) x C_SLOTS: each region, then the in-transit bucket. */
 	readonly counts: Int32Array;
+	/** People ever infected per region and age band (regionCount x 3), counted where they caught it. */
 	readonly ever: Int32Array;
 	/**
-	 * regionCount x A_SLOTS. Living travellers are left out; a death on the way counts at its
-	 * origin. The in-hospital channel is filled from agesInHospital when sampled.
+	 * regionCount x A_SLOTS. Living travellers are left out; deaths count where they happened (a
+	 * traveller's at the trip's origin). The in-hospital channel is filled from agesInHospital.
 	 */
 	readonly ages: Int32Array;
-	/** Expected outbreak patients in a bed per region, in dots; an ill traveller counts at its origin (6.8). */
+	/** Expected outbreak patients in a bed per region, in people; an ill traveller counts at their origin (6.8). */
 	readonly patients: Float64Array;
 	/** The same patients per region and age band (regionCount x 3). */
 	readonly agesInHospital: Float64Array;
 	/**
-	 * Deaths tally in people (6.6), per region, disease slot and age band
-	 * (regionCount x MAX_DISEASES x 3): each ended illness adds its chance of death x peoplePerDot.
-	 * Added in the engine's fixed dot order, so a run stays reproducible.
+	 * Deaths in people per region, disease slot and age band (regionCount x MAX_DISEASES x 3), counted
+	 * where they happened: a traveller's at the trip's origin (6.8).
 	 */
-	readonly deathTally: Float64Array;
-	/** Float, so the deaths channels keep the tally in people; display rounds them (8). */
+	readonly died: Int32Array;
 	private readonly history: Float64Array;
 	private readonly ageHistory: Float64Array;
 	private historyLen = 0;
@@ -75,87 +74,122 @@ export class TelemetryCounters {
 	constructor(regionCount: number) {
 		this.regionCount = regionCount;
 		this.counts = new Int32Array((regionCount + 1) * C_SLOTS);
-		this.ever = new Int32Array(regionCount);
+		this.ever = new Int32Array(regionCount * BANDS);
 		this.ages = new Int32Array(regionCount * A_SLOTS);
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
-		this.deathTally = new Float64Array(regionCount * MAX_DISEASES * BANDS);
+		this.died = new Int32Array(regionCount * MAX_DISEASES * BANDS);
 		this.history = new Float64Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.ageHistory = new Float64Array(HISTORY_DAYS * regionCount * A_SLOTS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
 	}
 
 	/**
-	 * Recount everyone by display colour. Living travellers go in the in-transit bucket; someone
-	 * who died on the way counts in the trip's origin, so every dot is counted exactly once.
+	 * Recount everyone by state, in people. Living travellers go in the in-transit bucket. The dead
+	 * aren't recounted: they stay counted where they died, so moving dots never carry deaths between
+	 * cities and every person is counted exactly once.
 	 */
-	recount(agents: Agents, routes: readonly Route[]): void {
-		const { counts, ages, patients, agesInHospital } = this;
+	recount(agents: Agents, people: People): void {
+		const { counts, ages } = this;
 		counts.fill(0);
 		ages.fill(0);
+		const n = agents.activeCount;
+		for (let i = 0; i < n; i++) {
+			let r = agents.region[i];
+			if (r < 0) {
+				if (agents.route[i] < 0) continue;
+				r = this.regionCount;
+			}
+			const band = agents.ageBand[i];
+			const ill = people.ill[i];
+			const base = r * C_SLOTS;
+			const p = agents.protection[i];
+			const silent = people.silentSymptomatic[i] + people.silentAsymptomatic[i];
+			const rec = people.recovered[i];
+			const well = people.perDot - people.dead[i] - ill - silent - rec;
+			counts[
+				base + (p === Protection.FULL ? C_FULL : p === Protection.PARTIAL ? C_PARTIAL : C_UNPROTECTED)
+			] += well;
+			counts[base + C_SILENT] += silent;
+			counts[base + C_SYMPTOMATIC] += ill;
+			counts[base + C_RECOVERED] += rec;
+			if (r === this.regionCount) continue;
+
+			const ab = r * A_SLOTS + band;
+			ages[ab + A_SUSCEPTIBLE * BANDS] += well;
+			ages[ab + A_INFECTED * BANDS] += silent + ill;
+			ages[ab + A_RECOVERED * BANDS] += rec;
+			if (p !== Protection.NONE) ages[ab + A_VACCINATED * BANDS] += people.perDot - people.dead[i];
+		}
+		for (let r = 0; r < this.regionCount; r++) {
+			const b = r * C_SLOTS;
+			counts[b + C_EVER] = this.everInfected(r);
+			counts[b + C_DECEASED] = this.deaths(r);
+			const died = this.deathsByAge(r);
+			for (let band = 0; band < BANDS; band++) ages[r * A_SLOTS + A_DECEASED * BANDS + band] = died[band];
+		}
+	}
+
+	/**
+	 * Expected outbreak patients per region and age band, in people (6.6), every tick for pressure.
+	 * Only dots with someone infected can have anyone ill. A traveller's bed is in the trip's origin (6.8).
+	 */
+	countPatients(agents: Agents, people: People, routes: readonly Route[], rules: IllnessRules): void {
+		const { patients, agesInHospital } = this;
 		patients.fill(0);
 		agesInHospital.fill(0);
-		const n = agents.activeCount;
-		const slots = agents.diseaseCount;
-		for (let i = 0; i < n; i++) {
-			const s = agents.displayState(i);
-			let r = agents.region[i];
-			// The region whose hospitals this dot uses: a traveller's is the trip's origin (6.8).
-			let home = r;
-			if (r < 0) {
+		if (!rules.hospital) return;
+		const disease = people.disease;
+		for (let k = 0; k < people.activeCount; k++) {
+			const i = people.active[k];
+			const ill = people.ill[i];
+			if (ill === 0) continue;
+			let home = agents.region[i];
+			if (home < 0) {
 				const route = agents.route[i];
 				if (route < 0) continue;
 				home = originOf(routes[route], agents.routeDir[i]);
-				r = s === State.DECEASED ? home : this.regionCount;
 			}
-			let need = 0;
-			for (let d = 0; d < slots; d++) need += agents.bedNeed[agents.offset(d) + i];
-			if (need > 0) {
-				patients[home] += need;
-				agesInHospital[home * BANDS + agents.ageBand[i]] += need;
-			}
-			const base = r * C_SLOTS;
-			const p = agents.protection[i];
-			if (s === State.SUSCEPTIBLE) {
-				counts[
-					base + (p === Protection.FULL ? C_FULL : p === Protection.PARTIAL ? C_PARTIAL : C_UNPROTECTED)
-				]++;
-			} else if (s === State.SILENT) counts[base + C_SILENT]++;
-			else if (s === State.SYMPTOMATIC) counts[base + C_SYMPTOMATIC]++;
-			else if (s === State.RECOVERED) counts[base + C_RECOVERED]++;
-			else counts[base + C_DECEASED]++;
-			if (r === this.regionCount) continue;
-
-			const ab = r * A_SLOTS + agents.ageBand[i];
-			const ch =
-				s === State.SUSCEPTIBLE
-					? A_SUSCEPTIBLE
-					: s === State.SILENT || s === State.SYMPTOMATIC
-						? A_INFECTED
-						: s === State.RECOVERED
-							? A_RECOVERED
-							: A_DECEASED;
-			ages[ab + ch * BANDS]++;
-			if (p !== Protection.NONE) ages[ab + A_VACCINATED * BANDS]++;
+			const band = agents.ageBand[i];
+			const again = people.illAgain[i];
+			const need =
+				(ill - again) * bedChanceOf(disease, band, people.severe[i], rules) +
+				again * bedChanceOf(disease, band, people.severeAgain(i), rules);
+			patients[home] += need;
+			agesInHospital[home * BANDS + band] += need;
 		}
-		for (let r = 0; r < this.regionCount; r++) counts[r * C_SLOTS + C_EVER] = this.ever[r];
+	}
+
+	/** Count `people` infected in a region's age band. */
+	addInfections(region: number, band: number, people: number): void {
+		this.ever[region * BANDS + band] += people;
+	}
+
+	everInfected(region: number): number {
+		const b = region * BANDS;
+		return this.ever[b] + this.ever[b + 1] + this.ever[b + 2];
+	}
+
+	everByAge(region: number): Bands {
+		const b = region * BANDS;
+		return [this.ever[b], this.ever[b + 1], this.ever[b + 2]];
 	}
 
 	symptomatic(region: number): number {
 		return this.counts[region * C_SLOTS + C_SYMPTOMATIC];
 	}
 
-	/** Add one ended illness to the deaths tally, in people. */
+	/** Count `people` who died in a region (a traveller's origin), of the disease in `slot`, in an age band. */
 	addDeaths(region: number, slot: number, band: number, people: number): void {
-		this.deathTally[(region * MAX_DISEASES + slot) * BANDS + band] += people;
+		this.died[(region * MAX_DISEASES + slot) * BANDS + band] += people;
 	}
 
-	/** Deaths so far in a region, in people, by age band, over every disease (6.6). */
+	/** Deaths so far in a region, in people, by age band, over every disease. */
 	deathsByAge(region: number): Bands {
 		const out: Bands = [0, 0, 0];
 		for (let s = 0; s < MAX_DISEASES; s++) {
 			const b = (region * MAX_DISEASES + s) * BANDS;
-			for (let band = 0; band < BANDS; band++) out[band] += this.deathTally[b + band];
+			for (let band = 0; band < BANDS; band++) out[band] += this.died[b + band];
 		}
 		return out;
 	}
@@ -180,7 +214,6 @@ export class TelemetryCounters {
 			history[h + 4] = counts[b + C_UNPROTECTED] + counts[b + C_PARTIAL];
 			history[h + 5] = Math.round(this.patients[r] * HOSPITAL_SCALE);
 			history[h + 6] = Math.round(pressure[r] * 1000);
-			history[h + 7] = this.deaths(r);
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {
@@ -188,8 +221,6 @@ export class TelemetryCounters {
 					agesInHospital[r * BANDS + band] * HOSPITAL_SCALE
 				);
 			}
-			const died = this.deathsByAge(r);
-			for (let band = 0; band < BANDS; band++) ageHistory[a + A_DECEASED * BANDS + band] = died[band];
 		}
 		this.historyDay[slot] = day;
 		this.historyHead = (slot + 1) % HISTORY_DAYS;

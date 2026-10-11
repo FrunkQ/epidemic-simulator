@@ -7,7 +7,7 @@ import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { toRuntime } from '../../src/lib/sim/disease';
 import { createSimulation } from '../../src/lib/sim/engine';
-import { State, type DiseaseConfig, type DiseaseId } from '../../src/lib/sim/types';
+import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
 
 /** The microcosm with nobody vaccinated and plenty of travel, so travellers are common. */
 function travelWorld(airports: boolean) {
@@ -56,62 +56,67 @@ describe('latentDays (6.1)', () => {
 		expect(sim.snapshot().totals.everInfected).toBeGreaterThan(cases);
 	});
 
-	it('never lets a silent dot infect anyone when the whole silent phase is latent, index cases included', () => {
+	it('never lets a silent person infect anyone when the whole silent phase is latent, index cases included', () => {
 		const plague = loadDisease('plague');
 		const sim = createSimulation(travelWorld(true), { seed: 6, diseaseId: 'plague' });
 		// Many index cases both ways (a queued command and seedNow), so an early tick would show.
 		sim.send({ type: 'seed', region: 1, count: 400 });
 		sim.seedNow(0, 400);
 		const a = sim.agents;
+		const p = sim.people;
 		let checked = 0;
 		for (let t = 0; t < 30 * TICKS_PER_DAY; t++) {
 			sim.step(1);
-			const tick = sim.snapshot().tick;
-			for (let j = 0; j < a.activeCount; j++) {
-				const src = a.infectedBy[j];
-				if (a.infectedTick[j] !== tick || src < 0) continue;
-				// Silent at transmission means still silent now, or turned ill later this same tick.
-				const wasSilent =
-					a.state[src] === State.SILENT ||
-					(a.state[src] === State.SYMPTOMATIC && a.stateTicks[src] === plague.illTicks);
-				expect(wasSilent, `dot ${j} at tick ${tick}`).toBe(false);
-				checked++;
+			// Every silent person is still latent, so only the ill can spread it.
+			for (let i = 0; i < a.activeCount; i++) {
+				const silent = p.silentSymptomatic[i] + p.silentAsymptomatic[i];
+				expect(p.latent[i], `dot ${i} at tick ${t}`).toBe(silent);
+				expect(p.infectious(i, true)).toBe(p.ill[i]);
+				checked += silent;
 			}
 		}
 		expect(checked).toBeGreaterThan(100);
+		expect(plague.latentTicks).toBe(plague.silentTicks);
 	});
 });
 
 describe('Black Death travel (6.8)', () => {
-	it('an incubating air traveller carries it to another city', () => {
+	it('an incubating air traveller carries it to another city, and no ill person boards', () => {
 		let seeded = 0;
+		let boardedSilent = 0;
 		for (const seed of [1, 2, 3]) {
 			const sim = createSimulation(travelWorld(true), { seed, diseaseId: 'plague' });
 			sim.send({ type: 'seed', region: 1, count: 50 });
 			const a = sim.agents;
-			/**
-			 * Dots that boarded a flight still incubating. Ill dots can't board, so this is the state
-			 * that matters; some fall ill during the flight and land ill.
-			 */
-			const boardedIncubating = new Uint8Array(a.capacity);
+			const p = sim.people;
+			// Person by person: ill people never board, so anyone carrying it is incubating (6.8).
+			let boarded = 0;
+			const ready = sim.planes.readyToBoard;
+			sim.planes.readyToBoard = (dot) => {
+				const ok = ready(dot);
+				if (ok) {
+					expect(p.ill[dot], `dot ${dot} boarded with ill people`).toBe(0);
+					boarded++;
+				}
+				return ok;
+			};
 			const lastRoute = new Int32Array(a.capacity).fill(-1);
-			let firstSource = -2;
-			for (let t = 0; t < 120 * TICKS_PER_DAY && firstSource === -2; t++) {
+			let elsewhere = false;
+			for (let t = 0; t < 120 * TICKS_PER_DAY && !elsewhere; t++) {
 				sim.step(1);
-				const tick = sim.snapshot().tick;
 				for (let i = 0; i < a.activeCount; i++) {
 					const r = a.route[i];
 					if (r >= 0 && lastRoute[i] < 0 && sim.routes[r].kind === 'air')
-						boardedIncubating[i] = a.state[i] === State.SILENT ? 1 : 0;
+						boardedSilent += p.silentSymptomatic[i] + p.ill[i];
 					lastRoute[i] = r;
 				}
-				// The first case caught in another city: who gave it to them?
-				for (let j = 0; j < a.activeCount && firstSource === -2; j++)
-					if (a.infectedTick[j] === tick && a.region[j] >= 0 && a.region[j] !== 1)
-						firstSource = a.infectedBy[j];
+				// Plague crosses only by air (next test), so a case in another city came on a plane.
+				elsewhere = sim.snapshot().regions.some((reg, k) => k !== 1 && reg.counts.everInfected > 0);
 			}
-			if (firstSource >= 0 && boardedIncubating[firstSource] === 1 && a.region[firstSource] !== 1) seeded++;
+			if (elsewhere) seeded++;
+			expect(boarded).toBeGreaterThan(0);
 		}
+		expect(boardedSilent).toBeGreaterThan(0);
 		expect(seeded).toBeGreaterThanOrEqual(2);
 	});
 
@@ -121,11 +126,11 @@ describe('Black Death travel (6.8)', () => {
 		expect(sim.routes.every((r) => r.kind !== 'air')).toBe(true);
 		sim.send({ type: 'seed', region: 1, count: 50 });
 		const a = sim.agents;
+		const p = sim.people;
 		let illOnTheWay = 0;
 		for (let day = 0; day < 150; day++) {
 			sim.step(TICKS_PER_DAY);
-			for (let i = 0; i < a.activeCount; i++)
-				if (a.route[i] >= 0 && a.state[i] === State.SYMPTOMATIC) illOnTheWay++;
+			for (let i = 0; i < a.activeCount; i++) if (a.route[i] >= 0 && p.ill[i] > 0) illOnTheWay++;
 		}
 		const t = sim.snapshot();
 		expect(t.regions[1].counts.everInfected).toBeGreaterThan(50);

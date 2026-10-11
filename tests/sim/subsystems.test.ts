@@ -5,7 +5,7 @@ import { STEIN_40_WEEKS } from '../../src/lib/config/derived';
 import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
-import { State, type Subsystems } from '../../src/lib/sim/types';
+import type { Subsystems } from '../../src/lib/sim/types';
 
 const city = (subsystems: Partial<Subsystems>) => ({ ...singleCity({ population: 300_000 }), subsystems });
 
@@ -35,18 +35,33 @@ describe('subsystem switches (6.14)', () => {
 		expect(spreadOff).toBeLessThan(spreadOn / 10);
 	});
 
-	it('ill stops movement off: people with symptoms keep moving', () => {
-		const sim = createSimulation(city({ illStopsMovement: false }), { seed: 3, diseaseId: 'ebola' });
-		const cases = sim.seedNow(0, 20);
-		const a = sim.agents;
-		const before = cases.map((i) => [a.x[i], a.y[i]]);
-		sim.step(10);
-		expect(cases.filter((i, k) => a.x[i] !== before[k][0] || a.y[i] !== before[k][1]).length).toBe(20);
-		const still = createSimulation(city({}), { seed: 3, diseaseId: 'ebola' });
-		const c2 = still.seedNow(0, 20);
-		const b2 = c2.map((i) => [still.agents.x[i], still.agents.y[i]]);
-		still.step(10);
-		expect(c2.every((i, k) => still.agents.x[i] === b2[k][0] && still.agents.y[i] === b2[k][1])).toBe(true);
+	it('ill stops movement: a dot stops once half or more of its people are ill, unless switched off', () => {
+		const run = (illStopsMovement: boolean) => {
+			const sim = createSimulation(city({ illStopsMovement }), { seed: 3, diseaseId: 'measles' });
+			sim.seedNow(0, 200);
+			const a = sim.agents;
+			const p = sim.people;
+			let moved = 0;
+			let still = 0;
+			for (let t = 0; t < 20 * TICKS_PER_DAY; t++) {
+				const x = Float32Array.from(a.x);
+				const y = Float32Array.from(a.y);
+				const flagged = Uint8Array.from(a.ill);
+				sim.step(1);
+				for (let i = 0; i < a.activeCount; i++) {
+					// The flag is the majority rule (finer-counts §0).
+					expect(a.ill[i]).toBe(2 * p.ill[i] >= p.perDot ? 1 : 0);
+					if (flagged[i] === 0 || a.region[i] < 0) continue;
+					if (a.x[i] === x[i] && a.y[i] === y[i]) still++;
+					else moved++;
+				}
+			}
+			return { moved, still };
+		};
+		const on = run(true);
+		expect(on.still).toBeGreaterThan(0);
+		expect(on.moved).toBe(0);
+		expect(run(false).moved).toBeGreaterThan(0);
 	});
 
 	it('travel off: nobody leaves their population', () => {
@@ -68,7 +83,11 @@ describe('subsystem switches (6.14)', () => {
 		sim.seedNow(0, 50);
 		sim.step(60 * TICKS_PER_DAY);
 		const a = sim.agents;
-		for (let i = 0; i < a.activeCount; i++) expect(a.waneTicks[i]).toBe(-1);
+		const p = sim.people;
+		for (let i = 0; i < a.activeCount; i++) {
+			expect(p.nextVaccineWane[i]).toBe(Infinity);
+			expect(p.nextRecoveredWane[i]).toBe(Infinity);
+		}
 	});
 
 	it('hospital off: no pressure and no strain', () => {
@@ -105,19 +124,17 @@ describe('subsystem switches (6.14)', () => {
 		expect(run(true)).toBeGreaterThan(0.15);
 	});
 
-	it('records who infected whom, -1 for index cases', () => {
-		const sim = createSimulation(city({}), { seed: 8, diseaseId: 'measles' });
+	it('credits each infection to the index case that caused it when calibrating (6.9)', () => {
+		const sim = createSimulation(city({}), { seed: 8, diseaseId: 'measles', secondaryOnly: true });
 		const cases = sim.seedNow(0, 3);
 		sim.step(8 * TICKS_PER_DAY);
-		const a = sim.agents;
-		for (const i of cases) expect(a.infectedBy[i]).toBe(-1);
+		const credited = sim.people.secondaries!;
 		let traced = 0;
-		for (let i = 0; i < a.activeCount; i++) {
-			if (a.state[i] === State.SUSCEPTIBLE || cases.includes(i)) continue;
-			expect(a.infectedBy[i]).toBeGreaterThanOrEqual(0);
-			expect(a.state[a.infectedBy[i]]).not.toBe(State.SUSCEPTIBLE);
-			traced++;
+		for (let i = 0; i < sim.agents.activeCount; i++) {
+			if (!cases.includes(i)) expect(credited[i]).toBe(0);
+			traced += credited[i];
 		}
+		expect(traced).toBe(sim.snapshot().totals.everInfected - cases.length);
 		expect(traced).toBeGreaterThan(0);
 	});
 });

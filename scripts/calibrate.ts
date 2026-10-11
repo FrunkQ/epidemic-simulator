@@ -2,9 +2,9 @@
  * Finds, for each disease, the per-tick spread chance (beta) at which the simulation's
  * measured R0 matches the research R0. Run with `npm run calibrate`.
  *
- * Method: a fully unvaccinated default city; seed a few index cases; newly infected dots are
- * set aside (they do not spread), so we count exactly how many people each index case infects
- * over its whole illness. Seeds are added until the standard error is under 2% of the target,
+ * Method: a fully unvaccinated default city; bring in a few index cases, one person each in
+ * different dots; newly infected people are set aside (they do not spread), so we count exactly
+ * how many people each index case infects over its whole illness (R0 per person). Seeds are added until the standard error is under 2% of the target,
  * then a binary search on beta runs with that same set of seeds.
  */
 import { writeFileSync } from 'node:fs';
@@ -66,13 +66,10 @@ export function measureR0(
 		});
 		const cases = sim.seedNow(0, perRun);
 		sim.step(disease.silentTicks + disease.illTicks + 2);
-		const a = sim.agents;
-		const counts = new Map<number, number>(cases.map((c) => [c, 0]));
-		for (let i = 0; i < a.activeCount; i++) {
-			const k = counts.get(a.infectedBy[i]);
-			if (k !== undefined) counts.set(a.infectedBy[i], k + 1);
-		}
-		for (const k of counts.values()) {
+		// Each index case is the only infectious person in its dot, so its dot's count is its own.
+		const secondaries = sim.people.secondaries!;
+		for (const c of cases) {
+			const k = secondaries[c];
 			sum += k;
 			sumSq += k * k;
 			n++;
@@ -100,7 +97,7 @@ function search(id: DiseaseId, target: number, radius: number, seeds: number): n
 	return Math.exp((lo + hi) / 2);
 }
 
-function calibrate(id: DiseaseId): DiseaseCalibration {
+export function calibrate(id: DiseaseId): DiseaseCalibration {
 	const target = DISEASES[id].r0.value;
 	const radius = findRadius(id, target);
 	// Rough beta, then grow the seed set until it is precise enough, then search again on it.
@@ -129,12 +126,8 @@ function calibrate(id: DiseaseId): DiseaseCalibration {
 	};
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-	// Optional disease ids on the command line limit the run to those; others keep their values.
-	const only = process.argv.slice(2) as DiseaseId[];
-	const ids = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => only.length === 0 || only.includes(id));
-	const out: Record<string, DiseaseCalibration> = { ...CALIBRATION };
-	for (const id of ids) out[id] = calibrate(id);
+/** Write diseases.generated.ts with these calibrations. */
+export function writeCalibration(out: Record<string, DiseaseCalibration>): string {
 	const all = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => out[id]);
 	const header = all
 		.map(
@@ -162,5 +155,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			`import type { DiseaseCalibration, DiseaseId } from '../sim/types';\n\n` +
 			`export const CALIBRATION: Record<DiseaseId, DiseaseCalibration> = {\n${body}\n};\n`
 	);
-	console.log(`wrote ${file}`);
+	return file;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+	// Optional disease ids on the command line limit the run to those; others keep their values.
+	const only = process.argv.slice(2) as DiseaseId[];
+	const ids = (Object.keys(DISEASES) as DiseaseId[]).filter((id) => only.length === 0 || only.includes(id));
+	const out: Record<string, DiseaseCalibration> = { ...CALIBRATION };
+	for (const id of ids) out[id] = calibrate(id);
+	console.log(`wrote ${writeCalibration(out)}`);
 }

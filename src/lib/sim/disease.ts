@@ -1,4 +1,5 @@
 import { Agents } from './agents';
+import { People, type PeopleHooks } from './people';
 import { TICKS_PER_DAY } from './constants';
 import { SpatialGrid } from './grid';
 import { Rng } from './rng';
@@ -6,8 +7,6 @@ import { breakthroughSevereProtection, defaultVaccine, vaccineKey } from '../con
 import { perSymptomaticBands } from '../config/diseases';
 import { originOf } from './transit';
 import {
-	Protection,
-	State,
 	type Bands,
 	type DiseaseCalibration,
 	type DiseaseConfig,
@@ -129,26 +128,6 @@ export function vaccineFor(disease: DiseaseRuntime, key: string | undefined): Va
 	return disease.vaccines.find((v) => v.key === key) ?? disease.vaccines[0];
 }
 
-/**
- * Ticks until protection fades, or -1 when it never does. Exponential with mean
- * halfLife / ln 2, so half of a cohort has lost protection at the half-life (6.3).
- */
-export function drawWaneTicks(meanTicks: number, rng: Rng): number {
-	if (meanTicks === 0) return -1;
-	return Math.max(1, Math.round(-Math.log(1 - rng.next()) * meanTicks));
-}
-
-/** Callbacks the disease step reports to, so the engine can keep its counters. */
-export interface DiseaseHooks {
-	onInfected(target: number, source: number): void;
-	onDeath(dot: number): void;
-	/**
-	 * A red phase ended in `region`'s hospitals (a traveller's trip origin, 6.8) with this chance of
-	 * death, whether or not the dot's own draw killed it; the engine adds it to the deaths tally.
-	 */
-	onIllnessEnd(dot: number, slot: number, region: number, deathChance: number, died: boolean): void;
-}
-
 /** Subsystem switches the illness rules read (6.14). */
 export interface IllnessRules {
 	deaths: boolean;
@@ -157,73 +136,26 @@ export interface IllnessRules {
 	illStopsMovement: boolean;
 }
 
-/** Put a dot into the silent phase of the disease in `slot`. */
-export function infect(
-	agents: Agents,
-	slot: number,
-	i: number,
-	source: number,
-	tick: number,
+/** Deaths per symptomatic case in a dot's age band, cut by protection against severe illness `severe`. */
+export function deathChanceOf(
 	disease: DiseaseRuntime,
-	rng: Rng,
-	rules: IllnessRules
-): void {
-	const k = agents.offset(slot) + i;
-	agents.state[k] = State.SILENT;
-	agents.infectedTick[k] = tick;
-	agents.infectedBy[k] = source;
-	agents.waneTicks[k] = -1;
-	const asymptomatic = rng.next() < disease.asymptomaticFraction;
-	agents.asymptomatic[k] = asymptomatic ? 1 : 0;
-	// No silent phase (e.g. Ebola): symptoms start at once, so the dot is never mobile and contagious.
-	if (!asymptomatic && disease.silentTicks === 0) {
-		showSymptoms(agents, k, i, disease, rules);
-		return;
-	}
-	// A case that never shows symptoms stays orange for its whole contagious period.
-	agents.stateTicks[k] = asymptomatic ? disease.silentTicks + disease.illTicks : disease.silentTicks;
-}
-
-/** The band's chances, cut by the dot's protection against severe illness. */
-function deathChance(
-	agents: Agents,
-	k: number,
-	i: number,
-	disease: DiseaseRuntime,
+	band: number,
+	severe: number,
 	rules: IllnessRules
 ): number {
-	const d = rules.ageBands ? disease.mortalityByBand[agents.ageBand[i]] : disease.mortality;
-	return d * (1 - agents.severe[k]);
+	const d = rules.ageBands ? disease.mortalityByBand[band] : disease.mortality;
+	return d * (1 - severe);
 }
 
-function bedChance(
-	agents: Agents,
-	k: number,
-	i: number,
+/** Share of symptomatic cases needing a bed in a dot's age band, cut by protection against severe illness. */
+export function bedChanceOf(
 	disease: DiseaseRuntime,
+	band: number,
+	severe: number,
 	rules: IllnessRules
 ): number {
-	const h = rules.ageBands ? disease.hospitalByBand[agents.ageBand[i]] : disease.hospitalisedShare;
-	return h * (1 - agents.severe[k]);
-}
-
-/** Symptoms start: the dot turns red, stops (unless that subsystem is off) and fills its share of beds. */
-function showSymptoms(
-	agents: Agents,
-	k: number,
-	i: number,
-	disease: DiseaseRuntime,
-	rules: IllnessRules
-): void {
-	agents.state[k] = State.SYMPTOMATIC;
-	agents.stateTicks[k] = disease.illTicks;
-	agents.ill[i] = 1;
-	if (rules.illStopsMovement) {
-		agents.vx[i] = 0;
-		agents.vy[i] = 0;
-	}
-	// Expected value, not a draw: the dot's people fill h of a dot's worth of beds (6.6).
-	agents.bedNeed[k] = rules.hospital ? bedChance(agents, k, i, disease, rules) : 0;
+	const h = rules.ageBands ? disease.hospitalByBand[band] : disease.hospitalisedShare;
+	return h * (1 - severe);
 }
 
 /** The region whose hospitals a dot uses: its own, or on a trip, the trip's origin (6.8). */
@@ -241,8 +173,8 @@ function strained(p: number, m: number): number {
 
 /**
  * Chance of dying at the end of illness (6.6): h·s(min(d,h)/h, m) + (1-h)·max(0,d-h)/(1-h).
- * The first term is the share of the dot's people who had a bed, the second those who didn't
- * (deaths outside hospital, which strain doesn't touch). With m = 1 it is exactly d.
+ * The first term is the share of people who had a bed, the second those who didn't (deaths
+ * outside hospital, which strain doesn't touch). With m = 1 it is exactly d.
  */
 export function deathChanceAtEnd(d: number, h: number, m: number): number {
 	const outside = Math.max(0, d - h);
@@ -250,204 +182,194 @@ export function deathChanceAtEnd(d: number, h: number, m: number): number {
 	return h * strained(Math.min(d, h) / h, m) + outside;
 }
 
+/** Scratch for one transmission pass: the summed log chance of escaping, per dot and disease. */
+export class Exposure {
+	readonly logEscape: Float64Array;
+	readonly touched: Int32Array;
+	readonly marked: Uint8Array;
+	touchedCount = 0;
+	constructor(capacity: number) {
+		this.logEscape = new Float64Array(capacity);
+		this.touched = new Int32Array(capacity);
+		this.marked = new Uint8Array(capacity);
+	}
+}
+
 /**
- * Spread: every infectious dot checks the 3x3 cells around it for susceptible dots in range.
- * Vaccines are all or nothing: a vaccinated dot either cannot catch it, or catches it like anyone.
- * When `secondaryOnly` is set (calibration), newly infected dots are counted and set aside
- * instead of becoming infectious, so each index case's own infections can be measured.
- * With `silentSpread` off, only dots with symptoms spread it.
+ * Spread (4.2 of research/finer-counts.md): every infectious person has the same chance,
+ * beta / peoplePerDot, of infecting each catchable person in every other dot within the
+ * transmission radius; people in the same dot don't infect each other. So a catchable person in dot
+ * i escapes with chance (1 - beta/N)^(infectious people nearby), and each exposed dot takes one
+ * binomial draw. One neighbour scan serves every disease (6.12). Travellers neither spread nor
+ * catch it. With `silentSpread` off only people with symptoms spread it. In calibration (`people`
+ * have `secondaries`), each infectious dot's draws are made in turn and the people it infects are
+ * set aside and credited to it, which gives the same chances as the combined draw.
  */
 export function transmit(
 	agents: Agents,
 	grid: SpatialGrid,
-	disease: DiseaseRuntime,
-	slot: number,
+	slots: readonly People[],
+	exposure: readonly Exposure[],
 	tick: number,
 	rng: Rng,
-	hooks: DiseaseHooks,
-	secondaryOnly: boolean,
-	silentSpread: boolean,
-	rules: IllnessRules
+	hooks: readonly PeopleHooks[],
+	silentSpread: boolean
 ): void {
-	const { x, y, state, stateTicks, asymptomatic, infectedTick, region, vaccineWorks, dead } = agents;
+	if (slots.length === 1 && !slots[0].secondaries) {
+		transmitOne(agents, grid, slots[0], exposure[0], tick, rng, hooks[0], silentSpread);
+		return;
+	}
+	const { x, y, region } = agents;
 	const { cellStart, cellItems } = grid;
-	const o = agents.offset(slot);
-	const n = agents.activeCount;
-	const r2 = disease.transmissionRadius * disease.transmissionRadius;
-	const beta = disease.beta;
+	const D = slots.length;
+	const w = new Float64Array(D);
+	const r2 = slots.map((p) => p.disease.transmissionRadius ** 2);
+	// Cells to scan either side: enough to cover the widest radius.
+	const span = Math.ceil(Math.sqrt(Math.max(...r2)) / grid.cellSize);
+	const logq = slots.map((p) => Math.log(1 - Math.min(p.disease.beta, 0.999999) / p.perDot));
+	for (const e of exposure) e.touchedCount = 0;
 
-	for (let i = 0; i < n; i++) {
-		const s = state[o + i];
-		if (s !== State.SYMPTOMATIC && (s !== State.SILENT || !silentSpread)) continue;
-		const reg = region[i];
-		if (infectedTick[o + i] >= tick || reg < 0 || dead[i] === 1) continue;
-		// Still incubating: infected, but not yet contagious (6.1). Timed on the clock that brings on
-		// symptoms (ticks of silent phase gone by), so index cases follow the same rule as any other.
-		if (s === State.SILENT && disease.latentTicks > 0) {
-			const silentStart =
-				asymptomatic[o + i] === 1 ? disease.silentTicks + disease.illTicks : disease.silentTicks;
-			if (silentStart - stateTicks[o + i] < disease.latentTicks) continue;
-		}
-		const xi = x[i];
-		const yi = y[i];
-		const cols = grid.cols[reg];
-		const rows = grid.rows[reg];
-		const base = grid.offset[reg];
-		const cx = grid.col(reg, xi);
-		const cy = grid.row(reg, yi);
-		const x0 = cx > 0 ? cx - 1 : 0;
-		const x1 = cx < cols - 1 ? cx + 1 : cols - 1;
-		const y0 = cy > 0 ? cy - 1 : 0;
-		const y1 = cy < rows - 1 ? cy + 1 : rows - 1;
-		for (let gy = y0; gy <= y1; gy++) {
-			for (let gx = x0; gx <= x1; gx++) {
-				const c = base + gy * cols + gx;
-				const end = cellStart[c + 1];
-				for (let m = cellStart[c]; m < end; m++) {
-					const j = cellItems[m];
-					if (state[o + j] !== State.SUSCEPTIBLE) continue;
-					if (vaccineWorks[o + j] === 1) continue;
-					const dx = x[j] - xi;
-					const dy = y[j] - yi;
-					if (dx * dx + dy * dy > r2) continue;
-					if (rng.next() >= beta) continue;
-					if (secondaryOnly) {
-						state[o + j] = State.RECOVERED;
-						infectedTick[o + j] = tick;
-						agents.infectedBy[o + j] = i;
-						agents.waneTicks[o + j] = -1;
-					} else {
-						infect(agents, slot, j, i, tick, disease, rng, rules);
+	for (let s0 = 0; s0 < D; s0++) {
+		const list = slots[s0];
+		for (let k = 0; k < list.activeCount; k++) {
+			const j = list.active[k];
+			// A dot active in an earlier disease has already been scanned for every disease.
+			let seen = false;
+			for (let s = 0; s < s0; s++) if (slots[s].infected(j) > 0) seen = true;
+			if (seen) continue;
+			const reg = region[j];
+			if (reg < 0) continue;
+			let any = false;
+			let reach = 0;
+			for (let s = 0; s < D; s++) {
+				const n = slots[s].infectious(j, silentSpread);
+				w[s] = n > 0 ? n * logq[s] : 0;
+				if (n > 0) {
+					any = true;
+					if (r2[s] > reach) reach = r2[s];
+				}
+			}
+			if (!any) continue;
+			const xj = x[j];
+			const yj = y[j];
+			const cols = grid.cols[reg];
+			const rows = grid.rows[reg];
+			const base = grid.offset[reg];
+			const cx = grid.col(reg, xj);
+			const cy = grid.row(reg, yj);
+			const x0 = cx > span ? cx - span : 0;
+			const x1 = cx < cols - 1 - span ? cx + span : cols - 1;
+			const y0 = cy > span ? cy - span : 0;
+			const y1 = cy < rows - 1 - span ? cy + span : rows - 1;
+			for (let gy = y0; gy <= y1; gy++) {
+				for (let gx = x0; gx <= x1; gx++) {
+					const c = base + gy * cols + gx;
+					const end = cellStart[c + 1];
+					for (let m = cellStart[c]; m < end; m++) {
+						const i = cellItems[m];
+						if (i === j) continue;
+						const dx = x[i] - xj;
+						const dy = y[i] - yj;
+						const d2 = dx * dx + dy * dy;
+						if (d2 > reach) continue;
+						for (let s = 0; s < D; s++) {
+							if (w[s] === 0 || d2 > r2[s]) continue;
+							const p = slots[s];
+							const open = p.catchable(i);
+							if (open === 0) continue;
+							if (p.secondaries) {
+								const got = rng.binomial(open, 1 - Math.exp(w[s]));
+								if (got > 0) {
+									p.infect(i, got, tick, rng, hooks[s], true);
+									p.secondaries[j] += got;
+								}
+								continue;
+							}
+							const e = exposure[s];
+							if (e.marked[i] === 0) {
+								e.marked[i] = 1;
+								e.logEscape[i] = 0;
+								e.touched[e.touchedCount++] = i;
+							}
+							e.logEscape[i] += w[s];
+						}
 					}
-					hooks.onInfected(j, i);
 				}
 			}
 		}
 	}
-}
-
-/**
- * Disease clocks: silent turns red (or recovers, if it never shows symptoms), red ends in
- * recovery or death. `strain[region]` multiplies the odds of dying for the share of a dot's
- * people in a bed (6.6); a dot on a trip feels its origin's strain (6.8). Waning is drawn at
- * recovery when `waning` is on.
- */
-export function advanceIllness(
-	agents: Agents,
-	disease: DiseaseRuntime,
-	slot: number,
-	rng: Rng,
-	strain: Float32Array,
-	routes: readonly Route[],
-	hooks: DiseaseHooks,
-	rules: IllnessRules,
-	waning: boolean
-): void {
-	const { state, stateTicks, dead } = agents;
-	const o = agents.offset(slot);
-	const n = agents.activeCount;
-	for (let i = 0; i < n; i++) {
-		const k = o + i;
-		const s = state[k];
-		if (s !== State.SILENT && s !== State.SYMPTOMATIC) continue;
-		if (dead[i] === 1) continue;
-		if (--stateTicks[k] > 0) continue;
-		if (s === State.SILENT) {
-			if (agents.asymptomatic[k] === 1) recover(agents, k, i, disease, rng, waning);
-			else showSymptoms(agents, k, i, disease, rules);
-			continue;
-		}
-		// End of the red phase: one death draw (6.6), with the strain of the dot's hospital region.
-		// An 'era' death rate predates modern hospital care, so strain never applies to it.
-		agents.bedNeed[k] = 0;
-		const home = hospitalRegion(agents, routes, i);
-		let p = 0;
-		if (rules.deaths) {
-			const d = deathChance(agents, k, i, disease, rules);
-			const h = bedChance(agents, k, i, disease, rules);
-			p = deathChanceAtEnd(d, h, disease.strainApplies && rules.hospital && home >= 0 ? strain[home] : 1);
-		}
-		const died = p > 0 && rng.next() < p;
-		hooks.onIllnessEnd(i, slot, home, p, died);
-		if (died) {
-			state[k] = State.DECEASED;
-			dead[i] = 1;
-			agents.vx[i] = 0;
-			agents.vy[i] = 0;
-			agents.isolated[i] = 0;
-			refreshIll(agents, i);
-			hooks.onDeath(i);
-		} else {
-			recover(agents, k, i, disease, rng, waning);
+	for (let s = 0; s < D; s++) {
+		const e = exposure[s];
+		const p = slots[s];
+		for (let k = 0; k < e.touchedCount; k++) {
+			const i = e.touched[k];
+			e.marked[i] = 0;
+			const got = rng.binomial(p.catchable(i), 1 - Math.exp(e.logEscape[i]));
+			if (got > 0) p.infect(i, got, tick, rng, hooks[s], false);
 		}
 	}
 }
 
-/**
- * Waning (6.3), one step per dot: a working vaccine stops working, and a recovered dot becomes
- * catchable again. Both keep their protection against severe illness.
- */
-export function wane(agents: Agents, slot: number): void {
-	const { state, waneTicks, vaccineWorks, dead } = agents;
-	const o = agents.offset(slot);
-	const n = agents.activeCount;
-	for (let i = 0; i < n; i++) {
-		const k = o + i;
-		if (waneTicks[k] < 0 || dead[i] === 1) continue;
-		if (--waneTicks[k] > 0) continue;
-		waneTicks[k] = -1;
-		const s = state[k];
-		if (s === State.RECOVERED) state[k] = State.SUSCEPTIBLE;
-		else if (s === State.SUSCEPTIBLE) vaccineWorks[k] = 0;
-	}
-}
-
-/** Recompute the per-dot `ill` flag after a dot leaves the red phase of one disease. */
-function refreshIll(agents: Agents, i: number): void {
-	let ill = 0;
-	for (let s = 0; s < agents.diseaseCount; s++) {
-		if (agents.state[agents.offset(s) + i] === State.SYMPTOMATIC) ill = 1;
-	}
-	agents.ill[i] = ill;
-}
-
-function recover(
+/** transmit() for one disease outside calibration, the usual case, with the per-disease loops taken out. */
+function transmitOne(
 	agents: Agents,
-	k: number,
-	i: number,
-	disease: DiseaseRuntime,
+	grid: SpatialGrid,
+	p: People,
+	e: Exposure,
+	tick: number,
 	rng: Rng,
-	waning: boolean
+	hooks: PeopleHooks,
+	silentSpread: boolean
 ): void {
-	agents.state[k] = State.RECOVERED;
-	agents.bedNeed[k] = 0;
-	agents.isolated[i] = 0;
-	// Having had it works like a vaccine course: keep the stronger protection, never combined (6.2).
-	if (disease.afterInfectionSevere > agents.severe[k]) agents.severe[k] = disease.afterInfectionSevere;
-	agents.waneTicks[k] = waning ? drawWaneTicks(disease.waningMeanTicks, rng) : -1;
-	refreshIll(agents, i);
-	if (agents.ill[i] === 1) return;
-	const a = rng.next() * Math.PI * 2;
-	agents.vx[i] = Math.cos(a) * agents.speed[i];
-	agents.vy[i] = Math.sin(a) * agents.speed[i];
-}
-
-/** Spawn-time vaccination for one dot and one disease (all or nothing, 6.1). */
-export function vaccinate(
-	agents: Agents,
-	slot: number,
-	i: number,
-	vaccine: VaccineRuntime,
-	rng: Rng,
-	waning: boolean
-): void {
-	const k = agents.offset(slot) + i;
-	const p = agents.protection[i];
-	const full = p === Protection.FULL;
-	const partial = p === Protection.PARTIAL;
-	const efficacy = full ? vaccine.fullInfection : partial ? vaccine.partialInfection : 0;
-	agents.vaccineWorks[k] = rng.next() < efficacy ? 1 : 0;
-	agents.severe[k] = full ? vaccine.fullSevere : partial ? vaccine.partialSevere : 0;
-	agents.waneTicks[k] =
-		agents.vaccineWorks[k] === 1 && waning ? drawWaneTicks(vaccine.waningMeanTicks, rng) : -1;
+	const { x, y, region } = agents;
+	const { cellStart, cellItems } = grid;
+	const { susceptible, susceptibleAgain, active } = p;
+	const { logEscape, touched, marked } = e;
+	const reach = p.disease.transmissionRadius ** 2;
+	const span = Math.ceil(p.disease.transmissionRadius / grid.cellSize);
+	const logq = Math.log(1 - Math.min(p.disease.beta, 0.999999) / p.perDot);
+	let touchedCount = 0;
+	for (let k = 0; k < p.activeCount; k++) {
+		const j = active[k];
+		const reg = region[j];
+		if (reg < 0) continue;
+		const n = p.infectious(j, silentSpread);
+		if (n <= 0) continue;
+		const w = n * logq;
+		const xj = x[j];
+		const yj = y[j];
+		const cols = grid.cols[reg];
+		const rows = grid.rows[reg];
+		const base = grid.offset[reg];
+		const cx = grid.col(reg, xj);
+		const cy = grid.row(reg, yj);
+		const x0 = cx > span ? cx - span : 0;
+		const x1 = cx < cols - 1 - span ? cx + span : cols - 1;
+		const y0 = cy > span ? cy - span : 0;
+		const y1 = cy < rows - 1 - span ? cy + span : rows - 1;
+		for (let gy = y0; gy <= y1; gy++) {
+			const row = base + gy * cols;
+			// The cells of one row are next to each other in cellItems.
+			const end = cellStart[row + x1 + 1];
+			for (let m = cellStart[row + x0]; m < end; m++) {
+				const i = cellItems[m];
+				if (i === j || susceptible[i] + susceptibleAgain[i] === 0) continue;
+				const dx = x[i] - xj;
+				const dy = y[i] - yj;
+				if (dx * dx + dy * dy > reach) continue;
+				if (marked[i] === 0) {
+					marked[i] = 1;
+					logEscape[i] = w;
+					touched[touchedCount++] = i;
+				} else logEscape[i] += w;
+			}
+		}
+	}
+	e.touchedCount = touchedCount;
+	for (let k = 0; k < touchedCount; k++) {
+		const i = touched[k];
+		marked[i] = 0;
+		const got = rng.binomialEscape(susceptible[i] + susceptibleAgain[i], logEscape[i]);
+		if (got > 0) p.infect(i, got, tick, rng, hooks, false);
+	}
 }

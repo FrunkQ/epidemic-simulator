@@ -3,7 +3,7 @@ import { loadDisease } from '../../src/lib/config';
 import { defaultPolicy, withValue } from '../../src/lib/config/healthPolicy';
 import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
-import { createSimulation, deathTallyPeople } from '../../src/lib/sim/engine';
+import { createSimulation } from '../../src/lib/sim/engine';
 import type { Bands, DiseaseRuntime } from '../../src/lib/sim/types';
 import { roundToTotal } from '../../src/lib/ui/charts/scale';
 
@@ -32,47 +32,42 @@ function run(d: number, seed: number) {
 	});
 	const cases = sim.seedNow(0, 3000).length;
 	sim.step(disease.silentTicks + disease.illTicks + 5 * TICKS_PER_DAY);
-	return { t: sim.snapshot(), cases };
+	return { t: sim.snapshot(), cases, sim };
 }
 
-describe('deaths tally (6.6)', () => {
-	it('adds each ended illness’s chance of death in people, so with no strain it is exactly cases x d', () => {
+/** Every person who has died, wherever their dot is now. */
+function deadPeople(sim: ReturnType<typeof createSimulation>): number {
+	let dead = 0;
+	for (let i = 0; i < sim.agents.activeCount; i++) dead += sim.people.dead[i];
+	return dead;
+}
+
+describe('deaths in whole people (6.6)', () => {
+	it('kills d of cases with no strain, in whole people', () => {
 		const d = 0.013;
-		const { t, cases } = run(d, 1);
+		const { t, cases, sim } = run(d, 1);
 		expect(t.regions[0].strain).toBe(1);
-		expect(t.regions[0].deaths).toBeCloseTo(cases * d * t.peoplePerDot, 6);
-		expect(t.regions[0].deathsByAge[1]).toBeCloseTo(t.regions[0].deaths, 9);
-		expect(t.deaths).toBeCloseTo(t.regions[0].deaths, 9);
+		const deaths = t.regions[0].deaths;
+		expect(Number.isInteger(deaths)).toBe(true);
+		expect(Math.abs(deaths - cases * d)).toBeLessThan(3 * Math.sqrt(cases * d * (1 - d)));
+		expect(deaths).toBe(deadPeople(sim));
+		expect(t.regions[0].deathsByAge[1]).toBe(deaths);
+		expect(t.deaths).toBe(deaths);
 	});
 
-	it('scales smoothly: a death rate far below one dot per run still shows', () => {
-		const d = 0.0002;
-		const { t, cases } = run(d, 2);
-		// Fewer than one dot is expected to die, but the tally shows the people, and the card's
-		// rounded figure is not 0.
-		expect(t.regions[0].deaths).toBeCloseTo(cases * d * t.peoplePerDot, 6);
-		expect(t.regions[0].deaths).toBeLessThan(t.peoplePerDot);
-		expect(Math.round(t.regions[0].deaths)).toBeGreaterThan(0);
+	it('shows a rare death as one person, not a fraction', () => {
+		// 3,000 cases at 1 in 2,000: 1.5 deaths expected, so most seeds have one or two.
+		let some = 0;
+		for (const seed of [2, 12, 22, 32, 42]) {
+			const deaths = run(0.0005, seed).t.regions[0].deaths;
+			expect(Number.isInteger(deaths)).toBe(true);
+			expect(deaths).toBeLessThan(10);
+			if (deaths > 0) some++;
+		}
+		expect(some).toBeGreaterThan(0);
 	});
 
-	// The engine never runs at one person per dot today (dot allocation starts at 100), so this
-	// checks the helper only; the guided village gets an engine-level check (11, step 6).
-	it('helper: counts the dead dots themselves when a dot is one person', () => {
-		expect(deathTallyPeople(0.3, true, 1)).toBe(1);
-		expect(deathTallyPeople(0.3, false, 1)).toBe(0);
-		expect(deathTallyPeople(0.3, false, 100)).toBeCloseTo(30, 9);
-	});
-
-	it('agrees with the dead dots on average', () => {
-		const { t } = run(0.2, 3);
-		const dots = t.regions[0].counts.deceased * t.peoplePerDot;
-		const tally = t.regions[0].deaths;
-		// Three standard errors of the dot draw.
-		const se = Math.sqrt(3000 * 0.2 * 0.8) * t.peoplePerDot;
-		expect(Math.abs(dots - tally)).toBeLessThan(3 * se);
-	});
-
-	it('agrees with the dead dots in every region with travel, full hospitals and vaccination', () => {
+	it('counts each death once, in every region, with travel, full hospitals and vaccination', () => {
 		const scenario = microcosm(0);
 		for (const r of scenario.regions) {
 			r.policy = withValue(r.policy, 'hospitalBedsPerThousand', 0.3);
@@ -89,15 +84,10 @@ describe('deaths tally (6.6)', () => {
 		expect(t.regions.some((r) => r.counts.full > 0)).toBe(true);
 		for (const r of t.regions) {
 			expect(r.deaths, r.name).toBeGreaterThan(0);
-			const dots = r.counts.deceased * t.peoplePerDot;
-			// The dot draw's variance, sum of P(1 - P), is at most sum of P = tally / peoplePerDot.
-			const se = Math.sqrt(r.deaths * t.peoplePerDot);
-			expect(Math.abs(dots - r.deaths), r.name).toBeLessThan(3 * se);
+			expect(r.counts.deceased, r.name).toBe(r.deaths);
 		}
-		expect(t.deaths).toBeCloseTo(
-			t.regions.reduce((a, r) => a + r.deaths, 0),
-			6
-		);
+		expect(t.deaths).toBe(t.regions.reduce((a, r) => a + r.deaths, 0));
+		expect(t.deaths).toBe(deadPeople(sim));
 	});
 
 	it('starts at 0 after a restart', () => {
