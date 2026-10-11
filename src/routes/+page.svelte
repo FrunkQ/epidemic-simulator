@@ -22,6 +22,7 @@
 	import RegionCard from '../lib/ui/RegionCard.svelte';
 	import SimCanvas from '../lib/ui/SimCanvas.svelte';
 	import TopBar from '../lib/ui/TopBar.svelte';
+	import { DEFAULT_SPEED } from '../lib/ui/speeds';
 
 	let mapIndex = $state(0);
 	let diseaseId: DiseaseId = $state('measles');
@@ -34,8 +35,9 @@
 	/** A disease with no vaccine has nobody vaccinated, so the legend leaves vaccination out. */
 	const hasVaccine = $derived(loadDisease(diseaseId).vaccines[0].exists);
 	let seed = $state(1);
-	let speed: Speed = $state(1);
+	let speed: Speed = $state(DEFAULT_SPEED);
 	const sim = createSimulation(microcosm(0), { seed: 1, diseaseId: 'measles' });
+	sim.send({ type: 'speed', value: DEFAULT_SPEED });
 	let telemetry: Telemetry | null = $state.raw(null);
 	let histories: RegionHistory[] = $state.raw([]);
 	let historyVersion = -1;

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DISEASES, DISEASE_GROUPS } from '../config/diseases';
 	import type { DiseaseId, Speed } from '../sim/types';
+	import { SPEEDS, speedTitle } from './speeds';
 
 	interface Props {
 		diseaseId: DiseaseId;
@@ -15,13 +16,6 @@
 
 	/** The picker's headings, in DISEASE_GROUPS order. */
 	const groups = Object.entries(DISEASE_GROUPS);
-	const speeds: { value: Speed; label: string }[] = [
-		{ value: 0, label: 'Paused' },
-		{ value: 0.5, label: 'Slow' },
-		{ value: 1, label: 'Normal' },
-		{ value: 2, label: 'Fast' },
-		{ value: 4, label: 'Very fast' }
-	];
 </script>
 
 <header class="bar">
@@ -40,8 +34,13 @@
 	</label>
 	<p class="blurb">{DISEASES[diseaseId].blurb}</p>
 	<div class="speed" role="group" aria-label="Speed">
-		{#each speeds as s (s.value)}
-			<button class:active={speed === s.value} onclick={() => onspeed(s.value)}>{s.label}</button>
+		{#each SPEEDS as s (s.value)}
+			<button
+				class:active={speed === s.value}
+				aria-label={s.label}
+				title={speedTitle(s.value, s.label)}
+				onclick={() => onspeed(s.value)}>{s.short}</button
+			>
 		{/each}
 	</div>
 	<span class="day">Day {day}</span>
@@ -77,6 +76,9 @@
 	}
 	.speed {
 		display: flex;
+	}
+	.speed button {
+		min-width: 32px;
 	}
 	.speed button {
 		border-radius: 0;
