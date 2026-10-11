@@ -121,21 +121,9 @@ describe('every person is counted once, travellers included', () => {
 		let diedOnRoute = 0;
 		const counted = new Uint8Array(a.capacity);
 		const origins = new Set<number>();
-		// Dots mostly dead on the way, and the tick they were first seen so: they still finish the trip.
-		const deadOnRoute = new Map<number, number>();
-		const longestTrip = Math.max(...Object.values(TRAVEL_DAYS)) * TICKS_PER_DAY;
-		const stranded = new Set<number>();
-		let tick = 0;
 		for (let day = 1; day <= 150; day++) {
 			for (let t = 0; t < TICKS_PER_DAY; t++) {
 				sim.step(1);
-				tick++;
-				for (let i = 0; i < a.activeCount; i++) {
-					if (a.route[i] >= 0 && a.dead[i] === 1) {
-						if (!deadOnRoute.has(i)) deadOnRoute.set(i, tick);
-						if (tick - deadOnRoute.get(i)! > longestTrip) stranded.add(i);
-					} else if (a.route[i] < 0) deadOnRoute.delete(i);
-				}
 				for (let i = 0; i < a.activeCount; i++)
 					if (a.route[i] >= 0 && p.dead[i] > 0 && !counted[i]) {
 						counted[i] = 1;
@@ -152,7 +140,6 @@ describe('every person is counted once, travellers included', () => {
 				t.unprotected + t.full + t.partial + t.silent + t.symptomatic + t.recovered + t.deceased;
 			expect(everyone, `day ${day}`).toBe(a.activeCount * p.perDot);
 		}
-		expect([...stranded], 'mostly-dead dots stopped on the way').toEqual([]);
 		// The scenario that lost deaths before: some people did die on the way.
 		expect(diedOnRoute).toBeGreaterThan(0);
 		// Their deaths are counted in the region they set out from (6.6).
@@ -161,6 +148,44 @@ describe('every person is counted once, travellers included', () => {
 			expect(r).toBeGreaterThanOrEqual(0);
 			expect(snap.regions[r].deaths).toBeGreaterThan(0);
 		}
+	});
+});
+
+describe('a dot in transit always completes its trip', () => {
+	it('carries a mostly-dead traveller on to its destination', () => {
+		const scenario = microcosm(0);
+		for (const r of scenario.regions) {
+			r.vaccinatedFull = 0;
+			r.vaccinatedPartial = 0;
+			r.policy = withValue(r.policy, 'travelFrequency', 3);
+		}
+		const sim = createSimulation(scenario, { seed: 3, diseaseId: 'measles' });
+		const a = sim.agents;
+		const p = sim.people;
+		// Wait for a dot to set off by road, then have 95 of its people die just after it leaves.
+		let dot = -1;
+		for (let t = 0; t < 30 * TICKS_PER_DAY && dot < 0; t++) {
+			sim.step(1);
+			for (let i = 0; i < a.activeCount; i++)
+				if (a.route[i] >= 0 && sim.routes[a.route[i]].kind === 'road' && p.susceptible[i] >= 95) {
+					dot = i;
+					break;
+				}
+		}
+		expect(dot, 'a dot set off by road').toBeGreaterThanOrEqual(0);
+		const route = sim.routes[a.route[dot]];
+		const destination = a.routeDir[dot] > 0 ? route.to : route.from;
+		p.susceptible[dot] -= 95;
+		p.dead[dot] += 95;
+		a.dead[dot] = 1;
+		const longestTrip = Math.max(...Object.values(TRAVEL_DAYS)) * TICKS_PER_DAY;
+		for (let t = 0; t < longestTrip + TICKS_PER_DAY && a.route[dot] >= 0; t++) sim.step(1);
+		expect(a.route[dot], 'still on the road').toBe(-1);
+		expect(a.dead[dot]).toBe(1);
+		expect(a.region[dot]).toBe(destination);
+		const city = sim.regions[destination];
+		const distance = Math.hypot(a.x[dot] - city.cx, a.y[dot] - city.cy);
+		expect(distance).toBeLessThanOrEqual(sim.radiusOf(destination));
 	});
 });
 

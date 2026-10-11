@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SHARE_STEPS, STEP_STRENGTH, lookOf, ringWidth } from '../../src/lib/sim/look';
+import { SHARE_STEPS, STEP_STRENGTH, fits, lookOf, ringWidth } from '../../src/lib/sim/look';
 import { State } from '../../src/lib/sim/types';
 
 const NONE = State.SUSCEPTIBLE;
@@ -91,5 +91,13 @@ describe('look E', () => {
 			// A square frame a fifth of the dot wide has about the dot's own area.
 			if (w > 0) expect(((size + 2 * w) ** 2 - size ** 2) / size ** 2).toBeCloseTo(0.96);
 		}
+	});
+
+	it('draws a pulse only where it fits like a ring', () => {
+		// A pulse reaches size + 3 px from the centre. Default zoom at 1x or 2x: dots 2.6 px apart.
+		expect(fits(2.6, 1.5, 1.5 + 3 - 0.75, 1)).toBe(false);
+		expect(fits(2.6, 1.5, 1.5 + 3 - 0.75, 2)).toBe(false);
+		// Zoomed in close: 6 px dots 20 px apart leave room.
+		expect(fits(20, 6, 6 + 3 - 3, 1)).toBe(true);
 	});
 });

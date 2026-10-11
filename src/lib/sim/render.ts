@@ -3,7 +3,7 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
-import { SHARE_STEPS, STEP_STRENGTH, ringWidth } from './look';
+import { SHARE_STEPS, STEP_STRENGTH, fits, ringWidth } from './look';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
@@ -226,10 +226,12 @@ export class Renderer {
 			ctx.fillRect((agents.x[i] - ox) * s - half, (agents.y[i] - oy) * s - half, d, d);
 		}
 
-		// A faint pulsing ring around every dot filled as infected.
+		// A faint pulsing ring around every dot filled as infected, only where it fits like a ring:
+		// where dots sit close, a pulse would cover many neighbours and paint the city red.
 		const pulse = 0.5 + 0.5 * Math.sin(tick * 0.2);
 		ctx.lineWidth = 1;
-		for (let k = 0; k < 2; k++) {
+		const showPulse = fits(spacing * s, size, size + 3 - half, dpr);
+		for (let k = 0; k < 2 && showPulse; k++) {
 			const len = this.pulseLen[k];
 			if (len === 0) continue;
 			ctx.strokeStyle =

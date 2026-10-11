@@ -84,12 +84,21 @@ export function setLook(agents: Agents, p: People, i: number): void {
 /**
  * How wide a ring is, in CSS pixels, around a dot `size` pixels across whose neighbours sit
  * `spacing` pixels apart on average: a fifth of the dot, so the frame's area is about the dot's
- * own. 0 when that is under RING_MIN_DEVICE_PX device pixels or reaches past half the spacing
- * (where it would cover a neighbour): the dot is then tinted instead.
+ * own. 0 when that is under RING_MIN_DEVICE_PX device pixels or reaches past half the average
+ * spacing: the dot is then tinted instead. Spacing is an average, so some rings that fit still
+ * reach a close neighbour; the red a city shows stays on target all the same (11 Oct).
  */
 export function ringWidth(spacing: number, size: number, dpr: number): number {
 	const w = size * RING_SHARE;
-	return w * dpr >= RING_MIN_DEVICE_PX && size / 2 + w <= spacing / 2 ? w : 0;
+	return fits(spacing, size, w, dpr) ? w : 0;
+}
+
+/**
+ * Whether a mark reaching `reach` CSS pixels beyond a dot `size` pixels across fits the ring
+ * rule: at least RING_MIN_DEVICE_PX device pixels, and within half the average spacing.
+ */
+export function fits(spacing: number, size: number, reach: number, dpr: number): boolean {
+	return reach * dpr >= RING_MIN_DEVICE_PX && size / 2 + reach <= spacing / 2;
 }
 
 /**
