@@ -152,7 +152,7 @@ export const RUBELLA_BABY_HARM: BabyHarmConfig = {
 	perInfection: true,
 	notes: [
 		`${pct(RUBELLA_CRS.risk)} of babies whose mother caught it in the first ${RUBELLA_CRS.weeks} weeks (CDC), up to ${C.rubellaEarlyCeiling.value}% in the first ${C.rubellaEarlyWeeks.value[0]} to ${C.rubellaEarlyWeeks.value[1]} weeks (UKHSA), and about none later. Silent infections count too.`,
-		`Pregnancies lost: ${NO_FIGURE.toLowerCase()}`
+		`Pregnancies lost: ${NO_FIGURE_AFTER}`
 	],
 	context: { rubellaEarlyCeiling: C.rubellaEarlyCeiling, rubellaEarlyWeeks: C.rubellaEarlyWeeks }
 };
@@ -222,7 +222,7 @@ export const SMALLPOX_LASTING_HARM: LastingHarmConfig = {
 			rate: { value: all(SMALLPOX_BLIND_SHARE), sources: ['who-smallpox-eradication-subclinical'] }
 		}
 	],
-	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE.toLowerCase()}`],
+	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE_AFTER}`],
 	context: { raoDecade: C.raoDecade }
 };
 
