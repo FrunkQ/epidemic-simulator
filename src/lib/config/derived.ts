@@ -681,6 +681,7 @@ export const KAYEM_REVIEW_STUDIES = 28;
 /** Study sizes quoted in citations' context lines. */
 export const STUDY_SIZES = {
 	hou2025: { studies: 429 },
+	lugtu2026: { splitMonths: 6 },
 	mandizadza2024: { studies: 23 },
 	ficenec2022: { survivors: 301, contacts: 711, meanYears: 4.3 }
 } as const;

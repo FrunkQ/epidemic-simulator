@@ -97,10 +97,10 @@ export const COVID19_LASTING_HARM: LastingHarmConfig = {
 export const OMICRON_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
 	notes: [
-		`Long COVID a year later: not counted. No study has measured it a year on for Omicron yet. Studies over shorter times find it less common than with earlier variants (${C.lugtuOmicron.value[0]}% against ${C.lugtuOmicron.value[1]}%, Lugtu 2026).`,
+		`Long COVID a year later: not counted. The ${C.longCovidMonths.value}-month figure counted for COVID-19 comes from 2020-21 infections, before Omicron. Studies over shorter times find it less common than with earlier variants (${C.lugtuOmicron.value[0]}% against ${C.lugtuOmicron.value[1]}%, Lugtu 2026).`,
 		BABIES_NOT_COUNTED
 	],
-	context: { lugtuOmicron: C.lugtuOmicron }
+	context: { lugtuOmicron: C.lugtuOmicron, longCovidMonths: C.longCovidMonths }
 };
 
 export const MEASLES_LASTING_HARM: LastingHarmConfig = {
@@ -266,7 +266,7 @@ export const EBOLA_LASTING_HARM: LastingHarmConfig = {
 	],
 	notes: [
 		`A year on, counting only the extra over people who never had Ebola. Measured among all survivors, joint pain is ${C.ebolaJointPain.value}% at ${C.ebolaWindowYears.value[0]}-${C.ebolaWindowYears.value[1]} years.`,
-		`Hearing loss (${C.ebolaHearingLoss.value}%) and numb hands (${C.ebolaNumbHands.value}%) or feet (${C.ebolaNumbFeet.value}%) at ${C.ebolaWindowYears.value[0]}-${C.ebolaWindowYears.value[1]} years: not counted. One study found hearing loss in ${C.ficenecHearing.value[0]}% of survivors against ${C.ficenecHearing.value[1]}% of people in their households (Ficenec 2022), but those people were picked for having no history of Ebola; the study reports no test for past infection.`
+		`Hearing loss (${C.ebolaHearingLoss.value}%) and numb hands (${C.ebolaNumbHands.value}%) or feet (${C.ebolaNumbFeet.value}%) at ${C.ebolaWindowYears.value[0]}-${C.ebolaWindowYears.value[1]} years: not counted. One study found hearing loss in ${C.ficenecHearing.value[0]}% of survivors against ${C.ficenecHearing.value[1]}% of people from their household or village (Ficenec 2022), but those people were picked for having no history of Ebola; the study reports no test for past infection.`
 	],
 	context: {
 		ebolaJointPain: C.ebolaJointPain,
@@ -282,7 +282,7 @@ export const EBOLA_BABY_HARM: BabyHarmConfig = {
 	label: 'Pregnancies lost',
 	risk: { value: EBOLA_FETAL_LOSS, sources: ['kayem2021-ebola-pregnancy'] },
 	notes: [
-		`About ${pct(EBOLA_FETAL_LOSS)} of pregnancies are lost when the mother has Ebola. The studies differ widely: the true figure could be anywhere from ${pct(EBOLA_FETAL_LOSS_CI[0])} to ${pct(EBOLA_FETAL_LOSS_CI[1])}.`
+		`About ${pct(EBOLA_FETAL_LOSS)} of pregnancies are lost when the mother has Ebola. The studies differ widely: the true figure is probably between ${pct(EBOLA_FETAL_LOSS_CI[0])} and ${pct(EBOLA_FETAL_LOSS_CI[1])}.`
 	]
 };
 

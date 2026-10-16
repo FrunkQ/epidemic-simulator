@@ -184,6 +184,19 @@ const POLIO_LASTING = polioLastingParalysis(
 	DISEASES.polio.mortality.value
 );
 
+/**
+ * COVID-era research may back only behaviour and COVID-19 itself (6.10). These named uses are the
+ * exceptions, each with its reason; the citation test checks each is still in use.
+ */
+export const COVID_ERA_EXEMPTIONS: { id: string; key: string; reason: string }[] = [
+	{
+		id: 'gbd2022-long-covid',
+		key: 'covid19omicron.lastingHarm.context.longCovidMonths',
+		reason:
+			'The Omicron hover names the 12-month window of the COVID-19 figure only to say it comes from 2020-21 infections, before Omicron; no Omicron number is taken from it.'
+	}
+];
+
 export const CITATIONS: Citation[] = [
 	{
 		id: 'neupane2024-surge-sr',
@@ -4879,7 +4892,11 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'meta-analysis',
 		doi: '10.1001/jama.2022.18931',
-		usedFor: ['covid19.lastingHarm.longCovid', 'covid19.lastingHarm.context.longCovidMonths'],
+		usedFor: [
+			'covid19.lastingHarm.longCovid',
+			'covid19.lastingHarm.context.longCovidMonths',
+			'covid19omicron.lastingHarm.context.longCovidMonths'
+		],
 		quote:
 			'Proportion with Long COVID symptom clusters among survivors, % (95% UI): 12 mo after symptom onset. All individuals 0.9 (0.3-2.0); Both sexes aged <20 y 0.3 (0.1-0.8); Women aged ≥20 y 1.7 (0.7-3.6); Men aged ≥20 y 0.8 (0.3-1.8)',
 		location: 'Table 3, 12-month column',
@@ -4948,7 +4965,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: ['measles.lastingHarm.brainDamage'],
 		quote:
 			'In the decade before, an average of 549,000 measles cases and 495 measles deaths were reported annually in the United States. However, it is likely that 3 to 4 million people on average were infected with measles annually; most cases were not reported. … 1,000 people developed chronic disability from acute encephalitis caused by measles annually. … 1 out of every 1,000 measles cases will develop acute encephalitis',
-		location: 'Disease rates, "Prior to vaccine introduction"',
+		location: 'Disease rates, "Prior to vaccine introduction"; Complications (acute encephalitis)',
 		why: `Lasting disability after measles encephalitis per infection: ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} a year over the middle of ${CDC_MEASLES_PREVACCINE.infectedPerYear[0] / 1e6} to ${CDC_MEASLES_PREVACCINE.infectedPerYear[1] / 1e6} million infected, ${fmt(MEASLES_LASTING_DISABILITY * 100, 3)}%. The page lists the ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} under "Of the reported cases", but per reported case (${fmt(CDC_MEASLES_PREVACCINE.reportedPerYear)} a year) it would be ${fmt((CDC_MEASLES_PREVACCINE.disabledPerYear / CDC_MEASLES_PREVACCINE.reportedPerYear) * 100, 2)}%, above the same page's 1 in ${fmt(CDC_MEASLES_PREVACCINE.encephalitisOneIn)} cases with encephalitis, so only the infection base is consistent. The sim's measles red dot is every infection.`,
 		context: 'United States, the decade before the 1963 vaccine',
 		verified: {
@@ -5154,7 +5171,7 @@ export const CITATIONS: Citation[] = [
 		quote: 'higher in pre-Omicron (35.5%) than Omicron (22.8%) eras (p=0.04)',
 		location: 'Abstract',
 		why: `Shown only in the Omicron hover, to say long COVID looks less common with Omicron; its follow-up is mostly under a year, so it gives no ${HARM_CONTEXT.longCovidMonths.value}-month figure and Omicron long COVID is not counted.`,
-		context: 'Pooled studies, 2020-2024, follow-up under and over 6 months',
+		context: `Pooled studies, 2020-2024, follow-up under and over ${STUDY_SIZES.lugtu2026.splitMonths} months`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-16',
@@ -5335,9 +5352,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'WHO',
 		url: 'https://www.who.int/news-room/fact-sheets/detail/measles',
-		usedFor: ['measles.about'],
-		quote: 'They are more likely in children who are malnourished, especially those without enough vitamin A',
-		location: 'Signs and symptoms, on complications (fact sheet of 15 July 2026)',
+		usedFor: ['measles.lastingHarm.hover'],
+		quote:
+			'Complications can include: blindness … They are more likely in children who are malnourished, especially those without enough vitamin A',
+		location:
+			'Signs and symptoms: the list of complications, and the line after it (fact sheet of 15 July 2026)',
 		why: 'Backs the measles hover line that blindness is more likely in children who are malnourished, especially those short of vitamin A. It gives no figure, so blindness is not counted.',
 		context: 'Worldwide',
 		verified: {
