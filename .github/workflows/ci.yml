@@ -24,7 +24,7 @@ jobs:
       - run: npm run check
       - run: npm run build
       - name: The layout probe stays out of the deployed build
-        run: '! grep -rq __layoutProbe build'
+        run: 'test -d build && ! grep -rq __layoutProbe build'
   # The suite runs in three parts at once, so each job stays inside the 5-minute budget (10 Oct).
   test:
     runs-on: ubuntu-latest
@@ -62,6 +62,13 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Keep the traces of failed checks
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 7
   # One result to require on main: green only when lint, every test shard and the browser checks passed.
   check:
     runs-on: ubuntu-latest

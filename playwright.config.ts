@@ -13,6 +13,8 @@ export default defineConfig({
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
+		// A failed check leaves a trace (CI keeps it as an artifact) to replay its frames.
+		trace: 'retain-on-failure',
 		launchOptions: existsSync(LOCAL_CHROMIUM) ? { executablePath: LOCAL_CHROMIUM } : {}
 	},
 	webServer: {

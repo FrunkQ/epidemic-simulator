@@ -23,6 +23,15 @@ interface Frame {
 }
 interface Logged extends Frame {
 	frame: number;
+	drawn: [number, number];
+	bitmap: [number, number];
+	box: [number, number];
+	dpr: number;
+	window: [number, number];
+}
+/** A painted frame: its map's scale and the strip as painted, and what was wrong with the canvas. */
+interface Painted extends Frame {
+	canvas?: string;
 }
 
 /** The four target screens (10): cards always float there. */
@@ -50,9 +59,16 @@ async function slowDown(page: Page) {
 
 /** Wait until 30 frames in a row drew the same layout and every card has its final size. */
 async function settle(page: Page) {
+	await page
+		.waitForFunction(() => '__layoutLog' in window, null, { timeout: 10_000 })
+		.catch(() => {
+			throw new Error(
+				'The page has no layout probe: build it with VITE_LAYOUT_PROBE=1 (npm run test:browser)'
+			);
+		});
 	await page.waitForFunction(() => {
 		const log = (window as unknown as { __layoutLog: Frame[] }).__layoutLog;
-		if (!log || log.length < 30) return false;
+		if (log.length < 30) return false;
 		const last = log[log.length - 1];
 		return log.slice(-30).every((f) => f.docked === last.docked && Math.abs(f.scale - last.scale) < 1e-9);
 	});
@@ -67,9 +83,11 @@ async function open(page: Page, w: number, h: number) {
 /**
  * The frames painted since log entry `from`, each with the map scale it drew (the last map drawn
  * in that frame) and the strip as it was painted (as the next frame's first map found it), with
- * repeats merged.
+ * repeats merged (see `shown` below). A frame also says what was wrong with its canvas, if anything: drawn for another
+ * size than its box on the page, pixels not matching that box, or resized (so cleared) after the
+ * map was drawn.
  */
-async function paintedSince(page: Page, from: number): Promise<Frame[]> {
+async function paintedSince(page: Page, from: number): Promise<Painted[]> {
 	const log = await page.evaluate(() => (window as unknown as { __layoutLog: Logged[] }).__layoutLog);
 	const frames: Logged[][] = [];
 	for (const entry of log.slice(from)) {
@@ -77,18 +95,54 @@ async function paintedSince(page: Page, from: number): Promise<Frame[]> {
 		if (last && last[0].frame === entry.frame) last.push(entry);
 		else frames.push([entry]);
 	}
-	const painted: Frame[] = [];
+	const painted: Painted[] = [];
 	for (let k = 0; k + 1 < frames.length; k++) {
-		const f = { scale: frames[k][frames[k].length - 1].scale, docked: frames[k + 1][0].docked };
+		const drew = frames[k][frames[k].length - 1];
+		// The page as painted is the page as the next frame first found it, unless the window changed
+		// in between (the test resized it): then it is the page as this frame last drew it.
+		const next = frames[k + 1][0];
+		const shown = next.window[0] === drew.window[0] && next.window[1] === drew.window[1] ? next : drew;
+		const off = (a: number[], b: number[], by: number) =>
+			Math.abs(a[0] - b[0]) > by || Math.abs(a[1] - b[1]) > by;
+		const canvas = off(drew.drawn, shown.box, 0.5)
+			? `drawn ${drew.drawn} in a ${shown.box} box`
+			: off(drew.bitmap, shown.bitmap, 0)
+				? `cleared after drawing (${drew.bitmap} → ${shown.bitmap} px)`
+				: off(
+							shown.bitmap.map((v) => v / shown.dpr),
+							shown.box,
+							1
+					  )
+					? `${shown.bitmap} px in a ${shown.box} box`
+					: undefined;
+		const f: Painted = { scale: drew.scale, docked: shown.docked, ...(canvas ? { canvas } : {}) };
 		const prev = painted[painted.length - 1];
-		if (!prev || prev.docked !== f.docked || Math.abs(prev.scale - f.scale) > 1e-6) painted.push(f);
+		if (!prev || !same(prev, f) || prev.canvas !== f.canvas) painted.push(f);
 	}
 	return painted;
 }
 
-/** After a change, the page goes straight from what it showed before to the final layout. */
-function expectStraightToFinal(frames: Frame[], label: string) {
-	expect(frames.length, `${label}: ${JSON.stringify(frames)}`).toBeLessThanOrEqual(2);
+const same = (a: Frame, b: Frame) => a.docked === b.docked && Math.abs(a.scale - b.scale) <= 1e-6;
+
+/**
+ * After a change, every painted frame shows what the page showed before it (`before`) until the
+ * first one that shows the final layout, and every frame after that shows the final layout; no
+ * frame paints a canvas of the wrong size. Without `before` (a load), the first frame is final.
+ */
+async function expectStraightToFinal(page: Page, from: number, label: string, before?: Frame) {
+	const frames = await paintedSince(page, from);
+	const final = await probe(page);
+	const at = `${label}: ${JSON.stringify(frames)}, before ${JSON.stringify(before)}, final ${JSON.stringify({ scale: final.scale, docked: final.docked })}`;
+	expect(
+		frames.filter((f) => f.canvas),
+		at
+	).toEqual([]);
+	let k = 0;
+	if (before) while (k < frames.length && same(frames[k], before) && !same(frames[k], final)) k++;
+	expect(
+		frames.slice(k).every((f) => same(f, final)),
+		at
+	).toBe(true);
 }
 
 const docked = (page: Page) => page.locator('.strip').count();
@@ -180,7 +234,7 @@ const PATHS: { name: string; sizes: (readonly [number, number])[] }[] = [
 		]
 	},
 	{
-		name: 'widen from narrow to a narrow floating width',
+		name: 'widen from narrow to 800 px, still docked for its height',
 		sizes: [
 			[700, 900],
 			[800, 900]
@@ -191,6 +245,13 @@ const PATHS: { name: string; sizes: (readonly [number, number])[] }[] = [
 		sizes: [
 			[700, 600],
 			[1280, 600]
+		]
+	},
+	{
+		name: 'between two floating sizes',
+		sizes: [
+			[1366, 768],
+			[1400, 900]
 		]
 	},
 	{
@@ -213,11 +274,13 @@ for (const font of [undefined, 'DejaVu Sans']) {
 			await slowDown(page);
 			const [w0, h0] = sizes[0];
 			await open(page, w0, h0);
+			if (font) await requireFont(page, font);
 			for (const [w, h] of sizes.slice(1)) {
+				const before = await probe(page);
 				const from = await frameCount(page);
 				await page.setViewportSize({ width: w, height: h });
 				await settle(page);
-				expectStraightToFinal(await paintedSince(page, from), `${w}x${h}`);
+				await expectStraightToFinal(page, from, `${w}x${h}`, before);
 			}
 			const [w, h] = sizes[sizes.length - 1];
 			const fresh = await browser.newPage();
@@ -238,11 +301,12 @@ test('1280x720: switching to plague and back keeps the cards floating, with no w
 	await slowDown(page);
 	await open(page, 1280, 720);
 	for (const disease of ['plague', 'measles']) {
+		const before = await probe(page);
 		const from = await frameCount(page);
 		await page.selectOption('select', disease);
 		await settle(page);
 		expect(await docked(page), disease).toBe(0);
-		expectStraightToFinal(await paintedSince(page, from), disease);
+		await expectStraightToFinal(page, from, disease, before);
 		expect(await covers(page), disease).toEqual([]);
 	}
 });
@@ -251,7 +315,7 @@ test('the first painted frame is already the final layout', async ({ page }) => 
 	await slowDown(page);
 	for (const [w, h] of [...TARGETS, [1280, 600] as const, [390, 844] as const]) {
 		await open(page, w, h);
-		expectStraightToFinal((await paintedSince(page, 0)).slice(0, 3), `${w}x${h} load`);
+		await expectStraightToFinal(page, 0, `${w}x${h} load`);
 	}
 });
 
@@ -266,18 +330,37 @@ async function forceFont(page: Page, font: string) {
 	}, font);
 }
 
+/**
+ * Skip the check where `font` isn't installed, which would check the fallback font instead; in CI,
+ * where it always is (Playwright installs it with Chromium), fail rather than pass by skipping.
+ */
+async function requireFont(page: Page, font: string) {
+	const installed = await page.evaluate((f) => {
+		const ctx = document.createElement('canvas').getContext('2d')!;
+		const width = (spec: string) => ((ctx.font = spec), ctx.measureText('Epidemic simulator 1347').width);
+		return width(`13px '${f}', monospace`) !== width('13px monospace');
+	}, font);
+	if (process.env.CI) expect(installed, `${font} is installed`).toBe(true);
+	test.skip(!installed, `${font} isn't installed here, so this would check another font`);
+}
+
+/** Whether the top bar is one row: nothing in it starts below its title. */
+const barOneRow = (page: Page) =>
+	page.locator('header.bar').evaluate((bar) => {
+		const title = bar.querySelector('h1')!.getBoundingClientRect();
+		return [...bar.children]
+			.filter((c) => !c.matches('.measure, .full'))
+			.every((c) => c.getBoundingClientRect().top < title.bottom);
+	});
+
 test('1280x720 in DejaVu Sans: every disease keeps the cards floating, its blurb at most 3 lines or one sentence', async ({
 	page
 }) => {
 	await forceFont(page, 'DejaVu Sans');
 	await open(page, 1280, 720);
-	// The font must be installed, or this would check the fallback font instead.
-	const installed = await page.evaluate(() => {
-		const ctx = document.createElement('canvas').getContext('2d')!;
-		const width = (font: string) => ((ctx.font = font), ctx.measureText('Epidemic simulator 1347').width);
-		return width("13px 'DejaVu Sans', monospace") !== width('13px monospace');
-	});
-	expect(installed, 'DejaVu Sans is installed').toBe(true);
+	await requireFont(page, 'DejaVu Sans');
+	// Its wider text still fits the bar on one row (the blurb's small flex basis), which leaves the map its height.
+	expect(await barOneRow(page), 'the top bar is one row').toBe(true);
 	const diseases = await page
 		.locator('select option')
 		.evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
@@ -305,6 +388,7 @@ test('1280x720 in DejaVu Sans: every disease keeps the cards floating, its blurb
 test('the blurb\'s "more" shows the whole text over the map, and Escape closes it', async ({ page }) => {
 	await forceFont(page, 'DejaVu Sans');
 	await open(page, 1280, 720);
+	await requireFont(page, 'DejaVu Sans');
 	await page.selectOption('select', 'plague');
 	await settle(page);
 	const before = await probe(page);
@@ -323,3 +407,31 @@ test('the blurb\'s "more" shows the whole text over the map, and Escape closes i
 	await page.mouse.click(5, 700);
 	await expect(page.locator('#blurb-full')).toHaveCount(0);
 });
+
+for (const [from, to] of [
+	[
+		[1366, 768],
+		[1400, 900]
+	],
+	[
+		[1280, 720],
+		[390, 844]
+	]
+] as const) {
+	test(`the blurb's "more" overlay closes when the window goes from ${from.join('x')} to ${to.join('x')}`, async ({
+		page
+	}) => {
+		await forceFont(page, 'DejaVu Sans');
+		await open(page, from[0], from[1]);
+		await requireFont(page, 'DejaVu Sans');
+		await page.selectOption('select', 'plague');
+		await settle(page);
+		await page.getByRole('button', { name: 'more' }).click();
+		await expect(page.locator('#blurb-full')).toHaveCount(1);
+		await page.setViewportSize({ width: to[0], height: to[1] });
+		await settle(page);
+		await expect(page.locator('#blurb-full')).toHaveCount(0);
+		// Nothing is left beyond the window's edge to scroll to.
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(to[0]);
+	});
+}
