@@ -471,9 +471,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-measles',
-		authors: 'CDC',
-		title: 'Pink Book, Chapter 13: Measles',
-		journal: 'CDC, Epidemiology and Prevention of Vaccine-Preventable Diseases',
+		authors: 'Gastañaduy P, Haber P, Rota PA, Patel M',
+		title: 'Chapter 13: Measles',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2024,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -740,9 +741,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-polio',
-		authors: 'CDC',
-		title: 'Pink Book, Chapter 18: Poliomyelitis',
-		journal: 'CDC, Epidemiology and Prevention of Vaccine-Preventable Diseases',
+		authors: 'Estívariz CF, Link-Gelles R, Shimabukuro T',
+		title: 'Chapter 18: Poliomyelitis',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2024,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -1499,9 +1501,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-varicella',
-		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
-		title: 'Chapter 22: Varicella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
+		authors: 'Lopez A, Harrington T, Marin M',
+		title: 'Chapter 22: Varicella',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2024,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -1641,9 +1644,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-mumps',
-		authors: 'Centers for Disease Control and Prevention (Marlow M, Haber P, Hickman C, Patel M)',
-		title: 'Chapter 15: Mumps — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
+		authors: 'Marlow M, Haber P, Hickman C, Patel M',
+		title: 'Chapter 15: Mumps',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2024,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -1695,9 +1699,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-pertussis',
-		authors: 'Centers for Disease Control and Prevention (Havers FP, Moro PL, Hariri S, Skoff T)',
-		title: 'Chapter 16: Pertussis — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
+		authors: 'Havers FP, Moro PL, Hariri S, Skoff T',
+		title: 'Chapter 16: Pertussis',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2022,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -2006,9 +2011,10 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-rubella',
-		authors: 'Centers for Disease Control and Prevention (Hall E, Wodi AP, et al., eds.)',
-		title: 'Chapter 20: Rubella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
+		authors: 'Lanzieri T, Haber P, Icenogle JP, Patel M',
+		title: 'Chapter 20: Rubella',
+		journal:
+			'In: Hall E, Wodi AP, et al., eds. Epidemiology and Prevention of Vaccine-Preventable Diseases, 14th ed. (CDC Pink Book)',
 		year: 2021,
 		evidence: 'official',
 		publisher: 'CDC',
@@ -5373,7 +5379,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Smith ER, Oakley E, Grandner GW, et al.',
 		title:
 			'Adverse maternal, fetal, and newborn outcomes among pregnant women with SARS-CoV-2 infection: an individual participant data meta-analysis',
-		journal: 'BMJ Global Health 8(3):e009495',
+		journal: 'BMJ Global Health 8(1):e009495',
 		year: 2023,
 		evidence: 'meta-analysis',
 		doi: '10.1136/bmjgh-2022-009495',
