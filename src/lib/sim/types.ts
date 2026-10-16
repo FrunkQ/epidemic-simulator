@@ -113,6 +113,51 @@ export interface Vaccine {
 	cardNote?: string;
 }
 
+/**
+ * One lasting harm counted among people who recover (6.17): a share of the people whose illness
+ * (the red phase) ends without death, by age band. Lasting means still there about a year later,
+ * or permanent by nature.
+ */
+export interface CountedHarm {
+	/** Short name for a chart or a test, e.g. "jointPain". */
+	key: string;
+	/** The card's hover line. */
+	label: string;
+	rate: Sourced<Bands>;
+}
+
+/**
+ * Lasting harm among survivors (6.17): what is counted and what is named but not counted. One
+ * person can have several harms, so the headline is never their sum: with more than one counted,
+ * it is "at least" the largest.
+ */
+export interface LastingHarmConfig {
+	counted: CountedHarm[];
+	/** Share of each rate left for a fully vaccinated person who still falls ill; left out where unsourced. */
+	fullyVaccinated?: Sourced;
+	/** Plain lines for the hover after the counted harms: context, and harms not counted and why. */
+	notes: string[];
+	/** Delayed deaths and later illnesses, kept out of the count (hover footnotes). */
+	footnotes?: string[];
+}
+
+/**
+ * Harm to babies (6.17): pregnancies harmed or lost when a pregnant woman is infected, counted on
+ * its own line, never inside Recovered, whether or not the mother survives.
+ */
+export interface BabyHarmConfig {
+	/** The card's hover line. */
+	label: string;
+	/** Chance an infected pregnant woman's baby is harmed or lost. */
+	risk: Sourced;
+	/** Weeks of pregnancy, from its start, that the risk covers; left out for the whole pregnancy. */
+	weeks?: Sourced;
+	/** The risk is per infection, silent ones included (rubella), not per case with symptoms. */
+	perInfection?: true;
+	/** Plain lines for the hover. */
+	notes: string[];
+}
+
 /** The care a disease's death rates were measured under (6.6). */
 export type MortalityBasis = 'modern-care' | 'era';
 
@@ -202,6 +247,10 @@ export interface DiseaseConfig {
 	 * waned keeps the severe part for breakthrough reinfections. Left out where nothing is sourced.
 	 */
 	afterInfection?: { infection: Sourced; severe: Sourced };
+	/** Lasting harm among people who recover (6.17); left out where there is nothing to say. */
+	lastingHarm?: LastingHarmConfig;
+	/** Harm to babies of women infected in pregnancy (6.17); left out where nothing is counted. */
+	babyHarm?: BabyHarmConfig;
 }
 
 /** Calibration output for one disease (diseases.generated.ts). */
@@ -271,6 +320,16 @@ export interface DiseaseRuntime {
 	afterInfectionSevere: number;
 	/** The vaccines on offer, default first. A disease with no vaccine has one that never works. */
 	vaccines: VaccineRuntime[];
+	/** Each counted lasting harm's share of survivors, by age band (6.17). */
+	harmRates: Bands[];
+	/** Share of those rates left for a fully vaccinated case (1 where none is sourced). */
+	harmVaccinatedFactor: number;
+	/**
+	 * Babies harmed or lost per person aged 15-64 whose illness ends, per unit of pregnant share
+	 * (6.17): the risk, times the share of a pregnancy it covers, and per case with symptoms. 0 when
+	 * nothing is counted.
+	 */
+	babyRiskPerCase: number;
 	beta: number;
 	transmissionRadius: number;
 }
@@ -393,6 +452,13 @@ export interface RegionTelemetry {
 	deathsByAge: Bands;
 	/** Deaths so far, all ages (the sum of deathsByAge; the same as counts.deceased). */
 	deaths: number;
+	/**
+	 * Expected people living with each counted lasting harm (6.17), in the disease's order, counted
+	 * where deaths are. Fractional: rate x people, with no random draw.
+	 */
+	harmed: number[];
+	/** Expected babies harmed or pregnancies lost (6.17), counted where deaths are. */
+	babies: number;
 	/** Outbreak patients need more beds than are spare (pressure over 100%). */
 	overloaded: boolean;
 	/** Spare hospital beds, in people. */
@@ -449,8 +515,9 @@ export interface RegionHistory {
 }
 
 /**
- * Daily channels per region, in people. inHospital (here and per age band) is an expected value in
- * thousandths of a person (HOSPITAL_SCALE), and pressure is in thousandths (1000 = 100%).
+ * Daily channels per region, in people. inHospital (here and per age band), lastingHarm and babies
+ * are expected values in thousandths of a person (HOSPITAL_SCALE), and pressure is in thousandths
+ * (1000 = 100%). lastingHarm is the headline: the largest counted harm (6.17).
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -459,7 +526,9 @@ export const HISTORY_CHANNELS = [
 	'deceased',
 	'susceptible',
 	'inHospital',
-	'pressure'
+	'pressure',
+	'lastingHarm',
+	'babies'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 

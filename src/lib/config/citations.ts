@@ -84,7 +84,29 @@ import {
 	KUGELER_2020_TREATED,
 	FLECK_DERDERIAN_UNTREATED_CASES,
 	PERTUSSIS_TRIALS,
-	HARTLEY_2023
+	HARTLEY_2023,
+	CDC_MEASLES_PREVACCINE,
+	CHICKENPOX_CVS,
+	EBOLA_FETAL_LOSS,
+	GBD_LONG_COVID_12M,
+	LONG_COVID_BANDS,
+	LONG_COVID_WOMEN_SHARES,
+	MEAN_GESTATION_WEEKS,
+	MEASLES_LASTING_DISABILITY,
+	POLIO_PARALYSIS,
+	PREGNANCY_YEARS,
+	RUBELLA_CRS,
+	SMALLPOX_BLINDNESS,
+	SMALLPOX_BLIND_SHARE,
+	SMALLPOX_POCKMARKS,
+	SMALLPOX_POCKMARKS_RANGE,
+	SMALLPOX_PREGNANCY,
+	WATANABE_TWO_DOSE_OR,
+	WEEKS_BEFORE_CONCEPTION,
+	WORLD_BANK_BIRTHS_2024,
+	WORLD_BANK_EU_BY_SEX_2025,
+	ebolaExcess,
+	pregnantShareOf
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
 
@@ -139,7 +161,8 @@ export const OFFICIAL_PUBLISHERS = [
 	'NHS England',
 	'World Bank',
 	'UN',
-	'ONS'
+	'ONS',
+	'HSE'
 ] as const;
 
 export const CITATIONS: Citation[] = [
@@ -704,7 +727,8 @@ export const CITATIONS: Citation[] = [
 			'polio.vaccines.OPV.partial.severe',
 			'polio.vaccines.OPV.seriousPer100kDoses',
 			'polio.vaccines.OPV.deathsPer100kDoses',
-			'polio.vaccines.IPV.waningDays'
+			'polio.vaccines.IPV.waningDays',
+			'polio.lastingHarm.paralysis'
 		],
 		quote:
 			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
@@ -2027,18 +2051,26 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'WHO',
 		url: 'https://iris.who.int/handle/10665/39485',
-		usedFor: ['smallpox.asymptomaticFraction'],
+		usedFor: [
+			'smallpox.asymptomaticFraction',
+			'smallpox.lastingHarm.pockmarks',
+			'smallpox.lastingHarm.blindness',
+			'smallpox.babyHarm.risk'
+		],
 		quote:
-			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major.',
-		location: 'Chapter 1, Clinical Features — section on subclinical infection',
-		why: "smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them.",
+			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors',
+		location:
+			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); p. 54, Table 1.15 (pregnancy, Rao)',
+		why:
+			"smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them." +
+			` Lasting harm (6.17): pockmarks are the middle of ${fmt(SMALLPOX_POCKMARKS_RANGE[0] * 100)}-${fmt(SMALLPOX_POCKMARKS_RANGE[1] * 100)}% (${fmt(SMALLPOX_POCKMARKS * 100, 1)}%), as for the smallpox half-life; sight lost in at least one eye is ${SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes} of ${fmt(SMALLPOX_BLINDNESS.survivors)} survivors (${fmt(SMALLPOX_BLIND_SHARE * 100, 2)}%). Pregnancies lost: fetal deaths plus women who died before giving birth, ${SMALLPOX_PREGNANCY.lost} of ${SMALLPOX_PREGNANCY.women} (${fmt((SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women) * 100)}%, a minimum); Fenner's "premature termination" figures include babies born early and alive, so they are not used.`,
 		context:
 			"The official WHO history of smallpox and its eradication, the standard reference for a disease that can no longer be studied; linked at WHO's own repository record.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Opened twice (the second read requested the full sentences with no ellipses); all three sentences confirmed word for word, and the file identified as Chapter 1 (Clinical Features) of 'Smallpox and Its Eradication'. Quotes were read from the LSU Law Center's public mirror of the chapter; the link points at WHO's IRIS record, confirmed on 2026-10-07 to be 'Smallpox and its eradication' (Fenner, Henderson, Arita, Jezek, Ladnyi; WHO, 1988). Caveat: the mirror serves the chapter PDF without its title page, so the editors, publisher and 1988 date come from the standard citation for the work rather than from the page itself; no retraction (and none is possible for a 1988 WHO monograph)."
+			note: "Opened twice (the second read requested the full sentences with no ellipses); all three sentences confirmed word for word, and the file identified as Chapter 1 (Clinical Features) of 'Smallpox and Its Eradication'. Quotes were read from the LSU Law Center's public mirror of the chapter; the link points at WHO's IRIS record, confirmed on 2026-10-07 to be 'Smallpox and its eradication' (Fenner, Henderson, Arita, Jezek, Ladnyi; WHO, 1988). Caveat: the mirror serves the chapter PDF without its title page, so the editors, publisher and 1988 date come from the standard citation for the work rather than from the page itself; no retraction (and none is possible for a 1988 WHO monograph). Lasting harm figures (pp. 49, 50, 54) read through WebFetch from the same mirror, 10 Oct 2026 (lasting-harm-verify.md rows 83, 84 and 90; the printed blindness percentage is garbled in the OCR, so it is worked out from the counts)."
 		}
 	},
 	{
@@ -2748,7 +2780,14 @@ export const CITATIONS: Citation[] = [
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.0014.TO.ZS',
 		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP0014TOZSWLD',
-		usedFor: ['population.ageMix', 'population.ukAgeMix', 'population.youngAgeMix', 'population.oldAgeMix'],
+		usedFor: [
+			'population.ageMix',
+			'population.ukAgeMix',
+			'population.youngAgeMix',
+			'population.oldAgeMix',
+			'population.pregnantShare',
+			'population.ukPregnantShare'
+		],
 		quote:
 			'2025: World 24.40906; European Union 14.20743; United Kingdom 16.96477; Nigeria 40.51972; Japan 11.23840',
 		location: 'FRED series pages, latest observation (2025)',
@@ -2772,7 +2811,14 @@ export const CITATIONS: Citation[] = [
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.TO.ZS',
 		mirrorUrl: 'https://fred.stlouisfed.org/series/SPPOP65UPTOZSWLD',
-		usedFor: ['population.ageMix', 'population.ukAgeMix', 'population.youngAgeMix', 'population.oldAgeMix'],
+		usedFor: [
+			'population.ageMix',
+			'population.ukAgeMix',
+			'population.youngAgeMix',
+			'population.oldAgeMix',
+			'population.pregnantShare',
+			'population.ukPregnantShare'
+		],
 		quote:
 			'2025: World 10.40243; European Union 22.44279; United Kingdom 19.70269; Nigeria 3.06954; Japan 29.99410',
 		location: 'FRED series pages, latest observation (2025)',
@@ -4797,6 +4843,277 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-11',
 			ok: true,
 			note: 'PMC9351529 full text: quote verbatim; Table 2 means 8.0 and 5.5 days.'
+		}
+	},
+	{
+		id: 'gbd2022-long-covid',
+		authors:
+			'Global Burden of Disease Long COVID Collaborators (Wulf Hanson S, Abbafati C, Aerts JG, et al.)',
+		title:
+			'Estimated Global Proportions of Individuals With Persistent Fatigue, Cognitive, and Respiratory Symptom Clusters Following Symptomatic COVID-19 in 2020 and 2021',
+		journal: 'JAMA 328(16):1604-1615',
+		year: 2022,
+		evidence: 'meta-analysis',
+		doi: '10.1001/jama.2022.18931',
+		usedFor: ['covid19.lastingHarm.longCovid'],
+		quote:
+			'Proportion with Long COVID symptom clusters among survivors, % (95% UI): 12 mo after symptom onset. Both sexes aged <20 y 0.3 (0.1-0.8); Women aged ≥20 y 1.7 (0.7-3.6); Men aged ≥20 y 0.8 (0.3-1.8)',
+		location: 'Table 3, 12-month column',
+		why: `The only pooled figure for long COVID a year on in everyone who had symptoms, adjusted for symptoms people already had. 0-14 uses the under-20 row (${fmt(GBD_LONG_COVID_12M.under20, 1)}%); 15-64 and 65+ mix the women's (${fmt(GBD_LONG_COVID_12M.women20up, 1)}%) and men's (${fmt(GBD_LONG_COVID_12M.men20up, 1)}%) rows by each band's share of women in the EU (${fmt(LONG_COVID_WOMEN_SHARES.band15to64 * 100, 2)}% and ${fmt(LONG_COVID_WOMEN_SHARES.band65up * 100, 2)}%), giving ${fmt(LONG_COVID_BANDS[1] * 100, 2)}% and ${fmt(LONG_COVID_BANDS[2] * 100, 2)}%. No row splits people over 65 out. Pooled prevalence studies without a comparison group find far more (Hou 2025, 46% at 1-2 years); GBD is used because it covers everyone with symptoms and removes symptoms people had before.`,
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Read through WebFetch from jamanetwork.com, one row at a time (lasting-harm-verify.md rows 1-3); the paper is not in the PMC open-access bucket.'
+		}
+	},
+	{
+		id: 'worldbank-pop-by-sex-2025',
+		authors: 'World Bank (World Development Indicators)',
+		title:
+			'Population ages 15-64, female and total, and population ages 65 and above, female and total (SP.POP.1564.FE.IN, SP.POP.1564.TO, SP.POP.65UP.FE.IN, SP.POP.65UP.TO), European Union',
+		journal: 'World Development Indicators',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.FE.IN',
+		usedFor: ['covid19.lastingHarm.longCovid'],
+		quote: `2025, European Union: SP.POP.1564.FE.IN ${WORLD_BANK_EU_BY_SEX_2025.women15to64}; SP.POP.1564.TO ${WORLD_BANK_EU_BY_SEX_2025.all15to64}; SP.POP.65UP.FE.IN ${WORLD_BANK_EU_BY_SEX_2025.women65up}; SP.POP.65UP.TO ${WORLD_BANK_EU_BY_SEX_2025.all65up}`,
+		location: 'World Bank API, country EUU, 2025 (last updated 8 Oct 2026)',
+		why: `The share of women in each band (${fmt(LONG_COVID_WOMEN_SHARES.band15to64 * 100, 2)}% of 15-64, ${fmt(LONG_COVID_WOMEN_SHARES.band65up * 100, 2)}% of 65+), to mix GBD's long COVID figures for women and men. The same publisher and year as the age mix.`,
+		context: 'European Union, 2025',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read from the World Bank API (lasting-harm-build-verify.md item 6). The 65+ total is 101,245,577, corrected from 101,245,579; the share of women is unchanged.'
+		}
+	},
+	{
+		id: 'watanabe2023-long-covid-vaccination',
+		authors: 'Watanabe A, Iwagami M, Yasuhara J, Takagi H, Kuno T',
+		title:
+			'Protective effect of COVID-19 vaccination against long COVID syndrome: A systematic review and meta-analysis',
+		journal: 'Vaccine 41(11):1783-1790',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.vaccine.2023.02.008',
+		usedFor: ['covid19.lastingHarm.fullyVaccinated'],
+		quote:
+			'Two-dose vaccination was associated with a lower risk of long COVID compared to no vaccination (OR, 0.64; 95% confidence interval [CI], 0.45–0.92)',
+		location: 'Abstract; "moderate certainty" in Results',
+		why: `A pooled figure for people who fell ill after a full course, rated moderate certainty, so a fully vaccinated case gets ${fmt(WATANABE_TWO_DOSE_OR, 2)} times the long COVID rate. Peine 2025 pools a larger effect (41%) from non-randomised studies at low certainty; it is context only.`,
+		context: 'COVID-19 era',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 10).'
+		}
+	},
+	{
+		id: 'cdc-measles-clinical-overview',
+		authors: 'CDC',
+		title: 'Clinical Overview of Measles',
+		journal: 'CDC, Measles (Rubeola): for healthcare providers',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/measles/hcp/clinical-overview/index.html',
+		usedFor: ['measles.lastingHarm.brainDamage'],
+		quote:
+			'However, it is likely that 3 to 4 million people on average were infected with measles annually; most cases were not reported. … 1,000 people developed chronic disability from acute encephalitis caused by measles annually.',
+		location: 'Disease rates, "Prior to vaccine introduction"',
+		why: `Lasting disability after measles encephalitis per infection: ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} a year over the middle of 3 to 4 million infected, ${fmt(MEASLES_LASTING_DISABILITY * 100, 3)}%. The page lists the 1,000 under "Of the reported cases", but per reported case (549,000 a year) it would be 0.18%, above the same page's 1 in 1,000 cases with encephalitis, so only the infection base is consistent. The sim's measles red dot is every infection.`,
+		context: 'United States, the decade before the 1963 vaccine',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Both sentences read under Disease rates (lasting-harm-build-verify.md item 1), the long one in two pieces because WebFetch shortens quotes.'
+		}
+	},
+	{
+		id: 'who-polio-factsheet-2025',
+		authors: 'World Health Organization',
+		title: 'Poliomyelitis (fact sheet)',
+		journal: 'WHO fact sheets',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/news-room/fact-sheets/detail/poliomyelitis',
+		usedFor: ['polio.lastingHarm.paralysis'],
+		quote:
+			'One in 200 infections leads to irreversible paralysis (usually in the legs). Among those paralysed, 5–10% die when their breathing muscles become immobilized.',
+		location: 'Key facts; Symptoms and risk (2 April 2025)',
+		why: `Paralysis per infection, ${fmt(POLIO_PARALYSIS.perInfection * 100, 1)}%. The sim's polio red dot is meningitis or paralysis only, so the paralysed who survive (less the sim's own deaths) are divided by the red dots who survive, then by the Pink Book's two-thirds still weak at 12 months: about 8%. WHO alone, calling the paralysis irreversible, would make it about 12%; the hover says so.`,
+		context: 'Global',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Read through WebFetch, fact sheet of 2 April 2025 (lasting-harm-verify.md row 77).'
+		}
+	},
+	{
+		id: 'sneller2019-ebola-sequelae',
+		authors: 'Sneller MC, et al. (PREVAIL III Study Group)',
+		title: 'A Longitudinal Study of Ebola Sequelae in Liberia',
+		journal: 'New England Journal of Medicine 380(10):924-934',
+		year: 2019,
+		evidence: 'study',
+		noReviewReason:
+			'The only study of Ebola survivors with a comparison group of people never infected. The meta-analysis (Mandizadza 2024) measures how common each problem is among survivors, not how much Ebola caused, and no pooled controlled figure exists.',
+		doi: '10.1056/NEJMoa1805435',
+		usedFor: [
+			'ebola.lastingHarm.jointPain',
+			'ebola.lastingHarm.memoryLoss',
+			'ebola.lastingHarm.uveitis',
+			'ebola.lastingHarm.musclePain',
+			'ebola.lastingHarm.tiredness',
+			'ebola.lastingHarm.headache'
+		],
+		quote:
+			'A total of 966 EBOV antibody-positive survivors and 2350 antibody-negative close contacts (controls) were enrolled … At enrollment (median time to baseline visit, 358 days after symptom onset), six symptoms were reported significantly more often among survivors than among controls: urinary frequency (14.7% vs. 3.4%), headache (47.6% vs. 35.6%), fatigue (18.4% vs. 6.3%), muscle pain (23.1% vs. 10.1%), memory loss (29.2% vs. 4.8%), and joint pain (47.5% vs. 17.5%) … Other than uveitis (prevalence at enrollment, 26.4% vs. 12.1%; at year 1, 33.3% vs. 15.4%)',
+		location: 'Abstract, Results',
+		why: `Each harm is the survivors' share less the contacts' share, about a year after symptoms: joint pain ${fmt(ebolaExcess('jointPain') * 100, 1)}, memory loss ${fmt(ebolaExcess('memoryLoss') * 100, 1)}, uveitis ${fmt(ebolaExcess('uveitis') * 100, 1)}, muscle pain ${fmt(ebolaExcess('musclePain') * 100, 1)}, tiredness ${fmt(ebolaExcess('tiredness') * 100, 1)} and headache ${fmt(ebolaExcess('headache') * 100, 1)} points. One person can have several, so the card's headline is "at least" the largest.`,
+		context: 'Liberia, 2015-2017, after the 2014-2016 epidemic',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Abstract read word for word from the University of Minnesota Experts record of the paper, because the NEJM page would not load and PubMed was rate-limited; the tables were not read (lasting-harm-build-verify.md item 4). Only the first author could be checked against the byline (section 7).'
+		}
+	},
+	{
+		id: 'kayem2021-ebola-pregnancy',
+		authors: 'Kayem ND, Benson C, Aye CYL, et al.',
+		title: 'Ebola virus disease in pregnancy: a systematic review and meta-analysis',
+		journal: 'Transactions of the Royal Society of Tropical Medicine and Hygiene 116(6):509-522',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1093/trstmh/trab180',
+		usedFor: ['ebola.babyHarm.risk'],
+		quote:
+			'The absolute risk for foetal losses was estimated at 76.9% (95% CI 45.0 to 98.3, I2=96%, p<0.01) … Gestational ages were inconsistently reported.',
+		location: 'Abstract; Results',
+		why: `Pregnancies lost per infected pregnant woman, ${fmt(EBOLA_FETAL_LOSS * 100, 1)}%, pooled over 28 studies. No split by week of pregnancy, so it applies to the whole pregnancy.`,
+		context: 'Africa, outbreaks from 1976 to 2019',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 98).'
+		}
+	},
+	{
+		id: 'cdc-mmwr-2001-rubella',
+		authors: 'CDC',
+		title:
+			'Control and Prevention of Rubella: Evaluation and Management of Suspected Outbreaks, Rubella in Pregnant Women, and Surveillance for Congenital Rubella Syndrome',
+		journal: 'MMWR Recommendations and Reports 50(RR-12)',
+		year: 2001,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5012a1.htm',
+		usedFor: ['rubella.babyHarm.risk', 'rubella.babyHarm.weeks'],
+		quote:
+			'the rate of CRS for infants born to women infected during the first 20 weeks of pregnancy is 20%. … Infants infected with rubella late in gestation do not exhibit clinical manifestations of CRS.',
+		location: 'Background',
+		why: `A single figure over the weeks of real risk, ${fmt(RUBELLA_CRS.risk * 100)}% over the first ${RUBELLA_CRS.weeks} weeks, about none later. The Green Book's "up to 90%" in weeks 0-10 is a ceiling and shown only in the hover. The base is live-born infants, so pregnancies lost are left out: an undercount. Silent infections harm babies too, so the risk is per infection.`,
+		context: 'United States',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Read through WebFetch (lasting-harm-verify.md rows 116-118).'
+		}
+	},
+	{
+		id: 'ahn2016-congenital-varicella',
+		authors: 'Ahn KH, Park YJ, Hong SC, et al.',
+		title: 'Congenital varicella syndrome: A systematic review',
+		journal: 'Journal of Obstetrics and Gynaecology 36(5):563-566',
+		year: 2016,
+		evidence: 'systematic-review',
+		doi: '10.3109/01443615.2015.1127905',
+		usedFor: ['chickenpox.babyHarm.risk'],
+		quote:
+			'The estimated incidence of CVS was 0.59% and 0.84% for women infected with VZV during the entire pregnancy and for those infected the first 20 weeks of pregnancy, respectively.',
+		location: 'Abstract',
+		why: `The whole-pregnancy figure, ${fmt(CHICKENPOX_CVS * 100, 2)}%, needs no assumption about when in pregnancy women catch it.`,
+		context: 'Pooled studies of women with chickenpox in pregnancy',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'Abstract confirmed from the Korea University repository copy, because Taylor & Francis would not load (lasting-harm-verify.md row 119).'
+		}
+	},
+	{
+		id: 'worldbank-births-2024',
+		authors: 'World Bank (World Development Indicators)',
+		title: 'Birth rate, crude (per 1,000 people) (SP.DYN.CBRT.IN)',
+		journal: 'World Development Indicators',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'World Bank',
+		url: 'https://data.worldbank.org/indicator/SP.DYN.CBRT.IN',
+		usedFor: ['population.pregnantShare', 'population.ukPregnantShare'],
+		quote: `2024: European Union ${WORLD_BANK_BIRTHS_2024.EU}; United Kingdom ${WORLD_BANK_BIRTHS_2024.UK}`,
+		location: 'World Bank API, countries EUU and GBR, 2024 (last updated 8 Oct 2026)',
+		why: `The share of people aged 15-64 pregnant at any time: births per person aged 15-64 (the birth rate over the 15-64 share of the age mix) times the years each birth was pregnant (${fmt(PREGNANCY_YEARS, 3)}): EU ${fmt(pregnantShareOf('EU') * 100, 2)}%, UK ${fmt(pregnantShareOf('UK') * 100, 2)}%. Dividing by everyone aged 15-64 folds in the share of women. Pregnancies that end before a birth are not counted, so it is slightly low.`,
+		context: 'European Union and United Kingdom, 2024',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read from the World Bank API (lasting-harm-verify.md row 124; lasting-harm-build-verify.md item 5).'
+		}
+	},
+	{
+		id: 'cdc-nchs-gestation-2022',
+		authors: 'Martin JA, Osterman MJK (CDC National Center for Health Statistics)',
+		title: 'Shifts in the Distribution of Births by Gestational Age: United States, 2014-2022',
+		journal: 'National Vital Statistics Reports 73(1)',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/nchs/data/nvsr/nvsr73/nvsr73-01.pdf',
+		usedFor: ['population.pregnantShare', 'population.ukPregnantShare'],
+		quote:
+			'2022, all races and origins: under 34 weeks 2.16; 34-36 weeks 6.51 (Table 1). Percentage of singleton births, by week of gestation, 2022: 37 weeks 11.63; 38: 17.45; 39: 38.84; 40: 18.26; 41: 4.88; 42 and later 0.27.',
+		location: 'Table 1 and the table on page 6',
+		why: `The mean length of pregnancy, ${fmt(MEAN_GESTATION_WEEKS, 2)} weeks, with each week at its middle and under 34 weeks at 31 (a convention: anything from 22 to 34 moves the mean by under 1%). Singleton births only.`,
+		context: 'United States, singleton births, 2022',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'All eight 2022 shares read from the PDF; they sum to 100.00 and the mean recomputes to 38.94 weeks (lasting-harm-build-verify.md item 2).'
+		}
+	},
+	{
+		id: 'hse-0-to-8-weeks',
+		authors: 'HSE (Health Service Executive, Ireland)',
+		title: '0 to 8 weeks pregnant',
+		journal: 'HSE, Pregnancy stages and baby development (the page is undated; read 16 Oct 2026)',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'HSE',
+		url: 'https://www2.hse.ie/wellbeing/child-health/0-to-8-weeks-pregnant.html',
+		usedFor: ['population.pregnantShare', 'population.ukPregnantShare'],
+		quote:
+			'Your weeks of pregnancy are dated from the first day of your last period. This means that in the first 2 weeks or so, you are not pregnant.',
+		location: 'Weeks 1 to 2 - preparing for ovulation',
+		why: `Weeks of pregnancy are counted from before conception, so the ${WEEKS_BEFORE_CONCEPTION} weeks are taken off the mean pregnancy to give the time actually pregnant.`,
+		context: "Ireland's national health service",
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'All three sentences match the page (lasting-harm-build-verify.md item 3). The page shows no date, so the year is the year it was read.'
 		}
 	}
 ];

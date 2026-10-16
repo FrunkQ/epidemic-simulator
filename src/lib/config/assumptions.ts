@@ -30,7 +30,9 @@ import {
 	BOURNER_HIGH_EFFICACY,
 	KUGELER_2020_TREATED,
 	MODEL_ADULT_FROM,
-	HARTLEY_2023
+	HARTLEY_2023,
+	GBD_LONG_COVID_12M,
+	HARM_CONTEXT
 } from './derived';
 import { POPULATION } from './population';
 import { TRAVEL_DAYS } from '../sim/routes';
@@ -124,7 +126,12 @@ export const ASSUMPTIONS = {
 	noSymptomUnsourced:
 		'Only for COVID-19 is there a figure for how much less people who never get symptoms pass it on. For every other disease they are as infectious as anyone, even where, as for flu, studies suggest they spread it less, because no study gives a number.',
 	bedWhereIll:
-		'A patient’s bed is in the city where their symptoms started, for the whole stay, and that city’s hospital strain and any death count there too. Someone who falls ill on a trip has their bed in the city they set out from, even after they arrive somewhere else.',
+		'A patient’s bed is in the city where their symptoms started, for the whole stay, and how full that city’s hospitals are sets their chance of dying, and any death is counted there too. Someone who falls ill on a trip has their bed in the city they set out from, even after they arrive somewhere else.',
+	harmPerIllness:
+		'Lasting harm is counted per illness, so someone ill twice can be counted twice. It is counted in the city where the illness ended in death or recovery, as deaths are.',
+	harmLongCovid: `Long COVID a year on comes from a pooled estimate (GBD 2022): ${fmt(GBD_LONG_COVID_12M.all, 1)}% of survivors. Pooled studies with no comparison group find far more, ${HARM_CONTEXT.houOneToTwoYears}% at one to two years (Hou 2025). The first is used because it covers everyone who had symptoms and leaves out symptoms people already had before.`,
+	harmPregnancy:
+		'The share of people pregnant counts only pregnancies that end in a birth, so it is slightly low, and harm to babies is undercounted.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`
 } as const;
 

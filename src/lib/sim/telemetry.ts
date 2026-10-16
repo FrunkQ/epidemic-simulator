@@ -1,6 +1,6 @@
 import { Agents } from './agents';
 import type { People } from './people';
-import { HISTORY_DAYS, MAX_DISEASES } from './constants';
+import { HISTORY_DAYS, MAX_DISEASES, MAX_HARMS } from './constants';
 import {
 	AGE_CHANNELS,
 	HISTORY_CHANNELS,
@@ -62,6 +62,13 @@ export class TelemetryCounters {
 	 * where they happened: a traveller's at the trip's origin (6.8).
 	 */
 	readonly died: Int32Array;
+	/**
+	 * Expected people with each counted lasting harm (6.17), per region, disease slot and harm
+	 * (regionCount x MAX_DISEASES x MAX_HARMS), counted where deaths are. Rate x people, no draw.
+	 */
+	readonly harmed: Float64Array;
+	/** Expected babies harmed or lost per region and disease slot (regionCount x MAX_DISEASES). */
+	readonly babies: Float64Array;
 	private readonly history: Float64Array;
 	private readonly ageHistory: Float64Array;
 	/** Expected patients by the tick their symptoms started: a ring of bedRing ticks x regions x bands. */
@@ -81,6 +88,8 @@ export class TelemetryCounters {
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
 		this.died = new Int32Array(regionCount * MAX_DISEASES * BANDS);
+		this.harmed = new Float64Array(regionCount * MAX_DISEASES * MAX_HARMS);
+		this.babies = new Float64Array(regionCount * MAX_DISEASES);
 		this.history = new Float64Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.ageHistory = new Float64Array(HISTORY_DAYS * regionCount * A_SLOTS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
@@ -202,6 +211,42 @@ export class TelemetryCounters {
 		this.died[(region * MAX_DISEASES + slot) * BANDS + band] += people;
 	}
 
+	/** Add `people` (expected, fractional) with lasting harm `harm` of the disease in `slot`, in a region. */
+	addHarm(region: number, slot: number, harm: number, people: number): void {
+		this.harmed[(region * MAX_DISEASES + slot) * MAX_HARMS + harm] += people;
+	}
+
+	addBabies(region: number, slot: number, babies: number): void {
+		this.babies[region * MAX_DISEASES + slot] += babies;
+	}
+
+	/** Expected people with each counted harm of the disease in `slot`, in a region (`count` harms). */
+	harms(region: number, slot: number, count: number): number[] {
+		const b = (region * MAX_DISEASES + slot) * MAX_HARMS;
+		return Array.from(this.harmed.subarray(b, b + count));
+	}
+
+	/**
+	 * The lasting harm headline (6.17), over every disease: the largest counted harm of each, since
+	 * one person can have several.
+	 */
+	harmHeadline(region: number): number {
+		let total = 0;
+		for (let s = 0; s < MAX_DISEASES; s++) {
+			const b = (region * MAX_DISEASES + s) * MAX_HARMS;
+			let most = 0;
+			for (let h = 0; h < MAX_HARMS; h++) most = Math.max(most, this.harmed[b + h]);
+			total += most;
+		}
+		return total;
+	}
+
+	babiesHarmed(region: number): number {
+		let total = 0;
+		for (let s = 0; s < MAX_DISEASES; s++) total += this.babies[region * MAX_DISEASES + s];
+		return total;
+	}
+
 	/** Deaths so far in a region, in people, by age band, over every disease. */
 	deathsByAge(region: number): Bands {
 		const out: Bands = [0, 0, 0];
@@ -232,6 +277,8 @@ export class TelemetryCounters {
 			history[h + 4] = counts[b + C_UNPROTECTED] + counts[b + C_PARTIAL];
 			history[h + 5] = Math.round(this.patients[r] * HOSPITAL_SCALE);
 			history[h + 6] = Math.round(pressure[r] * 1000);
+			history[h + 7] = Math.round(this.harmHeadline(r) * HOSPITAL_SCALE);
+			history[h + 8] = Math.round(this.babiesHarmed(r) * HOSPITAL_SCALE);
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {

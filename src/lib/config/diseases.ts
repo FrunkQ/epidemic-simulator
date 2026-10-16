@@ -1,4 +1,23 @@
 import type { Banded, Bands, DiseaseConfig, Sourced, Vaccine, VaccineDeathRate } from '../sim/types';
+import {
+	CHICKENPOX_BABY_HARM,
+	CHICKENPOX_LASTING_HARM,
+	COVID19_LASTING_HARM,
+	EBOLA_BABY_HARM,
+	EBOLA_LASTING_HARM,
+	FLU1918_LASTING_HARM,
+	FLU_LASTING_HARM,
+	MEASLES_LASTING_HARM,
+	MUMPS_LASTING_HARM,
+	NOT_COUNTED_HARM,
+	OMICRON_LASTING_HARM,
+	PERTUSSIS_LASTING_HARM,
+	RUBELLA_BABY_HARM,
+	RUBELLA_LASTING_HARM,
+	SMALLPOX_BABY_HARM,
+	SMALLPOX_LASTING_HARM,
+	polioLastingHarm
+} from './lastingHarm';
 import { covid19BandsPerInfection, covid19SevereBandsPerInfection } from './covidAgeIfr';
 import {
 	ALIMOHAMADI_EUROPE_STAY,
@@ -395,6 +414,15 @@ export function perSymptomaticBands(banded: Banded, asymptomaticFraction: Source
  * Disease presets. Every number carries the ids of its sources in citations.ts.
  * Durations are in days; the engine converts them to ticks once, at load.
  */
+const POLIO_ASYMPTOMATIC: Sourced = {
+	value: 0.96,
+	sources: ['cdc-pinkbook-polio', 'who2022-polio-position-paper', 'fatusi1997-polio-epidemiology']
+};
+const POLIO_MORTALITY: Sourced = {
+	value: 0.005,
+	sources: ['cdc-pinkbook-polio', 'fatusi1997-polio-epidemiology', 'doshi2011-polio-cfr-india']
+};
+
 export const DISEASES = {
 	measles: {
 		id: 'measles',
@@ -440,7 +468,8 @@ export const DISEASES = {
 					'bolotin2022-measles-waning-review'
 				]
 			})
-		]
+		],
+		lastingHarm: MEASLES_LASTING_HARM
 	},
 	polio: {
 		id: 'polio',
@@ -468,21 +497,16 @@ export const DISEASES = {
 				'yaari2016-polio-israel'
 			]
 		},
-		asymptomaticFraction: {
-			value: 0.96,
-			sources: ['cdc-pinkbook-polio', 'who2022-polio-position-paper', 'fatusi1997-polio-epidemiology']
-		},
+		asymptomaticFraction: POLIO_ASYMPTOMATIC,
 		mortalityBasis: 'modern-care',
-		mortality: {
-			value: 0.005,
-			sources: ['cdc-pinkbook-polio', 'fatusi1997-polio-epidemiology', 'doshi2011-polio-cfr-india']
-		},
+		mortality: POLIO_MORTALITY,
 		waningDays: { value: null, sources: ['cdc-pinkbook-polio', 'blake2014-polio-older-ages'] },
 		// IPV is the default (UK and EU use it): it protects against paralysis, hardly against infection.
 		fullEfficacy: POLIO_IPV_INFECTION,
 		partialEfficacy: POLIO_IPV_PARTIAL_INFECTION,
 		hospitalisedShare: { value: 1, sources: ['cdc-pinkbook-polio'] },
-		vaccines: [POLIO_IPV, POLIO_OPV]
+		vaccines: [POLIO_IPV, POLIO_OPV],
+		lastingHarm: polioLastingHarm(POLIO_ASYMPTOMATIC, POLIO_MORTALITY)
 	},
 	flu: {
 		id: 'flu',
@@ -540,7 +564,8 @@ export const DISEASES = {
 			reference: [0.3335, 0.5887, 0.0777],
 			overall: 0.01297,
 			sources: ['cdc-flu-burden-2018-19']
-		}
+		},
+		lastingHarm: FLU_LASTING_HARM
 	},
 	covid19: {
 		id: 'covid19',
@@ -581,7 +606,8 @@ export const DISEASES = {
 			value: perSymptomatic(COVID19_IHR, COVID19_ASYMPTOMATIC),
 			sources: ['ward-2024-covid-ihr-ifr', 'buitrago-garcia-2020-asymptomatic-sars-cov-2']
 		},
-		vaccines: [COVID19_2021]
+		vaccines: [COVID19_2021],
+		lastingHarm: COVID19_LASTING_HARM
 	},
 	covid19omicron: {
 		id: 'covid19omicron',
@@ -629,7 +655,8 @@ export const DISEASES = {
 		},
 		mortalityByAge: OMICRON_DEATHS_BY_AGE,
 		hospitalisedByAge: OMICRON_HOSPITAL_BY_AGE,
-		vaccines: [OMICRON_ORIGINAL, OMICRON_UPDATED]
+		vaccines: [OMICRON_ORIGINAL, OMICRON_UPDATED],
+		lastingHarm: OMICRON_LASTING_HARM
 	},
 	chickenpox: {
 		id: 'chickenpox',
@@ -673,7 +700,9 @@ export const DISEASES = {
 					sources: ['bolormaa2025-varicella-duration', 'pawaskar2022-varicella-nma']
 				}
 			}
-		]
+		],
+		lastingHarm: CHICKENPOX_LASTING_HARM,
+		babyHarm: CHICKENPOX_BABY_HARM
 	},
 	mumps: {
 		id: 'mumps',
@@ -696,7 +725,8 @@ export const DISEASES = {
 				value: LEWNARD_HALF_LIFE_YEARS * DAYS_PER_YEAR,
 				sources: ['lewnard-grad-2018-mumps-waning']
 			})
-		]
+		],
+		lastingHarm: MUMPS_LASTING_HARM
 	},
 	rubella: {
 		id: 'rubella',
@@ -714,7 +744,9 @@ export const DISEASES = {
 		fullEfficacy: RUBELLA_FULL,
 		partialEfficacy: RUBELLA_PARTIAL,
 		hospitalisedShare: { value: 0.001, sources: ['cdc-pinkbook-rubella'] },
-		vaccines: [mmr(RUBELLA_FULL, RUBELLA_PARTIAL, { value: null, sources: ['cdc-pinkbook-rubella'] })]
+		vaccines: [mmr(RUBELLA_FULL, RUBELLA_PARTIAL, { value: null, sources: ['cdc-pinkbook-rubella'] })],
+		lastingHarm: RUBELLA_LASTING_HARM,
+		babyHarm: RUBELLA_BABY_HARM
 	},
 	pertussis: {
 		id: 'pertussis',
@@ -759,7 +791,8 @@ export const DISEASES = {
 					sources: ['chit2018-acellular-pertussis-ve-waning', 'mcgirr-fisman-2015-dtap-duration']
 				}
 			}
-		]
+		],
+		lastingHarm: PERTUSSIS_LASTING_HARM
 	},
 	smallpox: {
 		id: 'smallpox',
@@ -807,7 +840,9 @@ export const DISEASES = {
 					]
 				}
 			}
-		]
+		],
+		lastingHarm: SMALLPOX_LASTING_HARM,
+		babyHarm: SMALLPOX_BABY_HARM
 	},
 	ebola: {
 		id: 'ebola',
@@ -848,7 +883,9 @@ export const DISEASES = {
 				},
 				waningDays: { value: null, sources: ['who-wer-2024-sage-ebola', 'huttner2023-rvsv-zebov-5-year'] }
 			}
-		]
+		],
+		lastingHarm: EBOLA_LASTING_HARM,
+		babyHarm: EBOLA_BABY_HARM
 	},
 	marburg: {
 		id: 'marburg',
@@ -868,7 +905,8 @@ export const DISEASES = {
 		mortality: { value: 0.5, sources: ['who-marburg-factsheet'] },
 		waningDays: { value: null, sources: ['natesan-2016-filovirus-antibody-persistence'] },
 		fullEfficacy: { value: 0, sources: ['who-marburg-factsheet'] },
-		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] }
+		hospitalisedShare: { value: 1, sources: ['who-marburg-treatment-centre'] },
+		lastingHarm: NOT_COUNTED_HARM
 	},
 	flu1918: {
 		id: 'flu1918',
@@ -923,7 +961,8 @@ export const DISEASES = {
 			reference: [15761 / 42354, 25927 / 42354, 666 / 42354],
 			overall: 0.017,
 			sources: ['britten-1932-phr-1918-canvass', 'morabia-2021-1918-canvass']
-		}
+		},
+		lastingHarm: FLU1918_LASTING_HARM
 	},
 	plague: {
 		id: 'plague',
@@ -983,6 +1022,7 @@ export const DISEASES = {
 			reference: PLAGUE_AGE_SHARES,
 			overall: PLAGUE_MORTALITY,
 			sources: ['mongillo-2024-bubonic-plague-by-age']
-		}
+		},
+		lastingHarm: NOT_COUNTED_HARM
 	}
 } satisfies Record<string, DiseaseConfig>;

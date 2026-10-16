@@ -177,9 +177,13 @@ export class Simulation {
 					this.pushEvent({ kind: 'firstCase', region: r, day: this.day });
 				}
 			},
-			onIllnessEnd: (dot, _people, died, bedRegion) => {
-				if (died === 0) return;
+			onIllnessEnd: (dot, people, died, bedRegion) => {
+				const disease = this.disease;
+				const band = this.agents.ageBand[dot];
+				const babies = band === 1 ? disease.babyRiskPerCase : 0;
+				if (died === 0 && disease.harmRates.length === 0 && babies === 0) return;
 				// People die in the hospital that took them: for symptoms that started on a trip, its origin.
+				// Lasting harm is counted there too, so every count about an illness is in one place.
 				const region = bedRegion >= 0 ? bedRegion : hospitalRegion(this.agents, this.routeList, dot);
 				// Every dot has a home region, so this can't happen; skipping would lose deaths from the
 				// counts, so fail loudly in development and tests, and say so once per run anywhere else.
@@ -190,7 +194,22 @@ export class Simulation {
 					this.lostDeathReported = true;
 					return;
 				}
-				this.counters.addDeaths(region, 0, this.agents.ageBand[dot], died);
+				if (died > 0) this.counters.addDeaths(region, 0, band, died);
+				// Expected values (6.17): rate x whole people, no draw, so the run itself never changes.
+				const survivors = people - died;
+				if (survivors > 0 && disease.harmRates.length > 0) {
+					const factor = this.agents.protection[dot] === Protection.FULL ? disease.harmVaccinatedFactor : 1;
+					disease.harmRates.forEach((rate, h) =>
+						this.counters.addHarm(region, 0, h, survivors * rate[band] * factor)
+					);
+				}
+				// Pregnancies are harmed or lost whether or not the mother survives.
+				if (babies > 0)
+					this.counters.addBabies(
+						region,
+						0,
+						people * this.scenario.regions[region].policy.pregnantShare.value * babies
+					);
 			},
 			onSymptoms: (dot, first, again, tick) => {
 				const region = hospitalRegion(this.agents, this.routeList, dot);
@@ -677,6 +696,8 @@ export class Simulation {
 			counts: c.regionCounts(r),
 			deathsByAge: c.deathsByAge(r),
 			deaths: c.deaths(r),
+			harmed: c.harms(r, 0, this.disease.harmRates.length),
+			babies: c.babiesHarmed(r),
 			overloaded: this.pressure[r] > 1,
 			capacity: this.bedCapacity[r],
 			beds: this.beds[r],
