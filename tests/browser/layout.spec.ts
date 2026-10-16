@@ -627,7 +627,7 @@ test('the lasting-harm details stay open on a new height alone, follow their car
 	await page.keyboard.press('Enter');
 	await expect(second).toHaveAttribute('aria-expanded', 'true');
 	await expect(first).toHaveAttribute('aria-expanded', 'false');
-	const shown = page.locator('section.card div.detail');
+	const shown = page.locator('section.card .detail');
 	await expect(shown).toHaveCount(1);
 	// A zoom moves the cards; the details move with their line rather than being left behind.
 	const card = page.locator('section.card').nth(1);
@@ -665,7 +665,7 @@ async function detailCovers(page: Page) {
 	const { discs } = await probe(page);
 	return page.evaluate(
 		({ discs, sx, sy }) => {
-			const box = document.querySelector('section.card div.detail');
+			const box = document.querySelector('section.card .detail');
 			if (!box) return [];
 			const b = box.getBoundingClientRect();
 			const own = box.closest('section.card')!;
@@ -715,25 +715,39 @@ async function everyLineOpens(page: Page, when: string) {
 		await page.keyboard.press('Enter');
 		await settle(page);
 		await expect(line, `line ${i} ${when}`).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.locator('section.card div.detail'), `line ${i} ${when}`).toBeVisible();
+		await expect(page.locator('section.card .detail'), `line ${i} ${when}`).toBeVisible();
 		expect(await detailCovers(page), `line ${i} ${when}`).toEqual([]);
 		// The line that opened them stays in sight, so its focus ring shows where they came from.
 		const hidden = await line.evaluate((el) => {
 			const l = el.getBoundingClientRect();
-			const b = document.querySelector('section.card div.detail')!.getBoundingClientRect();
+			const b = document.querySelector('section.card .detail')!.getBoundingClientRect();
 			return (
 				b.left < l.right - 0.5 && b.right > l.left + 0.5 && b.top < l.bottom - 0.5 && b.bottom > l.top + 0.5
 			);
 		});
 		expect(hidden, `line ${i} ${when} is under its details`).toBe(false);
+		// Over their own card, they take the taller of the spaces below the line and above it.
+		const side = await line.evaluate((el) => {
+			const l = el.getBoundingClientRect();
+			const b = document.querySelector('section.card .detail')!.getBoundingClientRect();
+			const card = el.closest('section.card')!;
+			const c = card.getBoundingClientRect();
+			if (Math.abs(b.left - c.left) > 0.5 || Math.abs(b.width - c.width) > 0.5) return 'beside';
+			const head = card.querySelector(':scope > header')!.getBoundingClientRect().bottom;
+			const below = Math.min(c.bottom, innerHeight) - (l.bottom + 4);
+			const above = l.top - 4 - Math.max(head, 0);
+			if (Math.max(below, above) < 40) return 'whole';
+			return b.top >= l.bottom === below >= above ? 'taller' : 'shorter';
+		});
+		expect(side, `line ${i} ${when}`).not.toBe('shorter');
 		// Details that scroll inside take keyboard focus, so their scroll is reachable without a mouse.
-		const box = page.locator('section.card div.detail');
+		const box = page.locator('section.card .detail');
 		if (await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1)) {
 			scrolled++;
 			await expect(box, `line ${i} ${when} scrolls`).toHaveAttribute('tabindex', '0');
 		}
 		await page.keyboard.press('Escape');
-		await expect(page.locator('section.card div.detail')).toHaveCount(0);
+		await expect(page.locator('section.card .detail')).toHaveCount(0);
 	}
 	return scrolled;
 }
@@ -778,7 +792,7 @@ for (const [w, h] of TARGETS) {
 				await settle(page);
 				expect(await detailCovers(page), `line ${i}, after ${step}`).toEqual([]);
 				// Closed for want of room (or by a new map's cards): open it again for the next step.
-				if ((await page.locator('section.card div.detail').count()) === 0 && (await lines.count()) > i) {
+				if ((await page.locator('section.card .detail').count()) === 0 && (await lines.count()) > i) {
 					await lines.nth(i).click();
 					await settle(page);
 					expect(await detailCovers(page), `line ${i}, reopened after ${step}`).toEqual([]);
@@ -809,7 +823,7 @@ test('docking for a short window keeps focus on the line whose details were open
 	await page.getByRole('button', { name: 'Paused' }).click();
 	await line.focus();
 	await page.keyboard.press('Enter');
-	await expect(page.locator('section.card div.detail')).toHaveCount(1);
+	await expect(page.locator('section.card .detail')).toHaveCount(1);
 	await page.setViewportSize({ width: 1280, height: 600 });
 	await settle(page);
 	expect(await docked(page)).toBe(1);
@@ -818,7 +832,7 @@ test('docking for a short window keeps focus on the line whose details were open
 	const after = page.locator('section.card button.harm').first();
 	await expect(after).toBeFocused();
 	await expect(after).toHaveAttribute('aria-expanded', 'true');
-	await expect(page.locator('section.card div.detail')).toBeVisible();
+	await expect(page.locator('section.card .detail')).toBeVisible();
 	expect(await detailCovers(page)).toEqual([]);
 	// Back to a tall window: the cards float, and the details open again beside the framed card.
 	await page.setViewportSize({ width: 1280, height: 720 });
@@ -827,7 +841,7 @@ test('docking for a short window keeps focus on the line whose details were open
 	const floating = page.locator('section.card button.harm').first();
 	await expect(floating).toBeFocused();
 	await expect(floating).toHaveAttribute('aria-expanded', 'true');
-	await expect(page.locator('section.card div.detail')).toBeVisible();
+	await expect(page.locator('section.card .detail')).toBeVisible();
 	expect(await detailCovers(page)).toEqual([]);
 });
 
@@ -856,10 +870,46 @@ for (const which of ['harm', 'babies'] as const) {
 		expect(await docked(page)).toBe(0);
 		await expect(lines().nth(n)).toBeFocused();
 		await expect(lines().nth(n)).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.locator('section.card div.detail')).toBeVisible();
+		await expect(page.locator('section.card .detail')).toBeVisible();
 		expect(await detailCovers(page)).toEqual([]);
 	});
 }
+
+test('docked, Tab goes from a line into its details when they scroll, and Page Down scrolls them', async ({
+	page
+}) => {
+	await open(page, 1280, 720);
+	await page.selectOption('select', 'smallpox');
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
+		timeout: 90_000
+	});
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await page.setViewportSize({ width: 1280, height: 600 });
+	await settle(page);
+	expect(await docked(page)).toBe(1);
+	const lines = page.locator('section.card button.harm');
+	const box = page.locator('section.card .detail');
+	let tried = 0;
+	for (let i = 0; i < (await lines.count()); i++) {
+		await lines.nth(i).focus();
+		await page.keyboard.press('Enter');
+		await expect(box).toBeVisible();
+		if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+			await page.keyboard.press('Escape');
+			continue;
+		}
+		tried++;
+		await page.keyboard.press('Tab');
+		await expect(box, `line ${i}`).toBeFocused();
+		await page.keyboard.press('PageDown');
+		await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
+		await expect(box, `line ${i} still open`).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(lines.nth(i)).toBeFocused();
+	}
+	expect(tried, 'some docked details scroll').toBeGreaterThan(0);
+});
 
 for (const [from, key] of [
 	['babies', 'Shift+Tab'],

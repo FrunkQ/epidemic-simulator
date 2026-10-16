@@ -147,7 +147,7 @@
 	 */
 	let detail: 'harm' | 'babies' | null = $state(null);
 	let detailFrom: HTMLButtonElement | undefined;
-	let detailBox = $state<HTMLDivElement>();
+	let detailBox = $state<HTMLElement>();
 	let detailAt = $state({ left: 0, top: 0 });
 	const detailText = $derived(detail === 'harm' ? harm?.hover : detail === 'babies' ? harm?.babiesHover : '');
 	const detailId = $derived(`harm-detail-${region.id}`);
@@ -215,8 +215,8 @@
 			});
 		let spot = tries.find((p) => clear(p.left, p.top));
 		if (!spot) {
-			// Inside the card's body, keeping the line in sight: below it, else between the header and
-			// it, else (too little room either side) over the whole body.
+			// Inside the card's body, keeping the line in sight: in the taller of the spaces below it and
+			// between the header and it, else (too little room either side) over the whole body.
 			const head = Math.max(ownHead?.getBoundingClientRect().bottom ?? card.top, 0);
 			const foot = Math.min(card.bottom, innerHeight);
 			const free = (top: number, bottom: number) =>
@@ -228,11 +228,13 @@
 					const dy = c.y - Math.max(top, Math.min(c.y, bottom));
 					return dx * dx + dy * dy >= c.r * c.r;
 				});
+			const below = { top: Math.max(line.bottom + 4, head), bottom: foot };
+			const above = { top: head, bottom: Math.min(line.top - 4, foot) };
+			const taller = (r: { top: number; bottom: number }) => r.bottom - r.top;
 			const inset = [
-				{ top: Math.max(line.bottom + 4, head), bottom: foot },
-				{ top: head, bottom: Math.min(line.top - 4, foot) },
+				...(taller(below) >= taller(above) ? [below, above] : [above, below]),
 				{ top: head, bottom: foot }
-			].find((r) => r.bottom - r.top >= MIN_INSET && free(r.top, r.bottom));
+			].find((r) => taller(r) >= MIN_INSET && free(r.top, r.bottom));
 			if (card.left < 0 || card.right > innerWidth || !inset) return closeDetail(true);
 			detailBox.style.width = `${card.width}px`;
 			detailBox.style.maxHeight = `${inset.bottom - inset.top}px`;
@@ -479,6 +481,30 @@
 			<p class="note" title={ERA_DEATH_RATE}>{ERA_DEATH_RATE_SHORT}</p>
 		{/if}
 	{/if}
+	<!-- Straight after the line that opens them, so Tab goes from the line into them. Spans, since
+	     they sit inside the counts paragraph. A region that scrolls must take focus so keyboard users
+	     can scroll it (WCAG 2.1.1). -->
+	{#snippet details(which: 'harm' | 'babies')}
+		{#if detail === which && detailText}
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<span
+				class="detail"
+				id={detailId}
+				role="region"
+				aria-label="{region.name}: {which === 'harm'
+					? 'lasting harm'
+					: 'babies harmed or pregnancies lost'}, what is counted"
+				bind:this={detailBox}
+				tabindex={detailScrolls ? 0 : undefined}
+				style:left="{detailAt.left}px"
+				style:top="{detailAt.top}px"
+			>
+				{#each detailText.split('\n') as line, k (k)}
+					<span class="para">{line}</span>
+				{/each}
+			</span>
+		{/if}
+	{/snippet}
 	{#if t}
 		<p class="counts">
 			<span
@@ -497,6 +523,7 @@
 					aria-controls={detail === 'harm' ? detailId : undefined}
 					onclick={(e) => toggleDetail('harm', e)}>{harm.line}</button
 				>
+				{@render details('harm')}
 			{/if}
 			<span><i style:background={COLOURS.deceased}></i>{t.deaths.toLocaleString()} died</span>
 			{#if harm?.babies}
@@ -509,28 +536,9 @@
 					aria-controls={detail === 'babies' ? detailId : undefined}
 					onclick={(e) => toggleDetail('babies', e)}>{harm.babies}</button
 				>
+				{@render details('babies')}
 			{/if}
 		</p>
-	{/if}
-	{#if detail && detailText}
-		<!-- A region that scrolls must take focus so keyboard users can scroll it (WCAG 2.1.1). -->
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<div
-			class="detail"
-			id={detailId}
-			role="region"
-			aria-label="{region.name}: {detail === 'harm'
-				? 'lasting harm'
-				: 'babies harmed or pregnancies lost'}, what is counted"
-			bind:this={detailBox}
-			tabindex={detailScrolls ? 0 : undefined}
-			style:left="{detailAt.left}px"
-			style:top="{detailAt.top}px"
-		>
-			{#each detailText.split('\n') as line, k (k)}
-				<p>{line}</p>
-			{/each}
-		</div>
 	{/if}
 	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
 </section>
@@ -691,10 +699,11 @@
 		font-size: 12px;
 		box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
 	}
-	.detail p {
+	.detail .para {
+		display: block;
 		margin: 0 0 4px;
 	}
-	.detail p:last-child {
+	.detail .para:last-child {
 		margin-bottom: 0;
 	}
 	.counts i {
