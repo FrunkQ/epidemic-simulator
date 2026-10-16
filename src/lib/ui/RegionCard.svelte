@@ -153,6 +153,8 @@
 	const detailId = $derived(`harm-detail-${region.id}`);
 	/** Room kept between the details and the window's edge. */
 	const EDGE = 8;
+	/** The least height of card body the details may lie over: about two lines of their text. */
+	const MIN_INSET = 40;
 	/** Sent on the window when a card opens its details, so the others close theirs. */
 	const DETAIL_OPENED = 'harm-detail-opened';
 	function toggleDetail(which: 'harm' | 'babies', e: MouseEvent) {
@@ -170,10 +172,15 @@
 	/**
 	 * Where the details go: below their line, else above it, else beside the card, whichever first
 	 * stays inside the window and clear of every card's header and city disc, as cards are (6.17).
-	 * Covering another card's body is allowed. With nowhere clear they close, focus back on the line.
+	 * Covering another card's body is allowed. With none clear they lie over their own card's body,
+	 * below its header and as wide as the card, scrolling inside it, which no other header or disc
+	 * can reach. Only when even that is off the window or too short do they close, focus on the line.
 	 */
 	function placeDetail() {
 		if (!detailBox || !detailFrom || !element) return;
+		// Measured at their own size, not the size the inset spot last gave them.
+		detailBox.style.width = '';
+		detailBox.style.maxHeight = '';
 		const box = detailBox.getBoundingClientRect();
 		const line = detailFrom.getBoundingClientRect();
 		const card = element.getBoundingClientRect();
@@ -186,9 +193,10 @@
 			{ left: card.right + 4, top: clampY(line.top) },
 			{ left: card.left - 4 - w, top: clampY(line.top) }
 		];
-		const headers = [...document.querySelectorAll('section.card > header')].map((el) =>
-			el.getBoundingClientRect()
-		);
+		const ownHead = element.querySelector(':scope > header');
+		const headEls = [...document.querySelectorAll('section.card > header')];
+		const headers = headEls.map((el) => el.getBoundingClientRect());
+		const others = headEls.filter((el) => el !== ownHead).map((el) => el.getBoundingClientRect());
 		const cities = discs();
 		const clear = (l: number, t: number) =>
 			l >= EDGE - 0.5 &&
@@ -201,8 +209,26 @@
 				const dy = c.y - Math.max(t, Math.min(c.y, t + h));
 				return dx * dx + dy * dy >= c.r * c.r;
 			});
-		const spot = tries.find((p) => clear(p.left, p.top));
-		if (!spot) return closeDetail(true);
+		let spot = tries.find((p) => clear(p.left, p.top));
+		if (!spot) {
+			const top = Math.max(ownHead?.getBoundingClientRect().bottom ?? card.top, 0);
+			const bottom = Math.min(card.bottom, innerHeight);
+			const inside = card.left >= 0 && card.right <= innerWidth;
+			const room = bottom - top;
+			const free =
+				others.every(
+					(r) => card.left >= r.right || card.right <= r.left || top >= r.bottom || bottom <= r.top
+				) &&
+				cities.every((c) => {
+					const dx = c.x - Math.max(card.left, Math.min(c.x, card.right));
+					const dy = c.y - Math.max(top, Math.min(c.y, bottom));
+					return dx * dx + dy * dy >= c.r * c.r;
+				});
+			if (!inside || room < MIN_INSET || !free) return closeDetail(true);
+			detailBox.style.width = `${card.width}px`;
+			detailBox.style.maxHeight = `${room}px`;
+			spot = { left: card.left, top };
+		}
 		if (spot.left !== detailAt.left || spot.top !== detailAt.top) detailAt = spot;
 	}
 	// Placed once the box is drawn (its size depends on its text).
@@ -229,10 +255,11 @@
 	 * is destroyed, so it is tracked here, and cleared only when focus leaves a line still on the page.
 	 */
 	let focusedLine: 'harm' | 'babies' | null = null;
-	function lineBlurred(e: FocusEvent) {
+	function lineBlurred(which: 'harm' | 'babies', e: FocusEvent) {
 		const el = e.currentTarget as HTMLElement;
+		// Focus moving to the other line has named it by now, so only this line's name is cleared.
 		setTimeout(() => {
-			if (el.isConnected && document.activeElement !== el) focusedLine = null;
+			if (focusedLine === which && el.isConnected && document.activeElement !== el) focusedLine = null;
 		});
 	}
 	onDestroy(() => {
@@ -248,10 +275,14 @@
 			const line = which === 'harm' ? harmLine : babiesLine;
 			if (!line) return;
 			line.focus();
-			if (wasOpen) {
-				detailFrom = line;
-				detail = which;
-			}
+			// Opened once the page has framed the cards anew, so they are placed beside the line's
+			// final spot rather than where the card first lands.
+			if (wasOpen)
+				requestAnimationFrame(() => {
+					if (!line.isConnected) return;
+					detailFrom = line;
+					detail = which;
+				});
 		});
 	});
 	$effect(() => {
@@ -446,7 +477,7 @@
 					class="harm"
 					bind:this={harmLine}
 					onfocus={() => (focusedLine = 'harm')}
-					onblur={lineBlurred}
+					onblur={(e) => lineBlurred('harm', e)}
 					aria-expanded={detail === 'harm'}
 					aria-controls={detail === 'harm' ? detailId : undefined}
 					onclick={(e) => toggleDetail('harm', e)}>{harm.line}</button
@@ -458,7 +489,7 @@
 					class="harm"
 					bind:this={babiesLine}
 					onfocus={() => (focusedLine = 'babies')}
-					onblur={lineBlurred}
+					onblur={(e) => lineBlurred('babies', e)}
 					aria-expanded={detail === 'babies'}
 					aria-controls={detail === 'babies' ? detailId : undefined}
 					onclick={(e) => toggleDetail('babies', e)}>{harm.babies}</button
