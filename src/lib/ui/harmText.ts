@@ -21,10 +21,13 @@ export function about(n: number): string {
 	return Math.round(n).toLocaleString('en-GB');
 }
 
-/** "about 12", or "fewer than 1" with no "about" or "at least" in front, which would read wrongly. */
-function counted(n: number, qualifier: 'about' | 'at least'): string {
-	const shown = about(n);
-	return shown === 'fewer than 1' ? shown : `${qualifier} ${shown}`;
+/**
+ * "about 12", or "fewer than 1" with no "about" or "at least" in front, which would read wrongly.
+ * `shown` is the count written after the qualifier (the largest of several harms), when it isn't `n`.
+ */
+function counted(n: number, qualifier: 'about' | 'at least', shown = n): string {
+	if (about(n) === 'fewer than 1') return 'fewer than 1';
+	return `${qualifier} ${about(shown)}`;
 }
 /** Whether the count reads as one person ("fewer than 1" and "about 1"), for the singular. */
 function isOne(n: number): boolean {
@@ -58,8 +61,15 @@ export function harmText(
 	const hover: string[] = [];
 	if (harm && harm.counted.length > 0) {
 		const most = Math.max(0, ...harmed);
-		const amount = counted(most, harm.counted.length > 1 ? 'at least' : 'about');
-		const one = isOne(most);
+		// One person can have several harms, so the people harmed lie between the largest count and
+		// the sum. Below half a person the largest says nothing, so the sum bounds it from above.
+		const sum = harmed.reduce((a, b) => a + b, 0);
+		const several = harm.counted.length > 1;
+		const below = several && most > 0 && most < 0.5 && sum >= 0.5;
+		const amount = below
+			? `up to ${about(sum)}`
+			: counted(several ? sum : most, several ? 'at least' : 'about', most);
+		const one = isOne(below ? sum : most);
 		line = ofRecovered
 			? `of whom ${amount} ${one ? 'lives' : 'live'} with lasting harm`
 			: `${amount} ${one ? 'person here lives' : 'people here live'} with lasting harm`;

@@ -1641,7 +1641,7 @@ export const CITATIONS: Citation[] = [
 	},
 	{
 		id: 'cdc-pinkbook-mumps',
-		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
+		authors: 'Centers for Disease Control and Prevention (Marlow M, Haber P, Hickman C, Patel M)',
 		title: 'Chapter 15: Mumps — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
 		journal: 'CDC Pink Book (online edition)',
 		year: 2024,
@@ -1653,17 +1653,20 @@ export const CITATIONS: Citation[] = [
 			'mumps.illDays',
 			'mumps.asymptomaticFraction',
 			'mumps.mortality',
-			'mumps.hospitalisedShare'
+			'mumps.hospitalisedShare',
+			'mumps.lastingHarm.hover'
 		],
-		quote: 'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis.',
-		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Effectiveness',
+		quote:
+			'Mumps is considered infectious from 2 days before through 5 days after onset of parotitis. … Hearing loss is usually transient but may be permanent. … no study has demonstrated a risk for sterility in men with mumps orchitis compared to those without mumps orchitis.',
+		location:
+			'Epidemiology — Transmission; Clinical Features (including complications); Vaccine Effectiveness',
 		why: "silentDays=2 and illDays=5 read straight off this sentence. asymptomaticFraction=0.20 is the middle of 'approximately 15% to 24% of infections were asymptomatic'. mortality=0.0001 is my own pick: the page only says 'Permanent sequelae and death are very rare in both vaccinated and unvaccinated patients', so I chose a token 1-in-10,000 rather than zero. hospitalisedShare=0.01 is my own pick worked out from 'reported rates of meningitis, encephalitis, pancreatitis, and hearing loss (either transient or permanent) have all been 1% or less' — those are the complications that put someone in a bed. The page also notes 'Since 2006, most cases have been in persons who previously received 2 doses of MMR vaccine', which shows vaccine protection is not permanent (its half-life comes from Lewnard & Grad 2018).",
 		context: 'Official US reference text.',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Opened twice with different questions; the communicability sentence, the '15% to 24%' asymptomatic sentence, the 78%/88% effectiveness sentence, the '1% or less' complication sentence and the 'Since 2006' sentence were all returned verbatim; page last reviewed May 1, 2024; no retraction."
+			note: "Opened twice with different questions; the communicability sentence, the '15% to 24%' asymptomatic sentence, the 78%/88% effectiveness sentence, the '1% or less' complication sentence and the 'Since 2006' sentence were all returned verbatim; page last reviewed May 1, 2024; no retraction. The hover sentences (hearing loss, sterility) and the chapter authors were read on cdc.gov on 16 Oct 2026 (lasting-harm-verify.md rows 56 and 60)."
 		}
 	},
 	{
@@ -2017,11 +2020,12 @@ export const CITATIONS: Citation[] = [
 			'rubella.mortality',
 			'rubella.hospitalisedShare',
 			'rubella.about',
-			'rubella.vaccines.MMR.waningDays'
+			'rubella.vaccines.MMR.waningDays',
+			'rubella.lastingHarm.hover'
 		],
 		quote:
-			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset.',
-		location: 'Epidemiology — Transmission; Clinical Features; Vaccine Characteristics',
+			'Rubella is most contagious when the rash first appears, but virus may be shed from 7 days before to 7 days after rash onset. … Joint symptoms tend to occur at about the same time or shortly after the rash appears and may last for up to 1 month. Chronic arthritis is rare.',
+		location: 'Epidemiology — Transmission; Clinical Features (Acquired Rubella); Vaccine Characteristics',
 		why: "silentDays=7 and illDays=7 read straight off this sentence. asymptomaticFraction=0.50 from 'Symptoms are often mild, and up to 50% of infections may be subclinical or inapparent.' The vaccine's waningDays=null from 'Follow-up studies indicate that 1 dose of vaccine confers long-term, probably lifelong, protection.' (immunity after infection comes from WHO 2020) mortality=0.00001 and hospitalisedShare=0.001 are my own picks: the chapter reports no case-fatality or hospitalisation rate, only that encephalitis occurs in about 1 in 6,000 cases and 'may be fatal', so I chose token values well below 1 in 10,000 deaths. The high subclinical share is also the basis for the low bedridden value.",
 		context:
 			'Official US reference text; page last reviewed August 18, 2021. The serious burden of rubella is congenital rubella syndrome in pregnancy, which this per-case preset does not represent.',
@@ -2029,7 +2033,7 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
-			note: "Re-opened: chapter title 'Chapter 20: Rubella', last reviewed August 18, 2021; all four quoted phrases ('7 days before to 7 days after rash onset', 'up to 50% of infections may be subclinical or inapparent', the single-dose seroconversion sentence and 'long-term, probably lifelong, protection') confirmed verbatim; no retraction or withdrawal notice."
+			note: "Re-opened: chapter title 'Chapter 20: Rubella', last reviewed August 18, 2021; all four quoted phrases ('7 days before to 7 days after rash onset', 'up to 50% of infections may be subclinical or inapparent', the single-dose seroconversion sentence and 'long-term, probably lifelong, protection') confirmed verbatim; no retraction or withdrawal notice. The hover sentences (Acquired Rubella) were read on cdc.gov on 16 Oct 2026 (lasting-harm-verify.md row 63)."
 		}
 	},
 	{
@@ -2096,7 +2100,7 @@ export const CITATIONS: Citation[] = [
 			'smallpox.babyHarm.risk'
 		],
 		quote:
-			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors … Table 1.15, totals: 384 cases; 36 died before the pregnancy ended; 52 abortions; 23 premature and 9 full-term stillbirths',
+			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors … Table 1.15, each row summed across the four types of smallpox (the table prints no totals): 384 cases; 36 died before the pregnancy ended; 52 abortions; 23 premature and 9 full-term stillbirths',
 		location:
 			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); Table 1.13 (Rao’s Madras series, 1961-1969); pp. 54-55, Table 1.15 (pregnancy, Rao)',
 		why:
@@ -5236,17 +5240,17 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'UKHSA',
 		url: 'https://assets.publishing.service.gov.uk/media/69dcf5cbd3e08b8871b6663b/UKHSA_Green_Book_on_Mumps_2_4_26__002_.pdf',
-		usedFor: ['mumps.lastingHarm.context.mumpsDeafnessOneIn'],
+		usedFor: ['mumps.lastingHarm.context.mumpsDeafnessOneIn', 'mumps.lastingHarm.hover'],
 		quote:
-			'Sensorineural deafness (bilateral or unilateral) is a well-recognised complication of mumps, with estimates of its frequency varying from one in 3400 cases to one in 20,000 (Garty et al., 1988).',
+			'Sensorineural deafness (bilateral or unilateral) is a well-recognised complication of mumps, with estimates of its frequency varying from one in 3400 cases to one in 20,000 (Garty et al., 1988). … Sub-fertility following bilateral orchitis has rarely been reported (Bjorvatn et al., 1973; Dejucq and Jegou, 2001).',
 		location: 'The disease (chapter 23, 2 April 2026)',
-		why: 'Shown in the mumps hover. It does not say the deafness is permanent, so it is not counted.',
+		why: 'Shown in the mumps hover: the deafness range, which does not say the deafness is permanent, so it is not counted; and reduced fertility, rarely reported.',
 		context: 'United Kingdom, chapter of 2 April 2026',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-16',
 			ok: true,
-			note: 'Read through WebFetch (lasting-harm-verify.md row 56). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+			note: 'Read through WebFetch (lasting-harm-verify.md row 56). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8). The sub-fertility sentence was read in the PDF on 16 Oct 2026.'
 		}
 	},
 	{
@@ -5348,14 +5352,14 @@ export const CITATIONS: Citation[] = [
 		id: 'wei2021-covid-pregnancy',
 		authors: 'Wei SQ, Bilodeau-Bertrand M, Liu S, Auger N',
 		title: 'The impact of COVID-19 on pregnancy outcomes: a systematic review and meta-analysis',
-		journal: 'CMAJ',
+		journal: 'CMAJ 193(16):E540-E548',
 		year: 2021,
 		evidence: 'meta-analysis',
 		doi: '10.1503/cmaj.202604',
 		usedFor: ['covid19.lastingHarm.hover'],
 		quote: 'stillbirth (OR 2.11, 95% CI 1.14 to 3.90; I2 = 24%; 6 studies)',
 		location: 'Results (and abstract)',
-		why: 'One of the two pooled studies the COVID-19 hover says disagree on stillbirth: this one finds stillbirth about twice as likely with COVID-19 in pregnancy. Smith 2023 finds no link, so stillbirth is not counted.',
+		why: 'One of the two pooled studies the COVID-19 hover says disagree on stillbirth: in the studies it pools, stillbirth was about twice as common among women who had COVID-19 in pregnancy, an observed link rather than a measured cause. Smith 2023 finds no link, so stillbirth is not counted.',
 		context: 'COVID-19 era',
 		verified: {
 			by: 'build thread (full text, PMC open-data bucket, PMC8084555)',
@@ -5369,7 +5373,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Smith ER, Oakley E, Grandner GW, et al.',
 		title:
 			'Adverse maternal, fetal, and newborn outcomes among pregnant women with SARS-CoV-2 infection: an individual participant data meta-analysis',
-		journal: 'BMJ Global Health',
+		journal: 'BMJ Global Health 8(3):e009495',
 		year: 2023,
 		evidence: 'meta-analysis',
 		doi: '10.1136/bmjgh-2022-009495',
@@ -5386,52 +5390,9 @@ export const CITATIONS: Citation[] = [
 		}
 	},
 	{
-		id: 'cdc-pinkbook-mumps-harm',
-		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
-		title: 'Chapter 15: Mumps — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
-		year: 2024,
-		evidence: 'official',
-		publisher: 'CDC',
-		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-15-mumps.html',
-		usedFor: ['mumps.lastingHarm.hover'],
-		quote:
-			'Hearing loss is usually transient but may be permanent. … no study has demonstrated a risk for sterility in men with mumps orchitis compared to those without mumps orchitis.',
-		location: 'Clinical Features — Complications',
-		why: 'Backs the mumps hover lines on deafness (usually temporary, sometimes permanent) and sterility (no study shows a higher risk). Neither gives a lasting share, so neither is counted.',
-		context: 'Official US reference text.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-10',
-			ok: true,
-			note: 'lasting-harm-verify.md rows 56 and 60 (read on cdc.gov).'
-		}
-	},
-	{
-		id: 'cdc-pinkbook-rubella-harm',
-		authors: 'Centers for Disease Control and Prevention (Hall E, Wodi AP, et al., eds.)',
-		title: 'Chapter 20: Rubella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
-		journal: 'CDC Pink Book (online edition)',
-		year: 2021,
-		evidence: 'official',
-		publisher: 'CDC',
-		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-20-rubella.html',
-		usedFor: ['rubella.lastingHarm.hover'],
-		quote: 'may last for up to 1 month … Chronic arthritis is rare.',
-		location: 'Clinical Features — Complications (arthralgia and arthritis)',
-		why: 'Backs the rubella hover line: joint pain can last up to a month, and long-term arthritis is rare, so no lasting harm is counted in the person ill.',
-		context: 'Official US reference text.',
-		verified: {
-			by: 'independent verification pass',
-			on: '2026-10-10',
-			ok: true,
-			note: 'lasting-harm-verify.md row 63 (read on cdc.gov).'
-		}
-	},
-	{
 		id: 'cdc-pertussis-complications',
 		authors: 'Centers for Disease Control and Prevention',
-		title: 'Whooping Cough: Signs and Symptoms',
+		title: 'Symptoms of Whooping Cough',
 		journal: 'CDC',
 		year: 2025,
 		evidence: 'official',
@@ -5441,7 +5402,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Babies younger than 1 year old who are treated in the hospital can have: … Encephalopathy (disease of the brain): 1 in 150 (0.6%)',
 		location: 'Complications (page last reviewed 2 December 2025)',
-		why: 'Backs the whooping cough hover line that some babies treated in hospital get encephalopathy. The page gives how often it happens, not how many are left with lasting damage, so it is not counted.',
+		why: 'Backs the whooping cough hover line that some babies treated in hospital get encephalopathy. The page gives how often it happens, and nothing on lasting damage, so it is not counted.',
 		context: 'Official US public health page.',
 		verified: {
 			by: 'build thread, read on cdc.gov',
@@ -5454,7 +5415,7 @@ export const CITATIONS: Citation[] = [
 		id: 'hoffman2017-encephalitis-lethargica',
 		authors: 'Hoffman LA, Vilensky JA',
 		title: 'Encephalitis lethargica: 100 years after the epidemic',
-		journal: 'Brain',
+		journal: 'Brain 140(8):2246-2251',
 		year: 2017,
 		evidence: 'review',
 		doi: '10.1093/brain/awx177',

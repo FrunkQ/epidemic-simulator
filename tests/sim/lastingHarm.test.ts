@@ -263,8 +263,15 @@ describe('what the card says about lasting harm (6.17)', () => {
 		expect(harmText(DISEASES.covid19, [1.2], 0, false).line).toBe(
 			'about 1 person here lives with lasting harm'
 		);
+		// Several harms: one person can have more than one, so the people harmed are at most the sum.
 		const ebola = harmText(DISEASES.ebola, [0.4, 0.3, 0.2, 0.1, 0.1, 0.1], 0.2, true);
-		expect(ebola.line).toBe('of whom fewer than 1 lives with lasting harm');
+		expect(ebola.line).toBe('of whom up to 1 lives with lasting harm');
+		expect(harmText(DISEASES.ebola, [0.1, 0.1, 0.1, 0.1, 0, 0], 0, true).line).toBe(
+			'of whom fewer than 1 lives with lasting harm'
+		);
+		expect(harmText(DISEASES.ebola, [0.4, 0.4, 0.4, 0.4, 0.4, 0.4], 0, true).line).toBe(
+			'of whom up to 2 live with lasting harm'
+		);
 		expect(ebola.hover.split('\n')[1]).toBe('Fewer than 1: Joint pain.');
 		expect(ebola.babies).toBe('Fewer than 1 baby harmed or pregnancy lost here');
 		expect(harmText(DISEASES.ebola, [1, 1, 1, 1, 1, 1], 1, true).babies).toBe(
