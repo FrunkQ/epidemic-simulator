@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { COLOURS } from '../sim/render';
-	import type { MortalityBasis, RegionHistory, Telemetry } from '../sim/types';
+	import type { DiseaseConfig, DiseaseId, RegionHistory, Telemetry } from '../sim/types';
+	import { loadDisease } from '../config';
+	import { harmSeries, harmTitle, harmViews, type HarmView } from './harmChart';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import AgeBarsChart from './charts/AgeBarsChart.svelte';
 	import LineChart from './charts/LineChart.svelte';
@@ -10,12 +12,13 @@
 
 	interface Props {
 		telemetry: Telemetry;
-		/** The care basis of the disease's death rate: strain never applies to an 'era' rate (6.6). */
-		mortalityBasis: MortalityBasis;
+		/** The disease: its care basis (strain never applies to an 'era' rate, 6.6) and what harm it counts (6.17). */
+		disease: DiseaseConfig;
 		/** Daily history per region, refreshed by the page when telemetry.historyVersion changes. */
 		history: RegionHistory[];
 	}
-	let { telemetry, history, mortalityBasis }: Props = $props();
+	let { telemetry, history, disease }: Props = $props();
+	const mortalityBasis = $derived(disease.mortalityBasis);
 
 	/** The stack, bottom first, in the dot colours so the map legend carries over. */
 	const BANDS = [
@@ -72,6 +75,31 @@
 		}))
 	);
 
+	/**
+	 * Lasting harm per city (6.17), the card's own numbers over time, held all run for a disease that
+	 * counts harm so the row never moves. Where babies are counted too, a People / Babies switch picks
+	 * the view, each on its own axis; a new disease starts on People.
+	 */
+	const views = $derived(harmViews(disease, telemetry.peoplePerDot));
+	let harmView: HarmView = $state('people');
+	$effect(() => {
+		void disease.id;
+		harmView = 'people';
+	});
+	const view = $derived(views.includes(harmView) ? harmView : 'people');
+	const harmLines = $derived(
+		views.length === 0
+			? []
+			: history.map((h, r): Line => ({
+					key: String(perRegion[r]?.id ?? r),
+					label: perRegion[r]?.name ?? '',
+					colour: view === 'people' ? COLOURS.recovered : '#c7d4e2',
+					dash: DASHES[r % DASHES.length],
+					values: harmSeries(h, view)
+				}))
+	);
+	const ofRecovered = $derived(loadDisease(disease.id as DiseaseId).waningMeanTicks === 0);
+
 	/** Charts' usual widths, and the gap between them. */
 	const WIDE = 240;
 	const NARROW = 170;
@@ -83,7 +111,9 @@
 	 * Every chart the row can hold this run, including a death-by-age chart per city before anyone
 	 * has died (held hidden), so the charts keep one size all run and the map never moves.
 	 */
-	const wideCount = $derived(perRegion.length + (perRegion.length > 1 ? 1 : 0) + (hospitalsOn ? 1 : 0));
+	const wideCount = $derived(
+		perRegion.length + (perRegion.length > 1 ? 1 : 0) + (hospitalsOn ? 1 : 0) + (views.length > 0 ? 1 : 0)
+	);
 	const narrowCount = $derived(telemetry.regions.length);
 	/** On a narrow row every chart shrinks alike, the age charts no further than MIN_NARROW. */
 	const fit = $derived.by(() => {
@@ -96,6 +126,8 @@
 	const wide = $derived(fit.wide);
 	/** Charts narrower than usual get shorter one-line captions (the full title shows on hover). */
 	const narrowRow = $derived(fit.wide < WIDE);
+	/** With the switch, a narrow chart's header holds only the switch, and the axis says what is counted. */
+	const switchOnly = $derived(views.length > 1 && narrowRow);
 	const narrow = $derived(fit.narrow);
 </script>
 
@@ -105,6 +137,7 @@
 			<StackedAreaChart
 				title="{p.name}: who has caught it so far"
 				caption={narrowRow ? `${p.name}: caught it` : undefined}
+				brief={p.name}
 				days={p.days}
 				bands={p.bands}
 				max={p.max}
@@ -115,6 +148,7 @@
 			<LineChart
 				title="Ill right now, in each city"
 				caption={narrowRow ? 'Ill now, each city' : undefined}
+				brief="Ill now"
 				days={perRegion[0].days}
 				lines={illLines}
 				width={wide}
@@ -124,6 +158,7 @@
 			<LineChart
 				title="Hospital beds in use, in each city"
 				caption={narrowRow ? 'Beds in use, each city' : undefined}
+				brief="Beds in use"
 				days={perRegion[0].days}
 				lines={pressureLines}
 				yLabel="% of beds"
@@ -140,6 +175,40 @@
 				combinedLabel="{threshold}% {mortalityBasis === 'era' ? 'under pressure' : 'strain'} · 100% full"
 				shortLabel="{threshold}% {mortalityBasis === 'era' ? 'pressure' : 'strain'} · 100% full"
 			/>
+		{/if}
+		{#if views.length > 0 && perRegion.length > 0}
+			<LineChart
+				title={harmTitle(view, ofRecovered)}
+				caption={switchOnly
+					? ''
+					: narrowRow || views.length > 1
+						? view === 'people'
+							? 'Lasting harm'
+							: 'Babies harmed'
+						: undefined}
+				days={perRegion[0].days}
+				lines={harmLines}
+				yLabel={switchOnly
+					? view === 'people'
+						? 'Lasting harm'
+						: 'Babies harmed'
+					: view === 'people'
+						? 'People'
+						: 'Babies'}
+				width={wide}
+			>
+				{#snippet controls()}
+					{#if views.length > 1}
+						<span class="switch" role="group" aria-label="Show on this chart">
+							{#each views as v (v)}
+								<button type="button" aria-pressed={view === v} onclick={() => (harmView = v)}
+									>{v === 'people' ? 'People' : 'Babies'}</button
+								>
+							{/each}
+						</span>
+					{/if}
+				{/snippet}
+			</LineChart>
 		{/if}
 		<!-- Held in place, hidden, until someone dies, so the row's height never changes mid-run. -->
 		{#each telemetry.regions as r (r.id)}
@@ -169,5 +238,33 @@
 	}
 	.waiting {
 		visibility: hidden;
+	}
+	.switch {
+		display: inline-flex;
+		flex: none;
+	}
+	.switch button {
+		font: inherit;
+		color: #c7d4e2;
+		background: transparent;
+		border: 1px solid #2a4562;
+		padding: 0 5px;
+		line-height: 14px;
+		cursor: pointer;
+	}
+	.switch button:first-child {
+		border-radius: 4px 0 0 4px;
+	}
+	.switch button:last-child {
+		border-left: none;
+		border-radius: 0 4px 4px 0;
+	}
+	.switch button[aria-pressed='true'] {
+		background: #2a4562;
+		color: #e6edf5;
+	}
+	.switch button:focus-visible {
+		outline: 2px solid #8fb8ff;
+		outline-offset: 1px;
 	}
 </style>

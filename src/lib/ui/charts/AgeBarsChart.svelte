@@ -1,12 +1,15 @@
 <script lang="ts">
+	import Caption from './Caption.svelte';
 	import { AGE_BANDS } from './ages';
-	import { MARGIN, niceMax, roundToTotal, short } from './scale';
+	import { MARGIN, niceMax, roundToTotal, short, wordings } from './scale';
 
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
 		/** A shorter title for a narrow chart; the full title then shows on hover. */
 		caption?: string;
+		/** A shorter wording still, used when the caption doesn't fit the chart's width. */
+		brief?: string;
 		/** One value per age band: 0-14, 15-64, 65+. People, or shares when `asShares` is set. */
 		values: readonly [number, number, number];
 		/** Show each band as its share of the total (e.g. who died, by age), in percent. */
@@ -15,7 +18,16 @@
 		width?: number;
 		height?: number;
 	}
-	let { title, caption, values, asShares = false, yLabel, width = 170, height = 110 }: Props = $props();
+	let {
+		title,
+		caption,
+		brief,
+		values,
+		asShares = false,
+		yLabel,
+		width = 170,
+		height = 110
+	}: Props = $props();
 
 	const total = $derived(values[0] + values[1] + values[2]);
 	const shown = $derived(asShares ? values.map((v) => (total > 0 ? (v / total) * 100 : 0)) : values.slice());
@@ -33,7 +45,9 @@
 </script>
 
 <figure style:width="{width}px">
-	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
+	<figcaption class="chart-caption">
+		<Caption {title} wordings={wordings(title, caption, brief)} />
+	</figcaption>
 	<svg {width} {height} role="img" aria-label={title}>
 		<line
 			class="axis"
@@ -100,14 +114,6 @@
 	figure {
 		position: relative;
 		margin: 0;
-	}
-	figcaption {
-		margin-bottom: 2px;
-		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		color: #e6edf5;
 	}
 	svg {
 		display: block;

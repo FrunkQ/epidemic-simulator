@@ -202,6 +202,74 @@ for (const [w, h] of TARGETS) {
 	});
 }
 
+/**
+ * Each chart's caption, cut or not, whether its controls stay inside it, and pairs of axis labels
+ * that touch (a narrow chart could run "Day" into the last day's number).
+ */
+async function chartRow(page: Page) {
+	return page.locator('.charts figure').evaluateAll((figs) =>
+		figs.flatMap((f, i) => {
+			const out: string[] = [];
+			const box = f.getBoundingClientRect();
+			if (box.width === 0) return out;
+			const text = f.querySelector('.chart-caption .text') as HTMLElement | null;
+			if (text && text.scrollWidth > text.clientWidth + 0.5)
+				out.push(`chart ${i}: caption "${text.textContent}" is cut`);
+			const controls = f.querySelector('.chart-caption .switch')?.getBoundingClientRect();
+			if (controls && (controls.left < box.left - 0.5 || controls.right > box.right + 0.5))
+				out.push(`chart ${i}: its switch leaves the chart`);
+			const labels = [...f.querySelectorAll(':scope > svg > text:not(.measure)')]
+				.map((t) => ({ t: t.textContent, r: t.getBoundingClientRect() }))
+				.filter(({ r }) => r.width > 0);
+			labels.forEach((a, k) =>
+				labels.slice(k + 1).forEach((b) => {
+					if (a.r.left < b.r.right && b.r.left < a.r.right && a.r.top < b.r.bottom && b.r.top < a.r.bottom)
+						out.push(`chart ${i}: "${a.t}" touches "${b.t}"`);
+				})
+			);
+			return out;
+		})
+	);
+}
+
+for (const [w, h] of TARGETS) {
+	test(`${w}x${h}: with the lasting harm chart, the cards float and every chart caption and axis fits`, async ({
+		page
+	}) => {
+		await open(page, w, h);
+		for (const disease of ['covid19', 'smallpox']) {
+			await page.selectOption('select', disease);
+			await settle(page);
+			expect(await docked(page), disease).toBe(0);
+			expect(await covers(page), disease).toEqual([]);
+			const harm = page.locator('.charts figure', { has: page.getByRole('img', { name: /lasting harm/ }) });
+			await expect(harm, disease).toHaveCount(1);
+			expect(await chartRow(page), disease).toEqual([]);
+		}
+		// Smallpox counts babies: the switch shows them on their own axis, and keeps the layout.
+		const people = page.getByRole('button', { name: 'People', exact: true });
+		const babies = page.getByRole('button', { name: 'Babies', exact: true });
+		await expect(people).toHaveAttribute('aria-pressed', 'true');
+		const before = await probe(page);
+		await babies.click();
+		await expect(babies).toHaveAttribute('aria-pressed', 'true');
+		await expect(people).toHaveAttribute('aria-pressed', 'false');
+		await expect(page.getByRole('img', { name: /Babies harmed/ })).toHaveCount(1);
+		await settle(page);
+		const after = await probe(page);
+		expect(after.scale).toBeCloseTo(before.scale, 9);
+		expect(await docked(page)).toBe(0);
+		expect(await chartRow(page)).toEqual([]);
+		// A disease with no babies line has no switch, and a new disease starts on People.
+		await page.selectOption('select', 'covid19');
+		await settle(page);
+		await expect(babies).toHaveCount(0);
+		await page.selectOption('select', 'smallpox');
+		await settle(page);
+		await expect(people).toHaveAttribute('aria-pressed', 'true');
+	});
+}
+
 test('1280x600: the cards dock at full height, open or closed', async ({ page }) => {
 	await open(page, 1280, 600);
 	expect(await docked(page)).toBe(1);

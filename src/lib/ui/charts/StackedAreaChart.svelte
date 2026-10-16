@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { MARGIN, nearest, niceMax, short, type Band } from './scale';
+	import Caption from './Caption.svelte';
+	import { MARGIN, nearest, niceMax, short, wordings, type Band } from './scale';
 
 	interface Props {
 		/** Plain words saying what the chart shows. */
 		title: string;
 		/** A shorter title for a narrow chart; the full title then shows on hover. */
 		caption?: string;
+		/** A shorter wording still, used when the caption doesn't fit the chart's width. */
+		brief?: string;
 		days: readonly number[];
 		bands: Band[];
 		/** Top of the y axis (e.g. the population); rounded up to a nice number. */
@@ -14,7 +17,17 @@
 		width?: number;
 		height?: number;
 	}
-	let { title, caption, days, bands, max, yLabel = 'People', width = 240, height = 110 }: Props = $props();
+	let {
+		title,
+		caption,
+		brief,
+		days,
+		bands,
+		max,
+		yLabel = 'People',
+		width = 240,
+		height = 110
+	}: Props = $props();
 
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
 	const plotH = $derived(height - MARGIN.top - MARGIN.bottom);
@@ -46,7 +59,9 @@
 </script>
 
 <figure style:width="{width}px">
-	<figcaption title={caption && caption !== title ? title : undefined}>{caption ?? title}</figcaption>
+	<figcaption class="chart-caption">
+		<Caption {title} wordings={wordings(title, caption, brief)} />
+	</figcaption>
 	<svg
 		{width}
 		{height}
@@ -100,14 +115,6 @@
 	figure {
 		position: relative;
 		margin: 0;
-	}
-	figcaption {
-		margin-bottom: 2px;
-		/* One line always, so the row keeps its height; a narrow chart gets a shorter caption. */
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		color: #e6edf5;
 	}
 	svg {
 		display: block;

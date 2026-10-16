@@ -514,7 +514,7 @@
 
 	<footer>
 		{#if telemetry}
-			<Charts {telemetry} history={histories} mortalityBasis={DISEASES[diseaseId].mortalityBasis} />
+			<Charts {telemetry} history={histories} disease={DISEASES[diseaseId]} />
 			<Legend peoplePerDot={telemetry.peoplePerDot} {hasVaccine} {hasPartialCourse} />
 		{/if}
 	</footer>

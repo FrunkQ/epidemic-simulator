@@ -64,3 +64,12 @@ export interface Reference {
 	/** Put the label at the left end of the line (so two close lines don't collide). */
 	labelStart?: boolean;
 }
+
+/**
+ * A chart caption's wordings, longest first: the caption (or the title), then a shorter one. An
+ * empty caption means the header holds only its controls.
+ */
+export function wordings(title: string, caption?: string, short?: string): string[] {
+	if (caption === '') return [];
+	return [...new Set([caption ?? title, ...(short ? [short] : [])])];
+}
