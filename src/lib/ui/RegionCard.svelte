@@ -126,6 +126,73 @@
 	let harm = $derived(
 		t && peoplePerDot > 1 ? harmText(disease, t.harmed, t.babies, runtime.waningMeanTicks === 0) : null
 	);
+
+	/**
+	 * The details behind the harm and babies lines: each line is a button that opens them over the
+	 * map, so keyboard, touch and screen readers reach them and the card never changes size. They
+	 * close on Escape (focus goes back to the line), a click elsewhere, a resize, a scroll or a new
+	 * disease.
+	 */
+	let detail: 'harm' | 'babies' | null = $state(null);
+	let detailFrom: HTMLButtonElement | undefined;
+	let detailBox = $state<HTMLDivElement>();
+	let detailAt = $state({ left: 0, top: 0 });
+	const detailText = $derived(detail === 'harm' ? harm?.hover : detail === 'babies' ? harm?.babiesHover : '');
+	const detailId = $derived(`harm-detail-${region.id}`);
+	/** Room kept between the details and the window's edge. */
+	const EDGE = 8;
+	function toggleDetail(which: 'harm' | 'babies', e: MouseEvent) {
+		if (detail === which) return closeDetail(false);
+		detailFrom = e.currentTarget as HTMLButtonElement;
+		const r = detailFrom.getBoundingClientRect();
+		detailAt = { left: r.left, top: r.bottom + 4 };
+		detail = which;
+	}
+	function closeDetail(refocus: boolean) {
+		detail = null;
+		if (refocus) detailFrom?.focus();
+	}
+	// Kept inside the window: shifted left if it would run off the right, above the line if below.
+	$effect(() => {
+		if (!detailBox || !detailFrom) return;
+		const box = detailBox.getBoundingClientRect();
+		const line = detailFrom.getBoundingClientRect();
+		const left = Math.max(EDGE, Math.min(detailAt.left, innerWidth - EDGE - box.width));
+		const top =
+			line.bottom + 4 + box.height > innerHeight - EDGE
+				? Math.max(EDGE, line.top - 4 - box.height)
+				: line.bottom + 4;
+		if (left !== detailAt.left || top !== detailAt.top) detailAt = { left, top };
+	});
+	$effect(() => {
+		void disease.id;
+		detail = null;
+	});
+	$effect(() => {
+		if (!detail) return;
+		const onkey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') closeDetail(true);
+		};
+		const ondown = (e: PointerEvent) => {
+			const n = e.target as Node;
+			if (!detailBox?.contains(n) && !detailFrom?.contains(n)) closeDetail(false);
+		};
+		const onresize = () => closeDetail(false);
+		// A scroll inside the details themselves (a long text) keeps them open.
+		const onscroll = (e: Event) => {
+			if (!(e.target instanceof Node) || !detailBox?.contains(e.target)) closeDetail(false);
+		};
+		addEventListener('keydown', onkey);
+		addEventListener('pointerdown', ondown);
+		addEventListener('resize', onresize);
+		addEventListener('scroll', onscroll, true);
+		return () => {
+			removeEventListener('keydown', onkey);
+			removeEventListener('pointerdown', ondown);
+			removeEventListener('resize', onresize);
+			removeEventListener('scroll', onscroll, true);
+		};
+	});
 </script>
 
 <section
@@ -279,13 +346,38 @@
 			<span><i style:background={COLOURS.symptomatic}></i>{people(t.counts.symptomatic)} ill</span>
 			<span><i style:background={COLOURS.recovered}></i>{people(t.counts.recovered)} recovered</span>
 			{#if harm?.line}
-				<span class="harm" title={harm.hover}>{harm.line}</span>
+				<button
+					class="harm"
+					aria-expanded={detail === 'harm'}
+					aria-controls={detail === 'harm' ? detailId : undefined}
+					onclick={(e) => toggleDetail('harm', e)}>{harm.line}</button
+				>
 			{/if}
 			<span><i style:background={COLOURS.deceased}></i>{t.deaths.toLocaleString()} died</span>
 			{#if harm?.babies}
-				<span class="harm" title={harm.babiesHover}>{harm.babies}</span>
+				<button
+					class="harm"
+					aria-expanded={detail === 'babies'}
+					aria-controls={detail === 'babies' ? detailId : undefined}
+					onclick={(e) => toggleDetail('babies', e)}>{harm.babies}</button
+				>
 			{/if}
 		</p>
+	{/if}
+	{#if detail && detailText}
+		<div
+			class="detail"
+			id={detailId}
+			role="region"
+			aria-label="{region.name}: {detail === 'harm' ? 'lasting harm' : 'babies'}, what is counted"
+			bind:this={detailBox}
+			style:left="{detailAt.left}px"
+			style:top="{detailAt.top}px"
+		>
+			{#each detailText.split('\n') as line, k (k)}
+				<p>{line}</p>
+			{/each}
+		</div>
 	{/if}
 	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
 </section>
@@ -406,10 +498,48 @@
 		margin: 6px 0 0;
 		color: #c7d4e2;
 	}
+	/* A line that opens its details: reads as text, with a dotted underline to show it opens. */
 	.counts .harm {
-		padding-left: 14px;
+		align-self: flex-start;
+		padding: 0 0 0 14px;
+		border: none;
+		background: none;
+		font: inherit;
+		text-align: left;
 		color: #9fb3c8;
-		cursor: help;
+		text-decoration: underline dotted rgba(159, 179, 200, 0.6);
+		text-underline-offset: 2px;
+		cursor: pointer;
+	}
+	.counts .harm[aria-expanded='true'] {
+		color: #e6edf5;
+	}
+	.counts .harm:focus-visible {
+		outline: 2px solid #8fb8ff;
+		outline-offset: 1px;
+	}
+	/* Over the map, fixed to the window, so it never changes the card's size or scrolls with it. */
+	.detail {
+		position: fixed;
+		z-index: 30;
+		width: max-content;
+		max-width: min(300px, calc(100vw - 16px));
+		max-height: calc(100vh - 16px);
+		overflow-y: auto;
+		box-sizing: border-box;
+		padding: 8px 10px;
+		background: #11233a;
+		border: 1px solid #2a4562;
+		border-radius: 6px;
+		color: #c9d6e3;
+		font-size: 12px;
+		box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
+	}
+	.detail p {
+		margin: 0 0 4px;
+	}
+	.detail p:last-child {
+		margin-bottom: 0;
 	}
 	.counts i {
 		display: inline-block;

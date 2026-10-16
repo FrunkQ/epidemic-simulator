@@ -21,8 +21,9 @@ export function about(n: number): string {
 	return Math.round(n).toLocaleString('en-GB');
 }
 
-/** Babies are an event, counted where the illness ended, as deaths are (6.8). */
-export const BABIES_WHERE = 'Counted in the city where the mother’s illness ended, as deaths are.';
+/** Babies are an event, counted in the hospital's city, as deaths are (6.8). */
+export const BABIES_WHERE =
+	'Counted in the city where the mother’s symptoms began, whose hospital took her, as deaths are.';
 
 /** The hover's first line: who the count is among (6.17). */
 export const WHO_COUNTED =

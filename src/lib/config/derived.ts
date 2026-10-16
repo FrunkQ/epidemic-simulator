@@ -649,6 +649,8 @@ export const SMALLPOX_BLIND_SHARE =
 	(SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes) / SMALLPOX_BLINDNESS.survivors;
 /** Fenner 1988 p. 54, Table 1.15 (Rao): fetal deaths plus women who died undelivered, of all pregnant women ill. */
 export const SMALLPOX_PREGNANCY = { lost: 120, women: 384 };
+/** The share of pregnancies lost when the mother has smallpox (Rao, above). */
+export const SMALLPOX_PREGNANCY_LOSS = SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women;
 
 /**
  * Sneller 2019 (PREVAIL III), abstract: % of Ebola survivors and of uninfected close contacts with

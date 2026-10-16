@@ -336,6 +336,9 @@
 				box: [number, number];
 				dpr: number;
 				window: [number, number];
+				resets: number;
+				/** A paint boundary rather than a draw: see the marks below. */
+				mark?: true;
 			}[];
 		};
 		probe.__layoutProbe = () => ({
@@ -357,23 +360,54 @@
 			})()
 		});
 		probe.__layoutLog = [];
+		// Each time a canvas is sized it is cleared, even to the size it had: count them, so the check
+		// can tell a map cleared after it was drawn from one drawn again at the same size.
+		const resets = new WeakMap<HTMLCanvasElement, number>();
+		for (const side of ['width', 'height'] as const) {
+			const own = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, side)!;
+			Object.defineProperty(HTMLCanvasElement.prototype, side, {
+				...own,
+				set(this: HTMLCanvasElement, v: number) {
+					resets.set(this, (resets.get(this) ?? 0) + 1);
+					own.set!.call(this, v);
+				}
+			});
+		}
+		const state = (canvas: HTMLCanvasElement) => ({
+			scale: sim.view.scale,
+			docked: !!stripElement,
+			frame: Number(document.timeline.currentTime ?? 0),
+			bitmap: [canvas.width, canvas.height] as [number, number],
+			box: [canvas.clientWidth, canvas.clientHeight] as [number, number],
+			dpr: window.devicePixelRatio || 1,
+			window: [window.innerWidth, window.innerHeight] as [number, number],
+			resets: resets.get(canvas) ?? 0
+		});
+		// A task queued from each animation frame runs once that frame is painted, so it marks where
+		// one frame's draws end; it logs the page as painted. A draw from a task (outside any frame)
+		// is painted in the next frame, even though it carries this frame's timeline time.
+		let lastCanvas: HTMLCanvasElement | undefined;
+		const channel = new MessageChannel();
+		let pending: number | undefined;
+		channel.port1.onmessage = () => {
+			if (lastCanvas && pending !== undefined)
+				probe.__layoutLog.push({ ...state(lastCanvas), frame: pending, drawn: [0, 0], mark: true });
+			pending = undefined;
+		};
+		const markFrames = () => {
+			requestAnimationFrame(markFrames);
+			pending = Number(document.timeline.currentTime ?? 0);
+			channel.port2.postMessage(0);
+		};
+		requestAnimationFrame(markFrames);
 		const render = sim.render.bind(sim);
 		sim.render = (...args) => {
 			// Every map drawn in one frame has the same timeline time; the last one is painted. Each
 			// entry also has the size the map was drawn for, the canvas's pixels and its box on the page.
-			const frame = Number(document.timeline.currentTime ?? 0);
 			const [ctx, drawn] = args;
 			const canvas = ctx.canvas as HTMLCanvasElement;
-			probe.__layoutLog.push({
-				scale: sim.view.scale,
-				docked: !!stripElement,
-				frame,
-				drawn: [drawn.width, drawn.height],
-				bitmap: [canvas.width, canvas.height],
-				box: [canvas.clientWidth, canvas.clientHeight],
-				dpr: window.devicePixelRatio || 1,
-				window: [window.innerWidth, window.innerHeight]
-			});
+			lastCanvas = canvas;
+			probe.__layoutLog.push({ ...state(canvas), drawn: [drawn.width, drawn.height] });
 			render(...args);
 		};
 	}

@@ -28,9 +28,14 @@ interface Logged extends Frame {
 	box: [number, number];
 	dpr: number;
 	window: [number, number];
+	/** How many times the canvas has been sized (each clears it). */
+	resets: number;
+	/** A paint boundary, logged once a frame is painted, rather than a map drawn. */
+	mark?: true;
 }
 /** A painted frame: its map's scale and the strip as painted, and what was wrong with the canvas. */
 interface Painted extends Frame {
+	window: [number, number];
 	canvas?: string;
 }
 
@@ -81,33 +86,37 @@ async function open(page: Page, w: number, h: number) {
 }
 
 /**
- * The frames painted since log entry `from`, each with the map scale it drew (the last map drawn
- * in that frame) and the strip as it was painted (as the next frame's first map found it), with
- * repeats merged (see `shown` below). A frame also says what was wrong with its canvas, if anything: drawn for another
- * size than its box on the page, pixels not matching that box, or resized (so cleared) after the
- * map was drawn.
+ * The frames painted since log entry `from`, each with the map scale it drew and the page as painted.
+ * The page logs every map drawn, and a mark after each frame is painted (a task queued from that
+ * frame) with the page as it was then. A frame paints the last map drawn before its mark with that
+ * frame's time or earlier: a map drawn from a task after the mark is painted in the next frame.
+ * Repeats are merged. A frame also says what was wrong with its canvas, if anything: drawn for
+ * another size than its box on the page, pixels not matching that box, or sized (so cleared) after
+ * the map was drawn.
  */
 async function paintedSince(page: Page, from: number): Promise<Painted[]> {
 	const log = await page.evaluate(() => (window as unknown as { __layoutLog: Logged[] }).__layoutLog);
-	const frames: Logged[][] = [];
-	for (const entry of log.slice(from)) {
-		const last = frames[frames.length - 1];
-		if (last && last[0].frame === entry.frame) last.push(entry);
-		else frames.push([entry]);
-	}
+	let waiting: Logged[] = [];
 	const painted: Painted[] = [];
-	for (let k = 0; k + 1 < frames.length; k++) {
-		const drew = frames[k][frames[k].length - 1];
-		// The page as painted is the page as the next frame first found it, unless the window changed
-		// in between (the test resized it): then it is the page as this frame last drew it.
-		const next = frames[k + 1][0];
-		const shown = next.window[0] === drew.window[0] && next.window[1] === drew.window[1] ? next : drew;
+	for (const entry of log.slice(from)) {
+		if (!entry.mark) {
+			waiting.push(entry);
+			continue;
+		}
+		const now = waiting.filter((d) => d.frame <= entry.frame);
+		waiting = waiting.filter((d) => d.frame > entry.frame);
+		const drew = now[now.length - 1];
+		if (!drew) continue;
+		// The page as painted is the mark, unless the test resized the window between the paint and
+		// the mark: then it is the page as the map was drawn.
+		const moved = entry.window[0] !== drew.window[0] || entry.window[1] !== drew.window[1];
+		const shown = moved ? drew : entry;
 		const off = (a: number[], b: number[], by: number) =>
 			Math.abs(a[0] - b[0]) > by || Math.abs(a[1] - b[1]) > by;
 		const canvas = off(drew.drawn, shown.box, 0.5)
 			? `drawn ${drew.drawn} in a ${shown.box} box`
-			: off(drew.bitmap, shown.bitmap, 0)
-				? `cleared after drawing (${drew.bitmap} → ${shown.bitmap} px)`
+			: shown.resets !== drew.resets
+				? `cleared after drawing (sized ${shown.resets - drew.resets} more times)`
 				: off(
 							shown.bitmap.map((v) => v / shown.dpr),
 							shown.box,
@@ -115,23 +124,39 @@ async function paintedSince(page: Page, from: number): Promise<Painted[]> {
 					  )
 					? `${shown.bitmap} px in a ${shown.box} box`
 					: undefined;
-		const f: Painted = { scale: drew.scale, docked: shown.docked, ...(canvas ? { canvas } : {}) };
+		const f: Painted = {
+			scale: drew.scale,
+			docked: shown.docked,
+			window: shown.window,
+			...(canvas ? { canvas } : {})
+		};
 		const prev = painted[painted.length - 1];
-		if (!prev || !same(prev, f) || prev.canvas !== f.canvas) painted.push(f);
+		if (!prev || !same(prev, f) || prev.canvas !== f.canvas || !sameWindow(prev, f)) painted.push(f);
 	}
 	return painted;
 }
 
+const sameWindow = (a: Painted, b: Painted) => a.window[0] === b.window[0] && a.window[1] === b.window[1];
 const same = (a: Frame, b: Frame) => a.docked === b.docked && Math.abs(a.scale - b.scale) <= 1e-6;
 
 /**
  * After a change, every painted frame shows what the page showed before it (`before`) until the
  * first one that shows the final layout, and every frame after that shows the final layout; no
- * frame paints a canvas of the wrong size. Without `before` (a load), the first frame is final.
+ * frame paints a canvas of the wrong size. After a resize (`resized`), a frame painted at the new
+ * window size is always final: the old layout may show only while the window is still the old size. Without `before` (a load),
+ * the first frame is final.
  */
-async function expectStraightToFinal(page: Page, from: number, label: string, before?: Frame) {
+async function expectStraightToFinal(
+	page: Page,
+	from: number,
+	label: string,
+	before?: Frame,
+	resized = false
+) {
 	const frames = await paintedSince(page, from);
 	const final = await probe(page);
+	const size = page.viewportSize()!;
+	const atFinalSize = (f: Painted) => f.window[0] === size.width && f.window[1] === size.height;
 	const at = `${label}: ${JSON.stringify(frames)}, before ${JSON.stringify(before)}, final ${JSON.stringify({ scale: final.scale, docked: final.docked })}`;
 	expect(
 		frames.filter((f) => f.canvas),
@@ -139,6 +164,11 @@ async function expectStraightToFinal(page: Page, from: number, label: string, be
 	).toEqual([]);
 	let k = 0;
 	if (before) while (k < frames.length && same(frames[k], before) && !same(frames[k], final)) k++;
+	if (resized)
+		expect(
+			frames.filter((f) => atFinalSize(f) && !same(f, final)),
+			`${at}: the old layout painted at the new size`
+		).toEqual([]);
 	expect(
 		frames.slice(k).every((f) => same(f, final)),
 		at
@@ -377,7 +407,7 @@ for (const font of [undefined, 'DejaVu Sans']) {
 				const from = await frameCount(page);
 				await page.setViewportSize({ width: w, height: h });
 				await settle(page);
-				await expectStraightToFinal(page, from, `${w}x${h}`, before);
+				await expectStraightToFinal(page, from, `${w}x${h}`, before, true);
 			}
 			const [w, h] = sizes[sizes.length - 1];
 			const fresh = await browser.newPage();
@@ -533,3 +563,44 @@ for (const [from, to] of [
 		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(to[0]);
 	});
 }
+
+test('the lasting-harm details open from the keyboard, close on Escape, a click elsewhere and a resize', async ({
+	page
+}) => {
+	await open(page, 1400, 900);
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	const line = page.locator('section.card button.harm').first();
+	await expect(line).toBeVisible({ timeout: 60_000 });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	// Reached by Tab like any other control.
+	await page.locator('body').focus();
+	for (let k = 0; k < 200; k++) {
+		await page.keyboard.press('Tab');
+		if (await line.evaluate((el) => el === document.activeElement)) break;
+	}
+	await expect(line).toBeFocused();
+	await expect(line).toHaveAttribute('aria-expanded', 'false');
+	await page.keyboard.press('Enter');
+	await expect(line).toHaveAttribute('aria-expanded', 'true');
+	const id = await line.getAttribute('aria-controls');
+	const detail = page.locator(`#${id}`);
+	await expect(detail).toBeVisible();
+	// Inside the window.
+	const box = (await detail.boundingBox())!;
+	expect(box.x).toBeGreaterThanOrEqual(0);
+	expect(box.x + box.width).toBeLessThanOrEqual(1400);
+	expect(box.y + box.height).toBeLessThanOrEqual(900);
+	await page.keyboard.press('Escape');
+	await expect(detail).toHaveCount(0);
+	await expect(line).toHaveAttribute('aria-expanded', 'false');
+	await expect(line).toBeFocused();
+	// A tap opens it too, and a tap elsewhere closes it.
+	await line.click();
+	await expect(page.locator(`#${id}`)).toBeVisible();
+	await page.mouse.click(5, 700);
+	await expect(page.locator(`#${id}`)).toHaveCount(0);
+	await line.click();
+	await expect(page.locator(`#${id}`)).toBeVisible();
+	await page.setViewportSize({ width: 1366, height: 768 });
+	await expect(page.locator(`#${id}`)).toHaveCount(0);
+});
