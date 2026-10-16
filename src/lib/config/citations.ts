@@ -95,7 +95,13 @@ import {
 	MEASLES_LASTING_DISABILITY,
 	POLIO_PARALYSIS,
 	PREGNANCY_YEARS,
+	NCHS_GESTATION_2022,
+	polioLastingParalysis,
 	RUBELLA_CRS,
+	KAYEM_REVIEW_STUDIES,
+	STUDY_SIZES,
+	UNDER_34_MOST_CHANGE,
+	UNDER_34_RANGE,
 	SMALLPOX_BLINDNESS,
 	SMALLPOX_BLIND_SHARE,
 	SMALLPOX_POCKMARKS,
@@ -109,6 +115,7 @@ import {
 	pregnantShareOf
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
+import { DISEASES } from './diseases';
 import { HARM_CONTEXT } from './lastingHarm';
 
 /**
@@ -170,6 +177,12 @@ export const OFFICIAL_PUBLISHERS = [
 	'HSE',
 	'UKHSA'
 ] as const;
+
+/** Polio's counted lasting paralysis, from the disease's own figures, for the citation's reasoning. */
+const POLIO_LASTING = polioLastingParalysis(
+	1 - DISEASES.polio.asymptomaticFraction.value,
+	DISEASES.polio.mortality.value
+);
 
 export const CITATIONS: Citation[] = [
 	{
@@ -4866,11 +4879,7 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'meta-analysis',
 		doi: '10.1001/jama.2022.18931',
-		usedFor: [
-			'covid19.lastingHarm.longCovid',
-			'covid19.lastingHarm.context.longCovidMonths',
-			'covid19omicron.lastingHarm.context.longCovidMonths'
-		],
+		usedFor: ['covid19.lastingHarm.longCovid', 'covid19.lastingHarm.context.longCovidMonths'],
 		quote:
 			'Proportion with Long COVID symptom clusters among survivors, % (95% UI): 12 mo after symptom onset. All individuals 0.9 (0.3-2.0); Both sexes aged <20 y 0.3 (0.1-0.8); Women aged ≥20 y 1.7 (0.7-3.6); Men aged ≥20 y 0.8 (0.3-1.8)',
 		location: 'Table 3, 12-month column',
@@ -4938,9 +4947,9 @@ export const CITATIONS: Citation[] = [
 		url: 'https://www.cdc.gov/measles/hcp/clinical-overview/index.html',
 		usedFor: ['measles.lastingHarm.brainDamage'],
 		quote:
-			'However, it is likely that 3 to 4 million people on average were infected with measles annually; most cases were not reported. … 1,000 people developed chronic disability from acute encephalitis caused by measles annually.',
+			'In the decade before, an average of 549,000 measles cases and 495 measles deaths were reported annually in the United States. However, it is likely that 3 to 4 million people on average were infected with measles annually; most cases were not reported. … 1,000 people developed chronic disability from acute encephalitis caused by measles annually. … 1 out of every 1,000 measles cases will develop acute encephalitis',
 		location: 'Disease rates, "Prior to vaccine introduction"',
-		why: `Lasting disability after measles encephalitis per infection: ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} a year over the middle of 3 to 4 million infected, ${fmt(MEASLES_LASTING_DISABILITY * 100, 3)}%. The page lists the 1,000 under "Of the reported cases", but per reported case (549,000 a year) it would be 0.18%, above the same page's 1 in 1,000 cases with encephalitis, so only the infection base is consistent. The sim's measles red dot is every infection.`,
+		why: `Lasting disability after measles encephalitis per infection: ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} a year over the middle of ${CDC_MEASLES_PREVACCINE.infectedPerYear[0] / 1e6} to ${CDC_MEASLES_PREVACCINE.infectedPerYear[1] / 1e6} million infected, ${fmt(MEASLES_LASTING_DISABILITY * 100, 3)}%. The page lists the ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} under "Of the reported cases", but per reported case (${fmt(CDC_MEASLES_PREVACCINE.reportedPerYear)} a year) it would be ${fmt((CDC_MEASLES_PREVACCINE.disabledPerYear / CDC_MEASLES_PREVACCINE.reportedPerYear) * 100, 2)}%, above the same page's 1 in ${fmt(CDC_MEASLES_PREVACCINE.encephalitisOneIn)} cases with encephalitis, so only the infection base is consistent. The sim's measles red dot is every infection.`,
 		context: 'United States, the decade before the 1963 vaccine',
 		verified: {
 			by: 'independent verification pass',
@@ -4962,7 +4971,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'One in 200 infections leads to irreversible paralysis (usually in the legs). Among those paralysed, 5–10% die when their breathing muscles become immobilized.',
 		location: 'Key facts; Symptoms and risk (2 April 2025)',
-		why: `Paralysis per infection, ${fmt(POLIO_PARALYSIS.perInfection * 100, 1)}%. The sim's polio red dot is meningitis or paralysis only, so the paralysed who survive (less the sim's own deaths) are divided by the red dots who survive, then by the Pink Book's two-thirds still weak at 12 months: about 8%. WHO alone, calling the paralysis irreversible, would make it about 12%; the hover says so.`,
+		why: `Paralysis per infection, ${fmt(POLIO_PARALYSIS.perInfection * 100, 1)}%. The sim's polio red dot is meningitis or paralysis only, so the paralysed who survive (less the sim's own deaths) are divided by the red dots who survive, then by the Pink Book's two-thirds still weak a year on: about ${fmt(POLIO_LASTING.rate * 100)}%. WHO alone, calling the paralysis irreversible, would make it about ${fmt(POLIO_LASTING.whoOnly * 100)}%; the hover says so.`,
 		context: 'Global',
 		verified: {
 			by: 'independent verification pass',
@@ -5013,7 +5022,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'The absolute risk for foetal losses was estimated at 76.9% (95% CI 45.0 to 98.3, I2=96%, p<0.01) … Gestational ages were inconsistently reported.',
 		location: 'Abstract; Results (published online 2 December 2021, in the June 2022 issue)',
-		why: `Pregnancies lost per infected pregnant woman, ${fmt(EBOLA_FETAL_LOSS * 100, 1)}%, from a review of 28 studies. No split by week of pregnancy, so it applies to the whole pregnancy.`,
+		why: `Pregnancies lost per infected pregnant woman, ${fmt(EBOLA_FETAL_LOSS * 100, 1)}%, from a review of ${KAYEM_REVIEW_STUDIES} studies. No split by week of pregnancy, so it applies to the whole pregnancy.`,
 		context: 'Africa, outbreaks from 1976 to 2019',
 		verified: {
 			by: 'independent verification pass',
@@ -5036,7 +5045,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'the rate of CRS for infants born to women infected during the first 20 weeks of pregnancy is 20%. … Infants infected with rubella late in gestation do not exhibit clinical manifestations of CRS.',
 		location: 'Background',
-		why: `A single figure over the weeks of real risk, ${fmt(RUBELLA_CRS.risk * 100)}% over the first ${RUBELLA_CRS.weeks} weeks, about none later. The Green Book's "up to 90%" in weeks 0-10 is a ceiling and shown only in the hover. The base is live-born infants, so pregnancies lost are left out: an undercount. Silent infections harm babies too, so the risk is per infection.`,
+		why: `A single figure over the weeks of real risk, ${fmt(RUBELLA_CRS.risk * 100)}% over the first ${RUBELLA_CRS.weeks} weeks, about none later. The Green Book's "up to ${HARM_CONTEXT.rubellaEarlyCeiling.value}%" in the first ${HARM_CONTEXT.rubellaEarlyWeeks.value[0]} to ${HARM_CONTEXT.rubellaEarlyWeeks.value[1]} weeks is a ceiling and shown only in the hover. The base is live-born infants, so pregnancies lost are left out: an undercount. Silent infections harm babies too, so the risk is per infection.`,
 		context: 'United States',
 		verified: {
 			by: 'independent verification pass',
@@ -5100,7 +5109,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'2022, all races and origins: under 34 weeks 2.16; 34-36 weeks 6.51 (Table 1). Percentage of singleton births, by week of gestation, 2022: 37 weeks 11.63; 38: 17.45; 39: 38.84; 40: 18.26; 41: 4.88; 42 and later 0.27.',
 		location: 'Table 1 and the table on page 6',
-		why: `The mean length of pregnancy, ${fmt(MEAN_GESTATION_WEEKS, 2)} weeks, with each week at its middle and under 34 weeks at 31 (a convention: anything from 22 to 34 moves the mean by under 1%). Singleton births only.`,
+		why: `The mean length of pregnancy, ${fmt(MEAN_GESTATION_WEEKS, 2)} weeks, with each week at its middle and under 34 weeks at ${NCHS_GESTATION_2022[0][0]} (a convention: anything from ${UNDER_34_RANGE[0]} to ${UNDER_34_RANGE[1]} moves the mean by at most ${fmt(UNDER_34_MOST_CHANGE * 100, 1)}%). Singleton births only.`,
 		context: 'United States, singleton births, 2022',
 		verified: {
 			by: 'independent verification pass',
@@ -5144,7 +5153,7 @@ export const CITATIONS: Citation[] = [
 		usedFor: ['covid19omicron.lastingHarm.context.lugtuOmicron'],
 		quote: 'higher in pre-Omicron (35.5%) than Omicron (22.8%) eras (p=0.04)',
 		location: 'Abstract',
-		why: 'Shown only in the Omicron hover, to say long COVID looks less common with Omicron; its follow-up is mostly under a year, so it gives no 12-month figure and Omicron long COVID is not counted.',
+		why: `Shown only in the Omicron hover, to say long COVID looks less common with Omicron; its follow-up is mostly under a year, so it gives no ${HARM_CONTEXT.longCovidMonths.value}-month figure and Omicron long COVID is not counted.`,
 		context: 'Pooled studies, 2020-2024, follow-up under and over 6 months',
 		verified: {
 			by: 'independent verification pass',
@@ -5166,7 +5175,7 @@ export const CITATIONS: Citation[] = [
 		quote: '46% (95% CI, 37%–57%) at 1–2 years',
 		location: 'Abstract',
 		why: 'Shown only on the About page, to say why the counted long COVID figure (GBD) is far lower than pooled prevalence: these cohorts have no comparison group and mixed definitions.',
-		context: '429 studies, mostly cohorts with no comparison group',
+		context: `${STUDY_SIZES.hou2025.studies} studies, mostly cohorts with no comparison group`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-16',
@@ -5235,7 +5244,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Infection in the first eight to ten weeks of pregnancy results in damage in up to 90% of surviving infants',
 		location: 'The disease (chapter 28, 7 April 2026)',
-		why: "A ceiling for the earliest weeks, shown only in the hover; the counted risk is CDC MMWR 2001's 20% over the first 20 weeks.",
+		why: `A ceiling for the earliest weeks, shown only in the hover; the counted risk is CDC MMWR 2001's ${fmt(RUBELLA_CRS.risk * 100)}% over the first ${RUBELLA_CRS.weeks} weeks.`,
 		context: 'United Kingdom, chapter of 7 April 2026',
 		verified: {
 			by: 'independent verification pass',
@@ -5285,8 +5294,8 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Prevalence (12-24 months): Arthralgia 37 (30%-44%); Numbness (feet) 16 (13%-19%); Numbness (hands) 12 (10%-15%); Hearing Loss 8 (2%-14%)',
 		location: 'Table 6',
-		why: 'How common each problem is among survivors at 1-2 years, shown only in the hover. With no comparison group it cannot say how much Ebola caused, so the counted figures come from Sneller 2019.',
-		context: '23 studies of survivors in Africa',
+		why: `How common each problem is among survivors at ${HARM_CONTEXT.ebolaWindowYears.value[0]}-${HARM_CONTEXT.ebolaWindowYears.value[1]} years, shown only in the hover. With no comparison group it cannot say how much Ebola caused, so the counted figures come from Sneller 2019.`,
+		context: `${STUDY_SIZES.mandizadza2024.studies} studies of survivors in Africa`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-16',
@@ -5308,13 +5317,34 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'A significantly greater percentage of EVD survivors were found to have hearing loss in comparison to contacts (23% vs. 9%, p < 0.001).',
 		location: 'Abstract, Results',
-		why: 'Shown only in the hover, to say why hearing loss is not counted: the comparison group was household contacts who were not tested for past infection, so it cannot say how much Ebola caused.',
-		context: 'Sierra Leone, 301 survivors and 711 household contacts, a mean of 4.3 years after illness',
+		why: 'Shown only in the hover, to say why hearing loss is not counted: the comparison group was household or village contacts picked for having no history of Ebola, with no reported test for past infection, so it cannot say how much Ebola caused.',
+		context: `Sierra Leone, ${STUDY_SIZES.ficenec2022.survivors} survivors and ${STUDY_SIZES.ficenec2022.contacts} household or village contacts, a mean of ${STUDY_SIZES.ficenec2022.meanYears} years after illness`,
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-16',
 			ok: true,
 			note: 'Full text from the PMC open-data bucket, PMC9290210 (lasting-harm-code-verify.md should-fix 1).'
+		}
+	},
+	{
+		id: 'who-measles-factsheet',
+		authors: 'WHO',
+		title: 'Measles (fact sheet)',
+		journal: 'WHO fact sheets',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'WHO',
+		url: 'https://www.who.int/news-room/fact-sheets/detail/measles',
+		usedFor: ['measles.about'],
+		quote: 'They are more likely in children who are malnourished, especially those without enough vitamin A',
+		location: 'Signs and symptoms, on complications (fact sheet of 15 July 2026)',
+		why: 'Backs the measles hover line that blindness is more likely in children who are malnourished, especially those short of vitamin A. It gives no figure, so blindness is not counted.',
+		context: 'Worldwide',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read on who.int (lasting-harm-code-verify.md must-fix 3), and again in the build; "They" are the complications of measles.'
 		}
 	}
 ];

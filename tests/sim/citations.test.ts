@@ -124,7 +124,7 @@ describe('citations', () => {
 		const misused = CITATIONS.filter(
 			(c) =>
 				c.context === 'COVID-19 era' &&
-				c.usedFor.some((u) => !u.startsWith('behaviour.') && !/^covid19(omicron)?\./.test(u))
+				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
 		).map((c) => c.id);
 		expect(misused).toEqual([]);
 	});
