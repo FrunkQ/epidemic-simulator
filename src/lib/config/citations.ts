@@ -109,6 +109,7 @@ import {
 	pregnantShareOf
 } from './derived';
 import { breakthroughSevereProtection, stackedProtection as stacked } from './vaccines';
+import { HARM_CONTEXT } from './lastingHarm';
 
 /**
  * Every source behind a number in config. The About page is generated from this list.
@@ -165,6 +166,7 @@ export const OFFICIAL_PUBLISHERS = [
 	'World Bank',
 	'UN',
 	'ONS',
+	// Ireland's Health Service Executive, the national health service (not the UK Health and Safety Executive).
 	'HSE',
 	'UKHSA'
 ] as const;
@@ -1427,8 +1429,9 @@ export const CITATIONS: Citation[] = [
 		usedFor: ['measles.hospitalisedShare', 'measles.lastingHarm.context.sspeYears'],
 		quote:
 			'About 1 in 5 unvaccinated people in the U.S. who get measles is hospitalized. … SSPE generally develops 7 to 10 years after a person has measles',
-		location: "Section 'Severe complications in children and adults' (last reviewed 29 April 2026)",
-		why: 'Official estimate of the hospitalised share of measles cases.',
+		location:
+			"Section 'Severe complications in children and adults'; Complications > Long-term complications > About SSPE (last reviewed 29 April 2026)",
+		why: 'Official estimate of the hospitalised share of measles cases, and when SSPE develops, shown in the hover.',
 		context: 'US, unvaccinated cases.',
 		verified: { by: 'independent verification pass', on: '2026-10-07', ok: true }
 	},
@@ -2062,12 +2065,13 @@ export const CITATIONS: Citation[] = [
 			'smallpox.asymptomaticFraction',
 			'smallpox.lastingHarm.pockmarks',
 			'smallpox.lastingHarm.blindness',
+			'smallpox.lastingHarm.context.raoDecade',
 			'smallpox.babyHarm.risk'
 		],
 		quote:
 			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors',
 		location:
-			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); p. 54, Table 1.15 (pregnancy, Rao)',
+			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); Table 1.13 (Rao’s Madras series, 1961-1969); pp. 54-55, Table 1.15 (pregnancy, Rao)',
 		why:
 			"smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them." +
 			` Lasting harm (6.17): pockmarks are the middle of ${fmt(SMALLPOX_POCKMARKS_RANGE[0] * 100)}-${fmt(SMALLPOX_POCKMARKS_RANGE[1] * 100)}% (${fmt(SMALLPOX_POCKMARKS * 100, 1)}%), as for the smallpox half-life; sight lost in at least one eye is ${SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes} of ${fmt(SMALLPOX_BLINDNESS.survivors)} survivors (${fmt(SMALLPOX_BLIND_SHARE * 100, 2)}%). Pregnancies lost: fetal deaths plus women who died before giving birth, ${SMALLPOX_PREGNANCY.lost} of ${SMALLPOX_PREGNANCY.women} (${fmt((SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women) * 100)}%, a minimum); Fenner's "premature termination" figures include babies born early and alive, so they are not used.`,
@@ -3057,7 +3061,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Mamelund SE, Haneberg B, Mjaaland S',
 		title:
 			'A Missed Summer Wave of the 1918–1919 Influenza Pandemic: Evidence From Household Surveys in the United States and Norway',
-		journal: 'Open Forum Infectious Diseases 12(9):ofaf533',
+		journal: 'Open Forum Infectious Diseases 3(1):ofw040',
 		year: 2016,
 		evidence: 'study',
 		noReviewReason:
@@ -4862,11 +4866,15 @@ export const CITATIONS: Citation[] = [
 		year: 2022,
 		evidence: 'meta-analysis',
 		doi: '10.1001/jama.2022.18931',
-		usedFor: ['covid19.lastingHarm.longCovid'],
+		usedFor: [
+			'covid19.lastingHarm.longCovid',
+			'covid19.lastingHarm.context.longCovidMonths',
+			'covid19omicron.lastingHarm.context.longCovidMonths'
+		],
 		quote:
-			'Proportion with Long COVID symptom clusters among survivors, % (95% UI): 12 mo after symptom onset. Both sexes aged <20 y 0.3 (0.1-0.8); Women aged ≥20 y 1.7 (0.7-3.6); Men aged ≥20 y 0.8 (0.3-1.8)',
+			'Proportion with Long COVID symptom clusters among survivors, % (95% UI): 12 mo after symptom onset. All individuals 0.9 (0.3-2.0); Both sexes aged <20 y 0.3 (0.1-0.8); Women aged ≥20 y 1.7 (0.7-3.6); Men aged ≥20 y 0.8 (0.3-1.8)',
 		location: 'Table 3, 12-month column',
-		why: `The only pooled figure for long COVID a year on in everyone who had symptoms, adjusted for symptoms people already had. 0-14 uses the under-20 row (${fmt(GBD_LONG_COVID_12M.under20, 1)}%); 15-64 and 65+ mix the women's (${fmt(GBD_LONG_COVID_12M.women20up, 1)}%) and men's (${fmt(GBD_LONG_COVID_12M.men20up, 1)}%) rows by each band's share of women in the EU (${fmt(LONG_COVID_WOMEN_SHARES.band15to64 * 100, 2)}% and ${fmt(LONG_COVID_WOMEN_SHARES.band65up * 100, 2)}%), giving ${fmt(LONG_COVID_BANDS[1] * 100, 2)}% and ${fmt(LONG_COVID_BANDS[2] * 100, 2)}%. No row splits people over 65 out. Pooled prevalence studies without a comparison group find far more (Hou 2025, 46% at 1-2 years); GBD is used because it covers everyone with symptoms and removes symptoms people had before.`,
+		why: `The only pooled figure for long COVID a year on in everyone who had symptoms, adjusted for symptoms people already had. 0-14 uses the under-20 row (${fmt(GBD_LONG_COVID_12M.under20, 1)}%); 15-64 and 65+ mix the women's (${fmt(GBD_LONG_COVID_12M.women20up, 1)}%) and men's (${fmt(GBD_LONG_COVID_12M.men20up, 1)}%) rows by each band's share of women in the EU (${fmt(LONG_COVID_WOMEN_SHARES.band15to64 * 100, 2)}% and ${fmt(LONG_COVID_WOMEN_SHARES.band65up * 100, 2)}%), giving ${fmt(LONG_COVID_BANDS[1] * 100, 2)}% and ${fmt(LONG_COVID_BANDS[2] * 100, 2)}%. No row splits people over 65 out. Pooled prevalence studies without a comparison group find far more (Hou 2025, ${HARM_CONTEXT.houOneToTwoYears.value}% at ${HARM_CONTEXT.houWindowYears.value[0]}-${HARM_CONTEXT.houWindowYears.value[1]} years); GBD is used because it covers everyone with symptoms and removes symptoms people had before.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
@@ -4910,7 +4918,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'Two-dose vaccination was associated with a lower risk of long COVID compared to no vaccination (OR, 0.64; 95% confidence interval [CI], 0.45–0.92)',
 		location: 'Abstract; "moderate certainty" in Results',
-		why: `A pooled figure for people who fell ill after a full course, rated moderate certainty, so a fully vaccinated case gets ${fmt(WATANABE_TWO_DOSE_OR, 2)} times the long COVID rate. Peine 2025 pools a larger effect (41%) from non-randomised studies at low certainty; it is context only.`,
+		why: `A pooled figure for people who fell ill after a full course, rated moderate certainty, so a fully vaccinated case gets ${fmt(WATANABE_TWO_DOSE_OR, 2)} times the long COVID rate. A later pooled study of non-randomised studies at low certainty finds a larger effect; it is not used.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
@@ -4998,14 +5006,14 @@ export const CITATIONS: Citation[] = [
 		authors: 'Kayem ND, Benson C, Aye CYL, et al.',
 		title: 'Ebola virus disease in pregnancy: a systematic review and meta-analysis',
 		journal: 'Transactions of the Royal Society of Tropical Medicine and Hygiene 116(6):509-522',
-		year: 2021,
+		year: 2022,
 		evidence: 'meta-analysis',
 		doi: '10.1093/trstmh/trab180',
 		usedFor: ['ebola.babyHarm.risk'],
 		quote:
 			'The absolute risk for foetal losses was estimated at 76.9% (95% CI 45.0 to 98.3, I2=96%, p<0.01) … Gestational ages were inconsistently reported.',
-		location: 'Abstract; Results',
-		why: `Pregnancies lost per infected pregnant woman, ${fmt(EBOLA_FETAL_LOSS * 100, 1)}%, pooled over 28 studies. No split by week of pregnancy, so it applies to the whole pregnancy.`,
+		location: 'Abstract; Results (published online 2 December 2021, in the June 2022 issue)',
+		why: `Pregnancies lost per infected pregnant woman, ${fmt(EBOLA_FETAL_LOSS * 100, 1)}%, from a review of 28 studies. No split by week of pregnancy, so it applies to the whole pregnancy.`,
 		context: 'Africa, outbreaks from 1976 to 2019',
 		verified: {
 			by: 'independent verification pass',
@@ -5154,7 +5162,7 @@ export const CITATIONS: Citation[] = [
 		year: 2025,
 		evidence: 'meta-analysis',
 		doi: '10.1093/ofid/ofaf533',
-		usedFor: ['covid19.lastingHarm.context.houOneToTwoYears'],
+		usedFor: ['covid19.lastingHarm.context.houOneToTwoYears', 'covid19.lastingHarm.context.houWindowYears'],
 		quote: '46% (95% CI, 37%–57%) at 1–2 years',
 		location: 'Abstract',
 		why: 'Shown only on the About page, to say why the counted long COVID figure (GBD) is far lower than pooled prevalence: these cohorts have no comparison group and mixed definitions.',
@@ -5163,7 +5171,7 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-16',
 			ok: true,
-			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 6). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+			note: 'The 46% sentence read on the published OFID page at academic.oup.com (lasting-harm-code-verify.md row 31); the PMC open-data copy is the medRxiv preprint and lacks it. Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
 		}
 	},
 	{
@@ -5175,7 +5183,11 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'UKHSA',
 		url: 'https://assets.publishing.service.gov.uk/media/69dcf3806b695d635c34dccc/UKHSA_Green_Book_on_Measles_2_4_26.pdf',
-		usedFor: ['measles.lastingHarm.context.sspeOneIn', 'measles.lastingHarm.context.sspeUnderTwoOneIn'],
+		usedFor: [
+			'measles.lastingHarm.context.sspeOneIn',
+			'measles.lastingHarm.context.sspeUnderTwoOneIn',
+			'measles.lastingHarm.context.sspeUnderAge'
+		],
 		quote:
 			'One case of SSPE occurs in every 25,000 measles infections … In children infected under the age of two, the rate is one in 8000 infections',
 		location: 'Measles encephalitis (chapter 21, 2 April 2026)',
@@ -5219,7 +5231,7 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'UKHSA',
 		url: 'https://assets.publishing.service.gov.uk/media/69dceebddaa863aa5db66628/UKHSA_Green_Book_chapter_Rubella_7_4_26__002_.pdf',
-		usedFor: ['rubella.babyHarm.context.rubellaEarlyCeiling'],
+		usedFor: ['rubella.babyHarm.context.rubellaEarlyCeiling', 'rubella.babyHarm.context.rubellaEarlyWeeks'],
 		quote:
 			'Infection in the first eight to ten weeks of pregnancy results in damage in up to 90% of surviving infants',
 		location: 'The disease (chapter 28, 7 April 2026)',
@@ -5267,7 +5279,8 @@ export const CITATIONS: Citation[] = [
 			'ebola.lastingHarm.context.ebolaJointPain',
 			'ebola.lastingHarm.context.ebolaHearingLoss',
 			'ebola.lastingHarm.context.ebolaNumbHands',
-			'ebola.lastingHarm.context.ebolaNumbFeet'
+			'ebola.lastingHarm.context.ebolaNumbFeet',
+			'ebola.lastingHarm.context.ebolaWindowYears'
 		],
 		quote:
 			'Prevalence (12-24 months): Arthralgia 37 (30%-44%); Numbness (feet) 16 (13%-19%); Numbness (hands) 12 (10%-15%); Hearing Loss 8 (2%-14%)',
@@ -5279,6 +5292,29 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-16',
 			ok: true,
 			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 93). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'ficenec2022-ebola-hearing',
+		authors: 'Ficenec SC, et al.',
+		title: 'The prevalence of Post-Ebola Syndrome hearing loss, Sierra Leone',
+		journal: 'BMC Infectious Diseases 22:624',
+		year: 2022,
+		evidence: 'study',
+		noReviewReason:
+			'The only pooled figure for hearing loss after Ebola (Mandizadza 2024) has no comparison group; this study compares survivors with their household contacts by audiometry.',
+		doi: '10.1186/s12879-022-07604-y',
+		usedFor: ['ebola.lastingHarm.context.ficenecHearing'],
+		quote:
+			'A significantly greater percentage of EVD survivors were found to have hearing loss in comparison to contacts (23% vs. 9%, p < 0.001).',
+		location: 'Abstract, Results',
+		why: 'Shown only in the hover, to say why hearing loss is not counted: the comparison group was household contacts who were not tested for past infection, so it cannot say how much Ebola caused.',
+		context: 'Sierra Leone, 301 survivors and 711 household contacts, a mean of 4.3 years after illness',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket, PMC9290210 (lasting-harm-code-verify.md should-fix 1).'
 		}
 	}
 ];

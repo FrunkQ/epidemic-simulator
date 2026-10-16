@@ -30,13 +30,17 @@ function shown<T extends number | readonly number[]>(value: T, sources: string[]
 }
 /** Every figure the hovers quote, each linked to its source (coordinator ruling, 16 Oct). */
 export const HARM_CONTEXT = {
+	/** How long after illness the counted long COVID figure is measured (GBD 2022's 12-month column). */
+	longCovidMonths: shown(12, ['gbd2022-long-covid']),
 	/** Lugtu 2026: long COVID (shorter follow-up) in the Omicron and earlier eras, %. */
 	lugtuOmicron: shown([22.8, 35.5] as const, ['lugtu2026-long-covid-eras']),
 	/** Hou 2025: pooled long COVID among confirmed cases at 1-2 years, % (no comparison group). */
 	houOneToTwoYears: shown(46, ['hou2025-long-covid-prevalence']),
+	houWindowYears: shown([1, 2] as const, ['hou2025-long-covid-prevalence']),
 	/** UKHSA Green Book: SSPE in 1 in 25,000 measles infections, 1 in 8,000 under age 2. */
 	sspeOneIn: shown(25_000, ['ukhsa-greenbook-measles']),
 	sspeUnderTwoOneIn: shown(8_000, ['ukhsa-greenbook-measles']),
+	sspeUnderAge: shown(2, ['ukhsa-greenbook-measles']),
 	/** CDC: SSPE "generally develops 7 to 10 years after a person has measles". */
 	sspeYears: shown([7, 10] as const, ['cdc-measles-symptoms']),
 	/** UKHSA Green Book: deafness after mumps, 1 in 3,400 to 1 in 20,000 cases. */
@@ -51,8 +55,14 @@ export const HARM_CONTEXT = {
 	ebolaHearingLoss: shown(8, ['mandizadza2024-ebola-symptoms']),
 	ebolaNumbHands: shown(12, ['mandizadza2024-ebola-symptoms']),
 	ebolaNumbFeet: shown(16, ['mandizadza2024-ebola-symptoms']),
-	/** UKHSA Green Book: rubella damage in up to 90% of surviving infants after infection in weeks 0-10. */
-	rubellaEarlyCeiling: shown(90, ['ukhsa-greenbook-rubella'])
+	ebolaWindowYears: shown([1, 2] as const, ['mandizadza2024-ebola-symptoms']),
+	/** Ficenec 2022: hearing loss by audiometry, survivors against household contacts not tested for past infection, %. */
+	ficenecHearing: shown([23, 9] as const, ['ficenec2022-ebola-hearing']),
+	/** Fenner 1988: the decade of Rao's Madras series (1961-69). */
+	raoDecade: shown(1960, ['who-smallpox-eradication-subclinical']),
+	/** UKHSA Green Book: rubella damage in up to 90% of surviving infants after infection in the first 8 to 10 weeks. */
+	rubellaEarlyCeiling: shown(90, ['ukhsa-greenbook-rubella']),
+	rubellaEarlyWeeks: shown([8, 10] as const, ['ukhsa-greenbook-rubella'])
 };
 const C = HARM_CONTEXT;
 
@@ -71,20 +81,24 @@ export const COVID19_LASTING_HARM: LastingHarmConfig = {
 	],
 	fullyVaccinated: { value: WATANABE_TWO_DOSE_OR, sources: ['watanabe2023-long-covid-vaccination'] },
 	notes: [
-		'Older people probably fare worse, but no study splits them out.',
-		`Vaccination lowers this by about ${pct(1 - WATANABE_TWO_DOSE_OR)} (moderate certainty).`,
+		'No study splits out older people.',
+		`In six studies, people who were fully vaccinated were about ${pct(1 - WATANABE_TWO_DOSE_OR)} less likely to have it (moderate certainty). One dose alone made no clear difference.`,
 		`${BABIES_NOT_COUNTED} Two pooled studies disagree on stillbirth.`
 	],
-	context: { houOneToTwoYears: C.houOneToTwoYears }
+	context: {
+		houOneToTwoYears: C.houOneToTwoYears,
+		houWindowYears: C.houWindowYears,
+		longCovidMonths: C.longCovidMonths
+	}
 };
 
 export const OMICRON_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
 	notes: [
-		`Long COVID a year later: not counted. No study has measured it at 12 months for Omicron yet. Studies over shorter times find it less common than with earlier variants (${C.lugtuOmicron.value[0]}% against ${C.lugtuOmicron.value[1]}%, Lugtu 2026).`,
+		`Long COVID a year later: not counted. No study has measured it at ${C.longCovidMonths.value} months for Omicron yet. Studies over shorter times find it less common than with earlier variants (${C.lugtuOmicron.value[0]}% against ${C.lugtuOmicron.value[1]}%, Lugtu 2026).`,
 		BABIES_NOT_COUNTED
 	],
-	context: { lugtuOmicron: C.lugtuOmicron }
+	context: { lugtuOmicron: C.lugtuOmicron, longCovidMonths: C.longCovidMonths }
 };
 
 export const MEASLES_LASTING_HARM: LastingHarmConfig = {
@@ -97,13 +111,18 @@ export const MEASLES_LASTING_HARM: LastingHarmConfig = {
 	],
 	notes: [
 		`From CDC's US figures before the vaccine (about ${fmt(CDC_MEASLES_PREVACCINE.disabledPerYear)} left disabled a year out of ${CDC_MEASLES_PREVACCINE.infectedPerYear[0] / 1e6} to ${CDC_MEASLES_PREVACCINE.infectedPerYear[1] / 1e6} million infected), read per infection because per reported case it would be higher than the encephalitis rate itself.`,
-		`Blindness: mostly in poorly nourished children who lack vitamin A; close to none where children are well fed. ${NO_FIGURE}`,
+		`Blindness: more likely in children who are malnourished, especially those short of vitamin A (WHO). ${NO_FIGURE}`,
 		BABIES_NOT_COUNTED
 	],
 	footnotes: [
-		`Not counted here: about 1 in ${fmt(C.sspeOneIn.value)} people who had measles (1 in ${fmt(C.sspeUnderTwoOneIn.value)} infected under age 2) die of a brain disease ${C.sspeYears.value[0]}-${C.sspeYears.value[1]} years later (UKHSA, CDC).`
+		`Not counted here: about 1 in ${fmt(C.sspeOneIn.value)} people who had measles (1 in ${fmt(C.sspeUnderTwoOneIn.value)} infected under age ${C.sspeUnderAge.value}) die of a brain disease ${C.sspeYears.value[0]}-${C.sspeYears.value[1]} years later (UKHSA, CDC).`
 	],
-	context: { sspeOneIn: C.sspeOneIn, sspeUnderTwoOneIn: C.sspeUnderTwoOneIn, sspeYears: C.sspeYears }
+	context: {
+		sspeOneIn: C.sspeOneIn,
+		sspeUnderTwoOneIn: C.sspeUnderTwoOneIn,
+		sspeUnderAge: C.sspeUnderAge,
+		sspeYears: C.sspeYears
+	}
 };
 
 export const MUMPS_LASTING_HARM: LastingHarmConfig = {
@@ -127,10 +146,10 @@ export const RUBELLA_BABY_HARM: BabyHarmConfig = {
 	weeks: { value: RUBELLA_CRS.weeks, sources: ['cdc-mmwr-2001-rubella'] },
 	perInfection: true,
 	notes: [
-		`${pct(RUBELLA_CRS.risk)} of babies whose mother caught it in the first ${RUBELLA_CRS.weeks} weeks (CDC), up to ${C.rubellaEarlyCeiling.value}% in the first 10 weeks (UKHSA), and about none later. Silent infections count too.`,
+		`${pct(RUBELLA_CRS.risk)} of babies whose mother caught it in the first ${RUBELLA_CRS.weeks} weeks (CDC), up to ${C.rubellaEarlyCeiling.value}% in the first ${C.rubellaEarlyWeeks.value[0]} to ${C.rubellaEarlyWeeks.value[1]} weeks (UKHSA), and about none later. Silent infections count too.`,
 		`Pregnancies lost: ${NO_FIGURE.toLowerCase()}`
 	],
-	context: { rubellaEarlyCeiling: C.rubellaEarlyCeiling }
+	context: { rubellaEarlyCeiling: C.rubellaEarlyCeiling, rubellaEarlyWeeks: C.rubellaEarlyWeeks }
 };
 
 export const CHICKENPOX_LASTING_HARM: LastingHarmConfig = {
@@ -160,7 +179,10 @@ export const FLU_LASTING_HARM: LastingHarmConfig = {
 
 export const FLU1918_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
-	notes: ['A link to sleeping sickness (encephalitis lethargica) is refuted by most studies.']
+	notes: [
+		'A link to sleeping sickness (encephalitis lethargica) is refuted by most studies.',
+		BABIES_NOT_COUNTED
+	]
 };
 
 /** Polio's red dot is meningitis or paralysis only, so its rate is per surviving red dot (verify question 1). */
@@ -186,16 +208,17 @@ export const SMALLPOX_LASTING_HARM: LastingHarmConfig = {
 	counted: [
 		{
 			key: 'pockmarks',
-			label: `Left with deep pockmark scars on the face (${pct(SMALLPOX_POCKMARKS_RANGE[0])} to ${pct(SMALLPOX_POCKMARKS_RANGE[1])} of survivors; the middle is used)`,
+			label: `Left with pockmark scars (depressed scars) on the face (${pct(SMALLPOX_POCKMARKS_RANGE[0])} to ${pct(SMALLPOX_POCKMARKS_RANGE[1])} of survivors; the middle is used)`,
 			rate: { value: all(SMALLPOX_POCKMARKS), sources: ['who-smallpox-eradication-subclinical'] }
 		},
 		{
 			key: 'blindness',
-			label: `Lost the sight of one or both eyes (both: ${SMALLPOX_BLINDNESS.bothEyes} in ${fmt(SMALLPOX_BLINDNESS.survivors)}). Measured in Madras, India, in the 1960s and 70s; blindness was mostly in people who were poorly nourished`,
+			label: `Lost the sight of one or both eyes (both: ${SMALLPOX_BLINDNESS.bothEyes} in ${fmt(SMALLPOX_BLINDNESS.survivors)}). Measured in Madras, India, in the ${C.raoDecade.value}s; blindness was mostly in people who were poorly nourished`,
 			rate: { value: all(SMALLPOX_BLIND_SHARE), sources: ['who-smallpox-eradication-subclinical'] }
 		}
 	],
-	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE.toLowerCase()}`]
+	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE.toLowerCase()}`],
+	context: { raoDecade: C.raoDecade }
 };
 
 export const SMALLPOX_BABY_HARM: BabyHarmConfig = {
@@ -224,7 +247,7 @@ export const EBOLA_LASTING_HARM: LastingHarmConfig = {
 		},
 		{
 			key: 'uveitis',
-			label: `Eye inflammation (uveitis), ${fmt(SNELLER_UVEITIS_YEAR_1[0] - SNELLER_UVEITIS_YEAR_1[1], 1)} points more a year later`,
+			label: `Eye inflammation (uveitis). By the next year’s check-up, the gap had grown to ${fmt(SNELLER_UVEITIS_YEAR_1[0] - SNELLER_UVEITIS_YEAR_1[1], 1)} in every 100`,
 			rate: { value: all(ebolaExcess('uveitis')), sources: SNELLER }
 		},
 		{
@@ -240,14 +263,16 @@ export const EBOLA_LASTING_HARM: LastingHarmConfig = {
 		{ key: 'headache', label: 'Headache', rate: { value: all(ebolaExcess('headache')), sources: SNELLER } }
 	],
 	notes: [
-		`A year on, counting only the extra over people who never had Ebola. Measured among all survivors, joint pain is ${C.ebolaJointPain.value}% at 1-2 years.`,
-		`Hearing loss (${C.ebolaHearingLoss.value}%) and numb hands (${C.ebolaNumbHands.value}%) or feet (${C.ebolaNumbFeet.value}%) at 1-2 years: not counted, since no study compares them with people who never had Ebola.`
+		`A year on, counting only the extra over people who never had Ebola. Measured among all survivors, joint pain is ${C.ebolaJointPain.value}% at ${C.ebolaWindowYears.value[0]}-${C.ebolaWindowYears.value[1]} years.`,
+		`Hearing loss (${C.ebolaHearingLoss.value}%) and numb hands (${C.ebolaNumbHands.value}%) or feet (${C.ebolaNumbFeet.value}%) at ${C.ebolaWindowYears.value[0]}-${C.ebolaWindowYears.value[1]} years: not counted. One study found hearing loss in ${C.ficenecHearing.value[0]}% of survivors against ${C.ficenecHearing.value[1]}% of people in their households (Ficenec 2022), but those people were not tested for past infection.`
 	],
 	context: {
 		ebolaJointPain: C.ebolaJointPain,
 		ebolaHearingLoss: C.ebolaHearingLoss,
 		ebolaNumbHands: C.ebolaNumbHands,
-		ebolaNumbFeet: C.ebolaNumbFeet
+		ebolaNumbFeet: C.ebolaNumbFeet,
+		ebolaWindowYears: C.ebolaWindowYears,
+		ficenecHearing: C.ficenecHearing
 	}
 };
 

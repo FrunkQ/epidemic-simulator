@@ -108,6 +108,8 @@ describe('citations', () => {
 			expect(c.context.trim().length, c.id).toBeGreaterThan(0);
 			expect(c.verified.by.trim().length, c.id).toBeGreaterThan(0);
 			expect(c.verified.on, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			// An undated page records when it was read, so a reader can find the same version.
+			if (c.year === 'n.d.') expect(c.accessed, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 			expect(c.doi ?? c.url, c.id).toBeTruthy();
 		}
 	});
@@ -122,7 +124,7 @@ describe('citations', () => {
 		const misused = CITATIONS.filter(
 			(c) =>
 				c.context === 'COVID-19 era' &&
-				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
+				c.usedFor.some((u) => !u.startsWith('behaviour.') && !/^covid19(omicron)?\./.test(u))
 		).map((c) => c.id);
 		expect(misused).toEqual([]);
 	});
