@@ -72,8 +72,14 @@
 			}
 			fit();
 		};
+		// Only a new window width closes it (8): a phone's address bar showing or hiding changes only
+		// the height, and would otherwise close it mid-read.
+		let windowWidth = innerWidth;
 		const onresize = () => {
-			moreOpen = false;
+			if (innerWidth !== windowWidth) {
+				windowWidth = innerWidth;
+				moreOpen = false;
+			}
 			refit();
 		};
 		const onkey = (e: KeyboardEvent) => {

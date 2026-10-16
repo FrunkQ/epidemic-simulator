@@ -107,6 +107,7 @@ import {
 	SMALLPOX_POCKMARKS,
 	SMALLPOX_POCKMARKS_RANGE,
 	SMALLPOX_PREGNANCY,
+	SMALLPOX_PREGNANCY_LOSS,
 	WATANABE_TWO_DOSE_OR,
 	WEEKS_BEFORE_CONCEPTION,
 	WORLD_BANK_BIRTHS_2024,
@@ -2100,7 +2101,7 @@ export const CITATIONS: Citation[] = [
 			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); Table 1.13 (Rao’s Madras series, 1961-1969); pp. 54-55, Table 1.15 (pregnancy, Rao)',
 		why:
 			"smallpox.asymptomaticFraction=0 is worked out from this quote rather than copied. The WHO eradication history records subclinical variola infection as something seen in people who were already protected: it 'occurred in many of the vaccinated close contacts', and 'Variola virus was occasionally recovered from the throat swabs of such subjects, sometimes for several days in succession, but most of them had been vaccinated and never developed symptoms.' It adds only 'suggestive but inconclusive evidence that inapparent infection occurred among subjects who had recovered from smallpox years before.' In an unvaccinated, previously uninfected population — which is what the preset models, and what today's population is — silent infection is not a documented phenomenon, so 0 is the right value. If a scenario included vaccinated contacts, a small silent fraction would belong among them." +
-			` Lasting harm (6.17): pockmarks are the middle of ${fmt(SMALLPOX_POCKMARKS_RANGE[0] * 100)}-${fmt(SMALLPOX_POCKMARKS_RANGE[1] * 100)}% (${fmt(SMALLPOX_POCKMARKS * 100, 1)}%), as for the smallpox half-life; sight lost in at least one eye is ${SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes} of ${fmt(SMALLPOX_BLINDNESS.survivors)} survivors (${fmt(SMALLPOX_BLIND_SHARE * 100, 2)}%). Pregnancies lost: fetal deaths plus women who died before giving birth, ${SMALLPOX_PREGNANCY.lost} of ${SMALLPOX_PREGNANCY.women} (${fmt((SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women) * 100)}%, a minimum); Fenner's "premature termination" figures include babies born early and alive, so they are not used.`,
+			` Lasting harm (6.17): pockmarks are the middle of ${fmt(SMALLPOX_POCKMARKS_RANGE[0] * 100)}-${fmt(SMALLPOX_POCKMARKS_RANGE[1] * 100)}% (${fmt(SMALLPOX_POCKMARKS * 100, 1)}%), as for the smallpox half-life; sight lost in at least one eye is ${SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes} of ${fmt(SMALLPOX_BLINDNESS.survivors)} survivors (${fmt(SMALLPOX_BLIND_SHARE * 100, 2)}%). Pregnancies lost: fetal deaths plus women who died before giving birth, ${SMALLPOX_PREGNANCY.lost} of ${SMALLPOX_PREGNANCY.women} (${fmt(SMALLPOX_PREGNANCY_LOSS * 100)}%, a minimum); Fenner's "premature termination" figures include babies born early and alive, so they are not used.`,
 		context:
 			"The official WHO history of smallpox and its eradication, the standard reference for a disease that can no longer be studied; linked at WHO's own repository record.",
 		verified: {

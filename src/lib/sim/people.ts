@@ -78,6 +78,8 @@ export class People {
 	readonly dead: Int32Array;
 	/** Infected and not yet ill (will get symptoms). */
 	readonly silentSymptomatic: Int32Array;
+	/** Of those, people who had it before (the againBuf entries still silent). */
+	readonly silentAgain: Int32Array;
 	/** Infected and never ill. */
 	readonly silentAsymptomatic: Int32Array;
 	readonly ill: Int32Array;
@@ -139,6 +141,7 @@ export class People {
 		this.dead = counts();
 		this.silentSymptomatic = counts();
 		this.silentAsymptomatic = counts();
+		this.silentAgain = counts();
 		this.ill = counts();
 		this.illAgain = counts();
 		this.latent = counts();
@@ -295,6 +298,7 @@ export class People {
 			if (symFirst + symAgain > 0) hooks.onSymptoms(i, symFirst, symAgain, tick);
 		} else {
 			this.silentSymptomatic[i] += symFirst + symAgain;
+			this.silentAgain[i] += symAgain;
 		}
 		if (this.latentTicks > 0) {
 			this.latent[i] += asym + (this.silentTicks > 0 ? symFirst + symAgain : 0);
@@ -345,6 +349,7 @@ export class People {
 				const twice = again ? again[b] : 0;
 				if (first + twice > 0) {
 					this.silentSymptomatic[i] -= first + twice;
+					this.silentAgain[i] -= twice;
 					this.ill[i] += first + twice;
 					this.illAgain[i] += twice;
 					hooks.onSymptoms(i, first, twice, tick);
@@ -459,10 +464,12 @@ export class People {
 		const diedFirst = first > 0 ? rng.binomial(first, deathChance(i, false, region)) : 0;
 		const diedTwice = twice > 0 ? rng.binomial(twice, deathChance(i, true, region)) : 0;
 		const died = diedFirst + diedTwice;
-		// Reinfected people who die take their expected share of earlier survivors with them.
-		if (diedTwice > 0 && this.illSurvivors[i] > 0) {
-			const hadIt = this.recovered[i] + this.susceptibleAgain[i] + twice;
-			this.illSurvivors[i] -= (diedTwice * this.illSurvivors[i]) / Math.max(hadIt, this.illSurvivors[i]);
+		// Reinfected people held their expected share of the dot's survivors; now every one who lives is
+		// a survivor (even if their first time had no symptoms), and those who die take their share.
+		if (twice > 0) {
+			const have = this.illSurvivors[i];
+			const share = have > 0 ? have / Math.max(this.hadIt(i) + twice, have) : 0;
+			this.illSurvivors[i] += twice - diedTwice - twice * share;
 		}
 		this.illSurvivors[i] += first - diedFirst;
 		this.dead[i] += died;
@@ -485,6 +492,8 @@ export class People {
 			else this.away.set(to, away);
 			this.away.delete(from);
 		}
+		// Ill people who had it before take their expected share of the dot's survivors (6.17).
+		if (this.illAgain[from] > 0) this.moveSurvivorShare(from, to, this.illAgain[from]);
 		const [lo, hi] = this.illAges();
 		for (let a = lo; a <= hi; a++) {
 			this.moveEntry(this.symBuf, from, to, tick, a);
@@ -506,14 +515,31 @@ export class People {
 		buf[f] = 0;
 	}
 
-	/** One person who has had it leaves `from` for `to`: they take the dot's survivor share with them. */
-	private moveSurvivorShare(from: number, to: number): void {
+	/**
+	 * Living people in a dot who may have had it before, the pool its survivors are among: recovered,
+	 * immunity worn off, ill or silent again, and silent with no symptoms (some of whom are reinfected).
+	 */
+	private hadIt(i: number): number {
+		return (
+			this.recovered[i] +
+			this.susceptibleAgain[i] +
+			this.illAgain[i] +
+			this.silentAgain[i] +
+			this.silentAsymptomatic[i]
+		);
+	}
+
+	/**
+	 * `n` people from the pool leave `from` for `to` (before they are taken off its counts): they take
+	 * their expected share of the dot's survivors with them, so neither dot holds more survivors than
+	 * its pool.
+	 */
+	private moveSurvivorShare(from: number, to: number, n = 1): void {
 		const have = this.illSurvivors[from];
 		if (have <= 0) return;
-		const hadIt = this.recovered[from] + this.susceptibleAgain[from];
-		const share = hadIt > 0 ? Math.min(1, have / hadIt) : 0;
-		this.illSurvivors[from] -= share;
-		this.illSurvivors[to] += share;
+		const moved = (n * have) / Math.max(this.hadIt(from), have);
+		this.illSurvivors[from] -= moved;
+		this.illSurvivors[to] += moved;
 	}
 
 	/**
@@ -547,11 +573,18 @@ export class People {
 		for (const [buf, last] of bufs) {
 			if (!buf) continue;
 			const symptomatic = buf !== this.asymBuf;
+			const again = buf === this.againBuf;
 			for (let a = 0; a <= last; a++) {
 				const f = this.at(from, tick, a);
 				if (u >= buf[f]) {
 					u -= buf[f];
 					continue;
+				}
+				// Someone reinfected, or silent with no symptoms (perhaps reinfected), carries the share.
+				if (again || !symptomatic) this.moveSurvivorShare(from, to);
+				if (again) {
+					this.silentAgain[from]--;
+					this.silentAgain[to]++;
 				}
 				buf[f]--;
 				buf[this.at(to, tick, a)]++;

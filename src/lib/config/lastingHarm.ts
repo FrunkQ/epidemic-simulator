@@ -12,6 +12,7 @@ import {
 	SMALLPOX_POCKMARKS,
 	SMALLPOX_POCKMARKS_RANGE,
 	SMALLPOX_PREGNANCY,
+	SMALLPOX_PREGNANCY_LOSS,
 	SNELLER_UVEITIS_YEAR_1,
 	WATANABE_TWO_DOSE_OR,
 	WATANABE_TWO_DOSE_STUDIES,
@@ -69,9 +70,11 @@ export const HARM_CONTEXT = {
 const C = HARM_CONTEXT;
 
 const NO_FIGURE = 'Not counted: no reliable figure yet.';
+/** The same, after a label and a colon ("Pregnancies lost: not counted, as…"). */
+const NO_FIGURE_AFTER = 'not counted, as there is no reliable figure yet.';
 const all = (v: number): Bands => [v, v, v];
 const pct = (share: number, digits = 0) => `${fmt(share * 100, digits)}%`;
-const BABIES_NOT_COUNTED = `Harm to babies in pregnancy: ${NO_FIGURE.toLowerCase()}`;
+const BABIES_NOT_COUNTED = `Harm to babies in pregnancy: ${NO_FIGURE_AFTER}`;
 
 export const COVID19_LASTING_HARM: LastingHarmConfig = {
 	counted: [
@@ -149,14 +152,14 @@ export const RUBELLA_BABY_HARM: BabyHarmConfig = {
 	perInfection: true,
 	notes: [
 		`${pct(RUBELLA_CRS.risk)} of babies whose mother caught it in the first ${RUBELLA_CRS.weeks} weeks (CDC), up to ${C.rubellaEarlyCeiling.value}% in the first ${C.rubellaEarlyWeeks.value[0]} to ${C.rubellaEarlyWeeks.value[1]} weeks (UKHSA), and about none later. Silent infections count too.`,
-		`Pregnancies lost: ${NO_FIGURE.toLowerCase()}`
+		`Pregnancies lost: ${NO_FIGURE_AFTER}`
 	],
 	context: { rubellaEarlyCeiling: C.rubellaEarlyCeiling, rubellaEarlyWeeks: C.rubellaEarlyWeeks }
 };
 
 export const CHICKENPOX_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
-	notes: [`Scarring, and brain damage after the infection reaches the brain: ${NO_FIGURE.toLowerCase()}`],
+	notes: [`Scarring, and brain damage after the infection reaches the brain: ${NO_FIGURE_AFTER}`],
 	footnotes: [
 		`The virus stays in the body; about 1 in ${C.shinglesOneIn.value} people get shingles later in life (CDC).`
 	],
@@ -176,7 +179,7 @@ export const PERTUSSIS_LASTING_HARM: LastingHarmConfig = {
 
 export const FLU_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
-	notes: [`Brain damage in children after flu affects the brain: ${NO_FIGURE.toLowerCase()}`]
+	notes: [`Brain damage in children after flu affects the brain: ${NO_FIGURE_AFTER}`]
 };
 
 export const FLU1918_LASTING_HARM: LastingHarmConfig = {
@@ -219,14 +222,14 @@ export const SMALLPOX_LASTING_HARM: LastingHarmConfig = {
 			rate: { value: all(SMALLPOX_BLIND_SHARE), sources: ['who-smallpox-eradication-subclinical'] }
 		}
 	],
-	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE.toLowerCase()}`],
+	notes: [`Bone and joint damage in children, and male infertility: ${NO_FIGURE_AFTER}`],
 	context: { raoDecade: C.raoDecade }
 };
 
 export const SMALLPOX_BABY_HARM: BabyHarmConfig = {
 	label: 'Pregnancies lost',
 	risk: {
-		value: SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women,
+		value: SMALLPOX_PREGNANCY_LOSS,
 		sources: ['who-smallpox-eradication-subclinical']
 	},
 	notes: [

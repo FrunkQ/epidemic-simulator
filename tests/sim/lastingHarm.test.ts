@@ -4,8 +4,11 @@ import { PREGNANCY_YEARS, WEEKS_PER_YEAR, pregnantShareOf } from '../../src/lib/
 import { DISEASES } from '../../src/lib/config/diseases';
 import { defaultPolicy } from '../../src/lib/config/healthPolicy';
 import { microcosm, singleCity } from '../../src/lib/config/scenarios';
-import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
+import { MAX_HARMS, TICKS_PER_DAY } from '../../src/lib/sim/constants';
+import { Agents } from '../../src/lib/sim/agents';
 import { createSimulation } from '../../src/lib/sim/engine';
+import { People } from '../../src/lib/sim/people';
+import { Rng } from '../../src/lib/sim/rng';
 import type { Bands, DiseaseConfig, DiseaseId, DiseaseRuntime } from '../../src/lib/sim/types';
 import { about, harmText } from '../../src/lib/ui/harmText';
 
@@ -153,6 +156,43 @@ describe('lasting harm on the map (6.17)', () => {
 		expect(checked).toBeGreaterThan(5);
 	});
 
+	it('never gives a dot more survivors than people who may have had it, with travel and reinfection', () => {
+		// COVID-19: immunity wanes and people catch it again, ill or silent, and travel between cities.
+		const sim = createSimulation(microcosm(), { seed: 1, diseaseId: 'covid19' });
+		for (const r of [0, 1, 2]) sim.send({ type: 'seed', region: r, count: 10 });
+		const p = sim.people;
+		let reinfected = 0;
+		for (let day = 0; day < 400; day++) {
+			sim.step(TICKS_PER_DAY);
+			if (day % 5 !== 4) continue;
+			for (let i = 0; i < sim.agents.activeCount; i++) {
+				const pool =
+					p.recovered[i] + p.susceptibleAgain[i] + p.illAgain[i] + p.silentAgain[i] + p.silentAsymptomatic[i];
+				expect(p.illSurvivors[i], `dot ${i}, day ${day + 1}`).toBeLessThanOrEqual(pool + 1e-9);
+				expect(p.illSurvivors[i]).toBeGreaterThanOrEqual(-1e-9);
+				reinfected += p.illAgain[i] + p.silentAgain[i];
+			}
+		}
+		expect(reinfected).toBeGreaterThan(0);
+	});
+
+	it('counts a reinfected person once whether they live or die, even if their first time was silent', () => {
+		// One dot: 60 people have had it, 50 of them counted as survivors. 10 of the 60 fall ill again,
+		// each holding 50/60 of a survivor. If all 10 die they take 10 x 50/60 with them; if all live,
+		// all 10 are survivors now, including the 10/6 whose first time had no symptoms.
+		const end = (died: boolean) => {
+			const p = new People(new Agents(), loadDisease('covid19'), 100, false);
+			p.recovered[0] = 50;
+			p.illSurvivors[0] = 50;
+			const hooks = { onInfected() {}, onIllnessEnd() {}, onSymptoms() {} };
+			const endIllness = (p as unknown as { endIllness: (...a: unknown[]) => void }).endIllness.bind(p);
+			endIllness(0, 0, 10, -1, new Rng(1), hooks, () => (died ? 1 : 0));
+			return p.illSurvivors[0];
+		};
+		expect(end(true)).toBeCloseTo(50 - (10 * 50) / 60, 9);
+		expect(end(false)).toBeCloseTo(50 + 10 - (10 * 50) / 60, 9);
+	});
+
 	it('counts people whose immunity has worn off, who still live with the harm', () => {
 		const sim = createSimulation(microcosm(), { seed: 2, diseaseId: 'covid19' });
 		sim.send({ type: 'seed', region: 0, count: 20 });
@@ -201,6 +241,22 @@ describe('what the card says about lasting harm (6.17)', () => {
 			}
 		}
 		expect(Object.keys(DISEASES.ebola.lastingHarm.context!)).toHaveLength(6);
+	});
+
+	it('counts no harm or babies for a disease that wanes with no reinfection rule, which would count twice', () => {
+		// Without an after-infection figure, a reinfection is booked as a first illness (people.ts).
+		for (const id of Object.keys(DISEASES) as DiseaseId[]) {
+			const d = loadDisease(id);
+			if (d.waningMeanTicks > 0 && d.afterInfectionSevere === 0) {
+				expect(d.harmRates, id).toEqual([]);
+				expect(d.babyRiskPerCase, id).toBe(0);
+			}
+		}
+	});
+
+	it('counts no more harms for one disease than telemetry has room for', () => {
+		for (const id of Object.keys(DISEASES) as DiseaseId[])
+			expect(loadDisease(id).harmRates.length, id).toBeLessThanOrEqual(MAX_HARMS);
 	});
 
 	it('gives every disease something to say, and every counted harm a line', () => {
