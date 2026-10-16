@@ -123,7 +123,9 @@
 	 * Lasting harm and babies (6.17). Hidden at one person per dot (the guided village) until a
 	 * chapter narrates it.
 	 */
-	let harm = $derived(t && peoplePerDot > 1 ? harmText(disease, t.harmed, t.babies) : null);
+	let harm = $derived(
+		t && peoplePerDot > 1 ? harmText(disease, t.harmed, t.babies, runtime.waningMeanTicks === 0) : null
+	);
 </script>
 
 <section

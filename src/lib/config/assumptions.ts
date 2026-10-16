@@ -31,9 +31,9 @@ import {
 	KUGELER_2020_TREATED,
 	MODEL_ADULT_FROM,
 	HARTLEY_2023,
-	GBD_LONG_COVID_12M,
-	HARM_CONTEXT
+	GBD_LONG_COVID_12M
 } from './derived';
+import { HARM_CONTEXT } from './lastingHarm';
 import { POPULATION } from './population';
 import { TRAVEL_DAYS } from '../sim/routes';
 import { DEFAULT_PEOPLE_PER_DOT } from '../sim/constants';
@@ -128,8 +128,8 @@ export const ASSUMPTIONS = {
 	bedWhereIll:
 		'A patient’s bed is in the city where their symptoms started, for the whole stay, and how full that city’s hospitals are sets their chance of dying, and any death is counted there too. Someone who falls ill on a trip has their bed in the city they set out from, even after they arrive somewhere else.',
 	harmPerIllness:
-		'Lasting harm is counted per illness, so someone ill twice can be counted twice. It is counted in the city where the illness ended in death or recovery, as deaths are.',
-	harmLongCovid: `Long COVID a year on comes from a pooled estimate (GBD 2022): ${fmt(GBD_LONG_COVID_12M.all, 1)}% of survivors. Pooled studies with no comparison group find far more, ${HARM_CONTEXT.houOneToTwoYears}% at one to two years (Hou 2025). The first is used because it covers everyone who had symptoms and leaves out symptoms people already had before.`,
+		'Lasting harm is counted once per person who survived an illness with symptoms, even if they catch it again, and moves with them from city to city. Harm to babies is counted where the mother’s illness ended, as deaths are.',
+	harmLongCovid: `Long COVID a year on comes from a pooled estimate (GBD 2022): ${fmt(GBD_LONG_COVID_12M.all, 1)}% of survivors. Pooled studies with no comparison group find far more, ${HARM_CONTEXT.houOneToTwoYears.value}% at one to two years (Hou 2025). The first is used because it covers everyone who had symptoms and leaves out symptoms people already had before.`,
 	harmPregnancy:
 		'The share of people pregnant counts only pregnancies that end in a birth, so it is slightly low, and harm to babies is undercounted.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`

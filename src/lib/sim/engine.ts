@@ -181,9 +181,9 @@ export class Simulation {
 				const disease = this.disease;
 				const band = this.agents.ageBand[dot];
 				const babies = band === 1 ? disease.babyRiskPerCase : 0;
-				if (died === 0 && disease.harmRates.length === 0 && babies === 0) return;
+				if (died === 0 && babies === 0) return;
 				// People die in the hospital that took them: for symptoms that started on a trip, its origin.
-				// Lasting harm is counted there too, so every count about an illness is in one place.
+				// Harm to babies is counted there too, as an event like a death.
 				const region = bedRegion >= 0 ? bedRegion : hospitalRegion(this.agents, this.routeList, dot);
 				// Every dot has a home region, so this can't happen; skipping would lose deaths from the
 				// counts, so fail loudly in development and tests, and say so once per run anywhere else.
@@ -195,15 +195,8 @@ export class Simulation {
 					return;
 				}
 				if (died > 0) this.counters.addDeaths(region, 0, band, died);
-				// Expected values (6.17): rate x whole people, no draw, so the run itself never changes.
-				const survivors = people - died;
-				if (survivors > 0 && disease.harmRates.length > 0) {
-					const factor = this.agents.protection[dot] === Protection.FULL ? disease.harmVaccinatedFactor : 1;
-					disease.harmRates.forEach((rate, h) =>
-						this.counters.addHarm(region, 0, h, survivors * rate[band] * factor)
-					);
-				}
-				// Pregnancies are harmed or lost whether or not the mother survives.
+				// An expected value (6.17), with no draw, so the run itself never changes. Pregnancies are
+				// harmed or lost whether or not the mother survives.
 				if (babies > 0)
 					this.counters.addBabies(
 						region,
@@ -295,6 +288,7 @@ export class Simulation {
 		const regions = scenario.regions;
 		this.counters = new TelemetryCounters(regions.length);
 		this.counters.setBedTiming(disease.admissionDelayTicks, disease.hospitalStayTicks);
+		this.counters.setHarms(disease.harmRates, disease.harmVaccinatedFactor);
 		this.pressure = new Float32Array(regions.length);
 		this.strain = new Float32Array(regions.length).fill(1);
 		this.overloadSeen = new Uint8Array(regions.length);
@@ -696,7 +690,7 @@ export class Simulation {
 			counts: c.regionCounts(r),
 			deathsByAge: c.deathsByAge(r),
 			deaths: c.deaths(r),
-			harmed: c.harms(r, 0, this.disease.harmRates.length),
+			harmed: c.harms(r),
 			babies: c.babiesHarmed(r),
 			overloaded: this.pressure[r] > 1,
 			capacity: this.bedCapacity[r],
@@ -718,6 +712,7 @@ export class Simulation {
 			travelling: this.transit.travellers(this.agents),
 			regions,
 			inTransit,
+			harmedInTransit: c.harms(this.scenario.regions.length),
 			totals: sumCounts([...regions.map((r) => r.counts), inTransit]),
 			deaths: regions.reduce((t, r) => t + r.deaths, 0),
 			latest: this.scenario.regions.map((_, r) => c.latest(r)),

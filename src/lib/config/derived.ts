@@ -711,26 +711,3 @@ export const WORLD_BANK_BIRTHS_2024 = {
 export function pregnantShareOf(place: keyof typeof WORLD_BANK_BIRTHS_2024): number {
 	return (WORLD_BANK_BIRTHS_2024[place] / 1000 / ageMixOf(place)[1]) * PREGNANCY_YEARS;
 }
-
-/**
- * Figures that appear only in the lasting-harm hovers, as context or for harms not counted (6.17),
- * each named with its source in the line itself (research/lasting-harm.md, "Not counted").
- */
-export const HARM_CONTEXT = {
-	/** Lugtu 2026: long COVID (shorter follow-up), Omicron against earlier variants, %. */
-	lugtuOmicron: [22.8, 35.5],
-	/** UKHSA Green Book: SSPE in 1 in 25,000 who had measles, 1 in 8,000 infected under age 2, 7-10 years on. */
-	sspe: { oneIn: 25_000, underTwoOneIn: 8_000, years: [7, 10] },
-	/** UKHSA: deafness after mumps, 1 in 3,400 to 1 in 20,000 cases. */
-	mumpsDeafnessOneIn: [3_400, 20_000],
-	/** CDC: about 1 in 3 people get shingles later in life. */
-	shinglesOneIn: 3,
-	/** CDC: post-polio syndrome in 25-40% of people paralysed as children, 15 to 40 years later. */
-	postPolio: { pct: [25, 40], years: [15, 40] },
-	/** Mandizadza 2024, Table 6: Ebola survivors at 12-24 months with each problem, % (no comparison group). */
-	ebolaRaw: { jointPain: 37, hearingLoss: 8, numbHands: 12, numbFeet: 16 },
-	/** Hou 2025: pooled long COVID among confirmed cases at 1-2 years, % (no comparison group). */
-	houOneToTwoYears: 46,
-	/** UKHSA Green Book: rubella damage in up to 90% of surviving infants after infection in weeks 0-10. */
-	rubellaEarlyCeiling: 90
-} as const;

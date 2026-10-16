@@ -24,6 +24,11 @@ export interface Sourced<T = number> {
 	 * tests/sim/provisional.test.ts, and a release build (RELEASE=1) fails while any remain.
 	 */
 	provisional?: string;
+	/**
+	 * Set on a figure that is only shown to people (a hover's context), never used by the model: it
+	 * still needs its sources, but it is not a model number (6.17).
+	 */
+	contextOnly?: true;
 }
 
 /** One value per age band: 0-14, 15-64, 65+ (the World Bank bands). */
@@ -139,6 +144,8 @@ export interface LastingHarmConfig {
 	notes: string[];
 	/** Delayed deaths and later illnesses, kept out of the count (hover footnotes). */
 	footnotes?: string[];
+	/** The figures the hover lines quote, each with its sources (contextOnly). */
+	context?: Record<string, Sourced<number | readonly number[]>>;
 }
 
 /**
@@ -156,6 +163,8 @@ export interface BabyHarmConfig {
 	perInfection?: true;
 	/** Plain lines for the hover. */
 	notes: string[];
+	/** The figures the hover lines quote, each with its sources (contextOnly). */
+	context?: Record<string, Sourced<number | readonly number[]>>;
 }
 
 /** The care a disease's death rates were measured under (6.6). */
@@ -453,11 +462,12 @@ export interface RegionTelemetry {
 	/** Deaths so far, all ages (the sum of deathsByAge; the same as counts.deceased). */
 	deaths: number;
 	/**
-	 * Expected people living with each counted lasting harm (6.17), in the disease's order, counted
-	 * where deaths are. Fractional: rate x people, with no random draw.
+	 * Expected people here now living with each counted lasting harm (6.17), in the disease's order:
+	 * each dot's survivors of an illness with symptoms x the rate for its age band. It follows the
+	 * people, so it never exceeds those here who have had it. Fractional, with no random draw.
 	 */
 	harmed: number[];
-	/** Expected babies harmed or pregnancies lost (6.17), counted where deaths are. */
+	/** Expected babies harmed or pregnancies lost here (6.17): an event, counted where deaths are. */
 	babies: number;
 	/** Outbreak patients need more beds than are spare (pressure over 100%). */
 	overloaded: boolean;
@@ -492,6 +502,8 @@ export interface Telemetry {
 	regions: RegionTelemetry[];
 	/** People on a road, ferry or plane, by colour. A death on a route counts in its origin region. */
 	inTransit: Counts;
+	/** People on a road, ferry or plane living with each counted lasting harm (6.17). */
+	harmedInTransit: number[];
 	/** Everyone: the regions plus inTransit. */
 	totals: Counts;
 	/** Deaths so far in people, every region (a death on a trip counts in its origin). */

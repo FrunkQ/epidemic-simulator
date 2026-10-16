@@ -131,32 +131,57 @@ describe('the lasting harm tally (6.17)', () => {
 });
 
 describe('lasting harm on the map (6.17)', () => {
-	it('counts every survivor once across the cities, wherever they end up', () => {
-		// Smallpox immunity never fades, so everyone recovered is a survivor tallied once.
+	it('follows the people: never more than a city’s recovered, and the world total is the cities plus travellers', () => {
+		// Smallpox: everyone infected falls ill and immunity never fades, so every survivor is recovered.
 		const sim = createSimulation(microcosm(), { seed: 1, diseaseId: 'smallpox' });
 		for (const r of [0, 1, 2]) sim.send({ type: 'seed', region: r, count: 3 });
-		sim.step(150 * TICKS_PER_DAY);
-		const t = sim.snapshot();
-		const pockmarks = t.regions.reduce((a, r) => a + r.harmed[0], 0);
-		expect(t.totals.recovered).toBeGreaterThan(1000);
-		expect(pockmarks).toBeCloseTo(
-			t.totals.recovered * DISEASES.smallpox.lastingHarm.counted[0].rate.value[0],
-			4
-		);
+		const rate = DISEASES.smallpox.lastingHarm.counted[0].rate.value[0];
+		let checked = 0;
+		for (let day = 0; day < 150; day++) {
+			sim.step(TICKS_PER_DAY);
+			if (day % 10 !== 9) continue;
+			const t = sim.snapshot();
+			for (const r of t.regions) expect(r.harmed[0]).toBeLessThanOrEqual(r.counts.recovered * rate + 1e-6);
+			const world = t.regions.reduce((a, r) => a + r.harmed[0], 0) + t.harmedInTransit[0];
+			const survivors =
+				t.regions.reduce((a, r) => a + r.counts.everInfected - r.deaths, 0) -
+				t.totals.symptomatic -
+				t.totals.silent;
+			expect(world).toBeCloseTo(survivors * rate, 4);
+			if (survivors > 1000) checked++;
+		}
+		expect(checked).toBeGreaterThan(5);
+	});
+
+	it('counts people whose immunity has worn off, who still live with the harm', () => {
+		const sim = createSimulation(microcosm(), { seed: 2, diseaseId: 'covid19' });
+		sim.send({ type: 'seed', region: 0, count: 20 });
+		sim.step(400 * TICKS_PER_DAY);
+		let survivors = 0;
+		let waned = 0;
+		for (let i = 0; i < sim.agents.activeCount; i++) {
+			survivors += sim.people.illSurvivors[i];
+			waned += sim.people.susceptibleAgain[i];
+			expect(sim.people.illSurvivors[i]).toBeLessThanOrEqual(sim.people.perDot - sim.people.dead[i] + 1e-9);
+		}
+		expect(waned).toBeGreaterThan(0);
+		expect(survivors).toBeGreaterThan(0);
 	});
 });
 
 describe('what the card says about lasting harm (6.17)', () => {
 	it('says "about" for one harm and "at least" the largest for several, never their sum', () => {
-		expect(harmText(DISEASES.covid19, [12.4], 0).line).toBe('about 12 live with lasting harm');
-		const ebola = harmText(DISEASES.ebola, [30, 24.4, 14.3, 13, 12.1, 12], 3.2);
-		expect(ebola.line).toBe('at least 30 live with lasting harm');
+		expect(harmText(DISEASES.covid19, [12.4], 0, false).line).toBe(
+			'about 12 people here live with lasting harm'
+		);
+		const ebola = harmText(DISEASES.ebola, [30, 24.4, 14.3, 13, 12.1, 12], 3.2, true);
+		expect(ebola.line).toBe('of whom at least 30 live with lasting harm');
 		expect(ebola.hover.split('\n')[1]).toBe('About 30: Joint pain.');
-		expect(ebola.babies).toBe('About 3 babies harmed or pregnancies lost');
+		expect(ebola.babies).toBe('About 3 babies harmed or pregnancies lost here');
 	});
 
 	it('names harms with no figure as not counted, and shows no babies line without a figure', () => {
-		const mumps = harmText(DISEASES.mumps, [], 0);
+		const mumps = harmText(DISEASES.mumps, [], 0, true);
 		expect(mumps.line).toBe('lasting harm: not counted');
 		expect(mumps.hover).toContain('Not counted: no figure for permanent deafness.');
 		expect(mumps.babies).toBeNull();
@@ -166,6 +191,16 @@ describe('what the card says about lasting harm (6.17)', () => {
 		expect(about(0)).toBe('0');
 		expect(about(0.3)).toBe('fewer than 1');
 		expect(about(1234.6)).toBe('1,235');
+	});
+
+	it('links every figure a hover quotes to a source, marked as shown only', () => {
+		for (const d of Object.values(DISEASES) as DiseaseConfig[]) {
+			for (const [k, v] of Object.entries({ ...d.lastingHarm?.context, ...d.babyHarm?.context })) {
+				expect(v.contextOnly, `${d.id}.${k}`).toBe(true);
+				expect(v.sources.length, `${d.id}.${k}`).toBeGreaterThan(0);
+			}
+		}
+		expect(Object.keys(DISEASES.ebola.lastingHarm.context!)).toHaveLength(4);
 	});
 
 	it('gives every disease something to say, and every counted harm a line', () => {

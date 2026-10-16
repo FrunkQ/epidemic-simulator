@@ -119,7 +119,10 @@ export interface Citation {
 	authors: string;
 	title: string;
 	journal: string;
-	year: number;
+	/** 'n.d.' for an undated page, which then gives `accessed`. */
+	year: number | 'n.d.';
+	/** The date an undated page was read (YYYY-MM-DD). */
+	accessed?: string;
 	/** How strong the evidence is; the About page and evidence table sort by this. */
 	evidence: Evidence;
 	/** Required when a number's best source is only a review or one study: why nothing stronger is used. */
@@ -162,7 +165,8 @@ export const OFFICIAL_PUBLISHERS = [
 	'World Bank',
 	'UN',
 	'ONS',
-	'HSE'
+	'HSE',
+	'UKHSA'
 ] as const;
 
 export const CITATIONS: Citation[] = [
@@ -728,10 +732,12 @@ export const CITATIONS: Citation[] = [
 			'polio.vaccines.OPV.seriousPer100kDoses',
 			'polio.vaccines.OPV.deathsPer100kDoses',
 			'polio.vaccines.IPV.waningDays',
-			'polio.lastingHarm.paralysis'
+			'polio.lastingHarm.paralysis',
+			'polio.lastingHarm.context.postPolioPct',
+			'polio.lastingHarm.context.postPolioYears'
 		],
 		quote:
-			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules.',
+			'For the onset of paralysis in paralytic poliomyelitis, the incubation period is usually 7 to 21 days. … Approximately 70% of all polio infections in children are asymptomatic. … Approximately 24% … consist of a minor, nonspecific illness … Nonparalytic aseptic meningitis occurs in 1% to 5% of polio infections in children. … Less than 1% of all polio infections in children result in flaccid paralysis. … The case fatality ratio for paralytic polio is generally 2% to 5% among children … most infectious in the days immediately before and after the onset of symptoms … at least 99% are immune following 3 doses … probably provides lifelong immunity after a complete series … Because of interference among serotypes during intestinal replication, a single dose of tOPV produces immunity to all three vaccine viruses in approximately 50% of recipients. … in more than 95% of recipients in industrialized countries … However, one case of VAPP occurred for every 2 to 3 million doses of tOPV vaccine administered. … No increased risks for serious adverse events have been observed in countries relying on all-IPV schedules. … Weakness or paralysis present 12 months after onset, which occurs in two-thirds of patients with paralysis … After an interval of 15 to 40 years, 25% to 40% of persons who contracted paralytic poliomyelitis in childhood',
 		location:
 			'Clinical Features; Epidemiology; Immunogenicity and Vaccine Efficacy (last reviewed 1 May 2024); OPV vaccine efficacy; Vaccine-associated paralytic polio; IPV safety',
 		why: `CDC reference text, read directly. silentDays 7 is worked out: the low end of the 7 to 21 day onset window, because people spread polio before they fall ill. hospitalisedShare 1 is worked out: in the model only meningitis and paralysis cases turn red, and those are hospital cases. Vaccines, against paralysis: IPV 3 doses 0.99; OPV 3 doses 0.95 (in industrialised countries; much lower in low-income tropical settings); OPV one dose 0.50. OPV risk: paralysis caused by the vaccine (VAPP), 1 per ${OPV_RISK.millionDosesPerVapp[0]} to ${OPV_RISK.millionDosesPerVapp[1]} million doses, the middle of which is ${fmt(OPV_RISK.vappPer100k, 4)} per 100,000 doses; it is 7 to 21 times higher for the first dose. IPV has no vaccine-specific serious risk, so the general anaphylaxis rate is used (McNeil 2016). OPV deaths are worked out: ${fmt(OPV_RISK.vappPer100k, 4)} x the middle of the ${OPV_RISK.paralyticCaseFatality[0] * 100}% to ${OPV_RISK.paralyticCaseFatality[1] * 100}% case fatality ratio for paralytic polio (${fmt(OPV_RISK.caseFatality * 100, 1)}%) = ${fmt(OPV_RISK.deathsPer100k, 5)} per 100,000 doses. That no death is established for IPV comes from ACIP 2024.`,
@@ -1418,8 +1424,9 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/measles/signs-symptoms/index.html',
-		usedFor: ['measles.hospitalisedShare'],
-		quote: 'About 1 in 5 unvaccinated people in the U.S. who get measles is hospitalized.',
+		usedFor: ['measles.hospitalisedShare', 'measles.lastingHarm.context.sspeYears'],
+		quote:
+			'About 1 in 5 unvaccinated people in the U.S. who get measles is hospitalized. … SSPE generally develops 7 to 10 years after a person has measles',
 		location: "Section 'Severe complications in children and adults' (last reviewed 29 April 2026)",
 		why: 'Official estimate of the hospitalised share of measles cases.',
 		context: 'US, unvaccinated cases.',
@@ -3050,7 +3057,7 @@ export const CITATIONS: Citation[] = [
 		authors: 'Mamelund SE, Haneberg B, Mjaaland S',
 		title:
 			'A Missed Summer Wave of the 1918–1919 Influenza Pandemic: Evidence From Household Surveys in the United States and Norway',
-		journal: 'Open Forum Infectious Diseases',
+		journal: 'Open Forum Infectious Diseases 12(9):ofaf533',
 		year: 2016,
 		evidence: 'study',
 		noReviewReason:
@@ -5098,8 +5105,9 @@ export const CITATIONS: Citation[] = [
 		id: 'hse-0-to-8-weeks',
 		authors: 'HSE (Health Service Executive, Ireland)',
 		title: '0 to 8 weeks pregnant',
-		journal: 'HSE, Pregnancy stages and baby development (the page is undated; read 16 Oct 2026)',
-		year: 2026,
+		journal: 'HSE, Pregnancy stages and baby development',
+		year: 'n.d.',
+		accessed: '2026-10-16',
 		evidence: 'official',
 		publisher: 'HSE',
 		url: 'https://www2.hse.ie/wellbeing/child-health/0-to-8-weeks-pregnant.html',
@@ -5113,7 +5121,164 @@ export const CITATIONS: Citation[] = [
 			by: 'independent verification pass',
 			on: '2026-10-16',
 			ok: true,
-			note: 'All three sentences match the page (lasting-harm-build-verify.md item 3). The page shows no date, so the year is the year it was read.'
+			note: 'All three sentences match the page (lasting-harm-build-verify.md item 3). The page shows no date, so it is cited n.d. with the date it was read.'
+		}
+	},
+	{
+		id: 'lugtu2026-long-covid-eras',
+		authors: 'Lugtu EJ, et al.',
+		title:
+			'Prevalence of Post-COVID Symptoms Across Variants of Concern and Follow-up Periods: A Systematic Review and Meta-Analysis',
+		journal: 'International Journal of Infectious Diseases',
+		year: 2026,
+		evidence: 'meta-analysis',
+		doi: '10.1016/j.ijid.2026.108522',
+		usedFor: ['covid19omicron.lastingHarm.context.lugtuOmicron'],
+		quote: 'higher in pre-Omicron (35.5%) than Omicron (22.8%) eras (p=0.04)',
+		location: 'Abstract',
+		why: 'Shown only in the Omicron hover, to say long COVID looks less common with Omicron; its follow-up is mostly under a year, so it gives no 12-month figure and Omicron long COVID is not counted.',
+		context: 'Pooled studies, 2020-2024, follow-up under and over 6 months',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Abstract confirmed from a reproduction (lasting-harm-verify.md row 7); the journal page would not load. Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'hou2025-long-covid-prevalence',
+		authors: 'Hou Y, Gu T, Ni Z, Shi X, Ranney ML, Mukherjee B',
+		title:
+			'Global Prevalence of Long COVID, Its Subtypes, and Risk Factors: An Updated Systematic Review and Meta-analysis',
+		journal: 'Open Forum Infectious Diseases 12(9):ofaf533',
+		year: 2025,
+		evidence: 'meta-analysis',
+		doi: '10.1093/ofid/ofaf533',
+		usedFor: ['covid19.lastingHarm.context.houOneToTwoYears'],
+		quote: '46% (95% CI, 37%–57%) at 1–2 years',
+		location: 'Abstract',
+		why: 'Shown only on the About page, to say why the counted long COVID figure (GBD) is far lower than pooled prevalence: these cohorts have no comparison group and mixed definitions.',
+		context: '429 studies, mostly cohorts with no comparison group',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 6). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'ukhsa-greenbook-measles',
+		authors: 'UKHSA',
+		title: 'Measles: the green book chapter',
+		journal: 'Immunisation against infectious disease (the Green Book)',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'UKHSA',
+		url: 'https://assets.publishing.service.gov.uk/media/69dcf3806b695d635c34dccc/UKHSA_Green_Book_on_Measles_2_4_26.pdf',
+		usedFor: ['measles.lastingHarm.context.sspeOneIn', 'measles.lastingHarm.context.sspeUnderTwoOneIn'],
+		quote:
+			'One case of SSPE occurs in every 25,000 measles infections … In children infected under the age of two, the rate is one in 8000 infections',
+		location: 'Measles encephalitis (chapter 21, 2 April 2026)',
+		why: 'A late death from measles, shown as a footnote and never counted as lasting harm.',
+		context: 'United Kingdom, chapter of 2 April 2026',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read through WebFetch (lasting-harm-verify.md row 52). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'ukhsa-greenbook-mumps',
+		authors: 'UKHSA',
+		title: 'Mumps: the green book chapter',
+		journal: 'Immunisation against infectious disease (the Green Book)',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'UKHSA',
+		url: 'https://assets.publishing.service.gov.uk/media/69dcf5cbd3e08b8871b6663b/UKHSA_Green_Book_on_Mumps_2_4_26__002_.pdf',
+		usedFor: ['mumps.lastingHarm.context.mumpsDeafnessOneIn'],
+		quote:
+			'Sensorineural deafness (bilateral or unilateral) is a well-recognised complication of mumps, with estimates of its frequency varying from one in 3400 cases to one in 20,000 (Garty et al., 1988).',
+		location: 'The disease (chapter 23, 2 April 2026)',
+		why: 'Shown in the mumps hover. It does not say the deafness is permanent, so it is not counted.',
+		context: 'United Kingdom, chapter of 2 April 2026',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read through WebFetch (lasting-harm-verify.md row 56). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'ukhsa-greenbook-rubella',
+		authors: 'UKHSA',
+		title: 'Rubella: the green book chapter',
+		journal: 'Immunisation against infectious disease (the Green Book)',
+		year: 2026,
+		evidence: 'official',
+		publisher: 'UKHSA',
+		url: 'https://assets.publishing.service.gov.uk/media/69dceebddaa863aa5db66628/UKHSA_Green_Book_chapter_Rubella_7_4_26__002_.pdf',
+		usedFor: ['rubella.babyHarm.context.rubellaEarlyCeiling'],
+		quote:
+			'Infection in the first eight to ten weeks of pregnancy results in damage in up to 90% of surviving infants',
+		location: 'The disease (chapter 28, 7 April 2026)',
+		why: "A ceiling for the earliest weeks, shown only in the hover; the counted risk is CDC MMWR 2001's 20% over the first 20 weeks.",
+		context: 'United Kingdom, chapter of 7 April 2026',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read through WebFetch (lasting-harm-verify.md row 116). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'cdc-shingles-about',
+		authors: 'CDC',
+		title: 'About Shingles (Herpes Zoster)',
+		journal: 'CDC, Shingles',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/shingles/about/index.html',
+		usedFor: ['chickenpox.lastingHarm.context.shinglesOneIn'],
+		quote:
+			'About 1 in every 3 people in the United States will have shingles (or herpes zoster) in their lifetime.',
+		location: 'Key points (published 15 May 2024, updated 17 January 2025)',
+		why: 'A later illness, shown as a footnote and never counted as lasting harm.',
+		context: 'United States',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Read through WebFetch (lasting-harm-verify.md row 66). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
+		}
+	},
+	{
+		id: 'mandizadza2024-ebola-symptoms',
+		authors: 'Mandizadza OO, Phebeni RT, Ji C',
+		title:
+			'Prevalence of somatic symptoms among Ebola Virus Disease (EVD) survivors in Africa: a systematic review and meta-analysis',
+		journal: 'BMC Public Health 24:1511',
+		year: 2024,
+		evidence: 'meta-analysis',
+		doi: '10.1186/s12889-024-19013-8',
+		usedFor: [
+			'ebola.lastingHarm.context.ebolaJointPain',
+			'ebola.lastingHarm.context.ebolaHearingLoss',
+			'ebola.lastingHarm.context.ebolaNumbHands',
+			'ebola.lastingHarm.context.ebolaNumbFeet'
+		],
+		quote:
+			'Prevalence (12-24 months): Arthralgia 37 (30%-44%); Numbness (feet) 16 (13%-19%); Numbness (hands) 12 (10%-15%); Hearing Loss 8 (2%-14%)',
+		location: 'Table 6',
+		why: 'How common each problem is among survivors at 1-2 years, shown only in the hover. With no comparison group it cannot say how much Ebola caused, so the counted figures come from Sneller 2019.',
+		context: '23 studies of survivors in Africa',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Full text from the PMC open-data bucket (lasting-harm-verify.md row 93). Metadata checked 16 Oct (lasting-harm-build-verify.md section 8).'
 		}
 	}
 ];

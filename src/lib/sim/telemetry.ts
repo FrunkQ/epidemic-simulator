@@ -63,12 +63,16 @@ export class TelemetryCounters {
 	 */
 	readonly died: Int32Array;
 	/**
-	 * Expected people with each counted lasting harm (6.17), per region, disease slot and harm
-	 * (regionCount x MAX_DISEASES x MAX_HARMS), counted where deaths are. Rate x people, no draw.
+	 * Expected people here now living with each counted lasting harm (6.17), per region plus the
+	 * in-transit bucket ((regionCount + 1) x MAX_HARMS): each dot's survivors x the rate for its age
+	 * band. Worked out in recount, so it follows the people wherever they move.
 	 */
 	readonly harmed: Float64Array;
 	/** Expected babies harmed or lost per region and disease slot (regionCount x MAX_DISEASES). */
 	readonly babies: Float64Array;
+	/** The counted harms' rates by band, and the share left for a fully vaccinated person (6.17). */
+	private harmRates: Bands[] = [];
+	private harmVaccinated = 1;
 	private readonly history: Float64Array;
 	private readonly ageHistory: Float64Array;
 	/** Expected patients by the tick their symptoms started: a ring of bedRing ticks x regions x bands. */
@@ -88,7 +92,7 @@ export class TelemetryCounters {
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
 		this.died = new Int32Array(regionCount * MAX_DISEASES * BANDS);
-		this.harmed = new Float64Array(regionCount * MAX_DISEASES * MAX_HARMS);
+		this.harmed = new Float64Array((regionCount + 1) * MAX_HARMS);
 		this.babies = new Float64Array(regionCount * MAX_DISEASES);
 		this.history = new Float64Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.ageHistory = new Float64Array(HISTORY_DAYS * regionCount * A_SLOTS);
@@ -101,9 +105,11 @@ export class TelemetryCounters {
 	 * cities and every person is counted exactly once.
 	 */
 	recount(agents: Agents, people: People): void {
-		const { counts, ages } = this;
+		const { counts, ages, harmed, harmRates } = this;
 		counts.fill(0);
 		ages.fill(0);
+		harmed.fill(0);
+		const harms = harmRates.length;
 		const n = agents.activeCount;
 		for (let i = 0; i < n; i++) {
 			let r = agents.region[i];
@@ -124,6 +130,11 @@ export class TelemetryCounters {
 			counts[base + C_SILENT] += silent;
 			counts[base + C_SYMPTOMATIC] += ill;
 			counts[base + C_RECOVERED] += rec;
+			const survivors = people.illSurvivors[i];
+			if (harms > 0 && survivors > 0) {
+				const factor = p === Protection.FULL ? this.harmVaccinated : 1;
+				for (let h = 0; h < harms; h++) harmed[r * MAX_HARMS + h] += survivors * harmRates[h][band] * factor;
+			}
 			if (r === this.regionCount) continue;
 
 			const ab = r * A_SLOTS + band;
@@ -211,34 +222,26 @@ export class TelemetryCounters {
 		this.died[(region * MAX_DISEASES + slot) * BANDS + band] += people;
 	}
 
-	/** Add `people` (expected, fractional) with lasting harm `harm` of the disease in `slot`, in a region. */
-	addHarm(region: number, slot: number, harm: number, people: number): void {
-		this.harmed[(region * MAX_DISEASES + slot) * MAX_HARMS + harm] += people;
+	/** Set the counted harms for this run (6.17). */
+	setHarms(rates: Bands[], fullyVaccinated: number): void {
+		this.harmRates = rates.slice(0, MAX_HARMS);
+		this.harmVaccinated = fullyVaccinated;
 	}
 
 	addBabies(region: number, slot: number, babies: number): void {
 		this.babies[region * MAX_DISEASES + slot] += babies;
 	}
 
-	/** Expected people with each counted harm of the disease in `slot`, in a region (`count` harms). */
-	harms(region: number, slot: number, count: number): number[] {
-		const b = (region * MAX_DISEASES + slot) * MAX_HARMS;
-		return Array.from(this.harmed.subarray(b, b + count));
+	/** Expected people living with each counted harm in region r (r = regionCount: in transit), as of the last recount. */
+	harms(r: number): number[] {
+		return Array.from(this.harmed.subarray(r * MAX_HARMS, r * MAX_HARMS + this.harmRates.length));
 	}
 
-	/**
-	 * The lasting harm headline (6.17), over every disease: the largest counted harm of each, since
-	 * one person can have several.
-	 */
-	harmHeadline(region: number): number {
-		let total = 0;
-		for (let s = 0; s < MAX_DISEASES; s++) {
-			const b = (region * MAX_DISEASES + s) * MAX_HARMS;
-			let most = 0;
-			for (let h = 0; h < MAX_HARMS; h++) most = Math.max(most, this.harmed[b + h]);
-			total += most;
-		}
-		return total;
+	/** The lasting harm headline (6.17): the largest counted harm, since one person can have several. */
+	harmHeadline(r: number): number {
+		let most = 0;
+		for (let h = 0; h < this.harmRates.length; h++) most = Math.max(most, this.harmed[r * MAX_HARMS + h]);
+		return most;
 	}
 
 	babiesHarmed(region: number): number {
