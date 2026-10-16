@@ -3,7 +3,7 @@ import { loadDisease } from '../../src/lib/config';
 import { PREGNANCY_YEARS, WEEKS_PER_YEAR, pregnantShareOf } from '../../src/lib/config/derived';
 import { DISEASES } from '../../src/lib/config/diseases';
 import { defaultPolicy } from '../../src/lib/config/healthPolicy';
-import { singleCity } from '../../src/lib/config/scenarios';
+import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import type { Bands, DiseaseConfig, DiseaseId, DiseaseRuntime } from '../../src/lib/sim/types';
@@ -130,12 +130,28 @@ describe('the lasting harm tally (6.17)', () => {
 	});
 });
 
+describe('lasting harm on the map (6.17)', () => {
+	it('counts every survivor once across the cities, wherever they end up', () => {
+		// Smallpox immunity never fades, so everyone recovered is a survivor tallied once.
+		const sim = createSimulation(microcosm(), { seed: 1, diseaseId: 'smallpox' });
+		for (const r of [0, 1, 2]) sim.send({ type: 'seed', region: r, count: 3 });
+		sim.step(150 * TICKS_PER_DAY);
+		const t = sim.snapshot();
+		const pockmarks = t.regions.reduce((a, r) => a + r.harmed[0], 0);
+		expect(t.totals.recovered).toBeGreaterThan(1000);
+		expect(pockmarks).toBeCloseTo(
+			t.totals.recovered * DISEASES.smallpox.lastingHarm.counted[0].rate.value[0],
+			4
+		);
+	});
+});
+
 describe('what the card says about lasting harm (6.17)', () => {
 	it('says "about" for one harm and "at least" the largest for several, never their sum', () => {
-		expect(harmText(DISEASES.covid19, [12.4], 0).line).toBe('of whom about 12 live with lasting harm');
+		expect(harmText(DISEASES.covid19, [12.4], 0).line).toBe('about 12 live with lasting harm');
 		const ebola = harmText(DISEASES.ebola, [30, 24.4, 14.3, 13, 12.1, 12], 3.2);
-		expect(ebola.line).toBe('of whom at least 30 live with lasting harm');
-		expect(ebola.hover.split('\n')[0]).toBe('About 30: Joint pain.');
+		expect(ebola.line).toBe('at least 30 live with lasting harm');
+		expect(ebola.hover.split('\n')[1]).toBe('About 30: Joint pain.');
 		expect(ebola.babies).toBe('About 3 babies harmed or pregnancies lost');
 	});
 

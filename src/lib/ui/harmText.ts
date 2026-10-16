@@ -21,6 +21,13 @@ export function about(n: number): string {
 	return Math.round(n).toLocaleString('en-GB');
 }
 
+/**
+ * Lasting harm is counted where the illness ended, as deaths are (6.8), while "recovered" counts
+ * the people here now, who may have caught it elsewhere; so the line is not worded as a share of them.
+ */
+export const WHERE_COUNTED =
+	'Counted in the city where the illness ended, as deaths are; recovered people who later move are not counted again where they go.';
+
 export function harmText(disease: DiseaseConfig, harmed: number[], babies: number): HarmText {
 	const harm = disease.lastingHarm;
 	const baby = disease.babyHarm;
@@ -30,8 +37,9 @@ export function harmText(disease: DiseaseConfig, harmed: number[], babies: numbe
 		const most = Math.max(0, ...harmed);
 		line =
 			harm.counted.length > 1
-				? `of whom at least ${about(most)} live with lasting harm`
-				: `of whom about ${about(most)} live with lasting harm`;
+				? `at least ${about(most)} live with lasting harm`
+				: `about ${about(most)} live with lasting harm`;
+		hover.push(WHERE_COUNTED);
 		harm.counted.forEach((h, k) => hover.push(`About ${about(harmed[k] ?? 0)}: ${h.label}.`));
 	} else if (harm) line = 'lasting harm: not counted';
 	if (harm) hover.push(...harm.notes, ...(harm.footnotes ?? []));
