@@ -611,12 +611,16 @@ export const LONG_COVID_BANDS: [number, number, number] = [
 	longCovidAdults(EU_WOMEN_65_UP)
 ];
 export const LONG_COVID_WOMEN_SHARES = { band15to64: EU_WOMEN_15_64, band65up: EU_WOMEN_65_UP };
-/** Watanabe 2023: two doses, odds ratio of long COVID against no vaccination. */
+/** Watanabe 2023: two doses, odds ratio of long COVID against no vaccination, pooled over four studies. */
 export const WATANABE_TWO_DOSE_OR = 0.64;
+export const WATANABE_TWO_DOSE_STUDIES = 4;
 
 /** CDC, before the measles vaccine: people left disabled by measles encephalitis a year, and people infected. */
 export const CDC_MEASLES_PREVACCINE = {
 	disabledPerYear: 1000,
+	/** Reported cases a year, and the page's 1 case in this many with encephalitis. */
+	reportedPerYear: 549_000,
+	encephalitisOneIn: 1000,
 	infectedPerYear: [3_000_000, 4_000_000] as const
 };
 /** Lasting disability after measles encephalitis, per infection (the sim's measles red dot is every infection). */
@@ -672,12 +676,21 @@ export const SNELLER_UVEITIS_YEAR_1 = [33.3, 15.4] as const;
 export const RUBELLA_CRS = { risk: 0.2, weeks: 20 };
 /** Ahn 2016: congenital varicella syndrome after chickenpox at any time in pregnancy. */
 export const CHICKENPOX_CVS = 0.0059;
-/** Kayem 2021: pregnancies lost to Ebola (foetal losses). */
+/** Kayem 2021: pregnancies lost to Ebola (foetal losses), its 95% CI, and the studies in the review. */
 export const EBOLA_FETAL_LOSS = 0.769;
+export const EBOLA_FETAL_LOSS_CI = [0.45, 0.983] as const;
+export const KAYEM_REVIEW_STUDIES = 28;
+/** Study sizes quoted in citations' context lines. */
+export const STUDY_SIZES = {
+	hou2025: { studies: 429 },
+	lugtu2026: { splitMonths: 6 },
+	mandizadza2024: { studies: 23 },
+	ficenec2022: { survivors: 301, contacts: 711, meanYears: 4.3 }
+} as const;
 
 /**
  * CDC NCHS NVSR 73(1), 2022: singleton births by weeks of pregnancy, % (Table 1 and the page-6
- * table), each placed at its middle week (<34 at 31; a convention, worth under 1% of the result).
+ * table), each placed at its middle week (<34 at 31; a convention: UNDER_34_MOST_CHANGE below).
  */
 export const NCHS_GESTATION_2022: readonly (readonly [number, number])[] = [
 	[31, 2.16],
@@ -689,9 +702,17 @@ export const NCHS_GESTATION_2022: readonly (readonly [number, number])[] = [
 	[41.5, 4.88],
 	[42.5, 0.27]
 ];
-export const MEAN_GESTATION_WEEKS =
-	NCHS_GESTATION_2022.reduce((a, [w, pct]) => a + w * pct, 0) /
-	NCHS_GESTATION_2022.reduce((a, [, pct]) => a + pct, 0);
+/** The mean length of pregnancy, in weeks, with the under-34 group placed at `under34At`. */
+function meanGestation(under34At = NCHS_GESTATION_2022[0][0]): number {
+	const rows = NCHS_GESTATION_2022.map(([w, pct], k) => [k === 0 ? under34At : w, pct] as const);
+	return rows.reduce((a, [w, pct]) => a + w * pct, 0) / rows.reduce((a, [, pct]) => a + pct, 0);
+}
+export const MEAN_GESTATION_WEEKS = meanGestation();
+/** Where the under-34 group could sit (22 to 34 weeks), and the most that moves the mean, as a share. */
+export const UNDER_34_RANGE = [22, 34] as const;
+export const UNDER_34_MOST_CHANGE = Math.max(
+	...UNDER_34_RANGE.map((w) => Math.abs(meanGestation(w) / MEAN_GESTATION_WEEKS - 1))
+);
 /** HSE: weeks of pregnancy count from the last period, and "in the first 2 weeks or so, you are not pregnant". */
 export const WEEKS_BEFORE_CONCEPTION = 2;
 export const WEEKS_PER_YEAR = DAYS_PER_YEAR / 7;
