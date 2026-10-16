@@ -9,6 +9,10 @@
 		caption?: string;
 		/** A shorter wording still, used when the caption doesn't fit the chart's width. */
 		brief?: string;
+		/** Start from this wording (1: the shorter one), so a row of charts can shorten together. */
+		from?: number;
+		/** Whether the first wording fits, whatever `from` is. */
+		firstFits?: boolean;
 		days: readonly number[];
 		bands: Band[];
 		/** Top of the y axis (e.g. the population); rounded up to a nice number. */
@@ -21,6 +25,8 @@
 		title,
 		caption,
 		brief,
+		from = 0,
+		firstFits = $bindable(),
 		days,
 		bands,
 		max,
@@ -60,7 +66,7 @@
 
 <figure style:width="{width}px">
 	<figcaption class="chart-caption">
-		<Caption {title} wordings={wordings(title, caption, brief)} />
+		<Caption {title} wordings={wordings(title, caption, brief)} {from} bind:firstFits />
 	</figcaption>
 	<svg
 		{width}

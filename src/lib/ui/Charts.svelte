@@ -3,7 +3,7 @@
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, DiseaseId, RegionHistory, Telemetry } from '../sim/types';
 	import { loadDisease } from '../config';
-	import { harmSeries, harmTitle, harmViews, type HarmView } from './harmChart';
+	import { harmSeries, harmTitle, harmViews, shortCity, type HarmView } from './harmChart';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import AgeBarsChart from './charts/AgeBarsChart.svelte';
 	import LineChart from './charts/LineChart.svelte';
@@ -77,8 +77,8 @@
 
 	/**
 	 * Lasting harm per city (6.17), the card's own numbers over time, held all run for a disease that
-	 * counts harm so the row never moves. Where babies are counted too, a People / Babies switch picks
-	 * the view, each on its own axis; a new disease starts on People.
+	 * counts harm or babies so the row never moves. With both, a People / Babies switch picks the
+	 * view, each on its own axis; a new disease starts on its first view.
 	 */
 	const views = $derived(harmViews(disease, telemetry.peoplePerDot));
 	let harmView: HarmView = $state('people');
@@ -86,7 +86,7 @@
 		void disease.id;
 		harmView = 'people';
 	});
-	const view = $derived(views.includes(harmView) ? harmView : 'people');
+	const view = $derived(views.includes(harmView) ? harmView : (views[0] ?? 'people'));
 	const harmLines = $derived(
 		views.length === 0
 			? []
@@ -99,6 +99,9 @@
 				}))
 	);
 	const ofRecovered = $derived(loadDisease(disease.id as DiseaseId).waningMeanTicks === 0);
+	/** When any city's stack caption has to shorten, every city's does, so they read alike. */
+	let stackFits: Record<number, boolean> = $state({});
+	const stackShort = $derived(Object.values(stackFits).some((f) => f === false));
 
 	/** Charts' usual widths, and the gap between them. */
 	const WIDE = 240;
@@ -137,7 +140,9 @@
 			<StackedAreaChart
 				title="{p.name}: who has caught it so far"
 				caption={narrowRow ? `${p.name}: caught it` : undefined}
-				brief={p.name}
+				brief="{shortCity(p.name)}: caught it"
+				from={stackShort ? 1 : 0}
+				bind:firstFits={stackFits[p.id]}
 				days={p.days}
 				bands={p.bands}
 				max={p.max}
@@ -248,8 +253,10 @@
 		color: #c7d4e2;
 		background: transparent;
 		border: 1px solid #2a4562;
+		height: 100%;
+		box-sizing: border-box;
 		padding: 0 5px;
-		line-height: 14px;
+		line-height: 1;
 		cursor: pointer;
 	}
 	.switch button:first-child {

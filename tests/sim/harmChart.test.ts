@@ -5,17 +5,24 @@ import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
 import type { DiseaseConfig } from '../../src/lib/sim/types';
 import { wordings } from '../../src/lib/ui/charts/scale';
-import { harmSeries, harmTitle, harmViews } from '../../src/lib/ui/harmChart';
+import { harmSeries, harmTitle, harmViews, shortCity } from '../../src/lib/ui/harmChart';
 
 describe('the lasting harm chart (6.17)', () => {
-	it('has a People view for every disease that counts harm, and Babies only where babies are counted', () => {
+	it('has a People view where harm is counted and a Babies view where babies are, with a switch only for both', () => {
 		for (const d of Object.values(DISEASES) as DiseaseConfig[]) {
-			const views = harmViews(d, 100);
-			if ((d.lastingHarm?.counted.length ?? 0) === 0) expect(views, d.id).toEqual([]);
-			else expect(views, d.id).toEqual(d.babyHarm ? ['people', 'babies'] : ['people']);
+			const want = [
+				...((d.lastingHarm?.counted.length ?? 0) > 0 ? ['people'] : []),
+				...(d.babyHarm ? ['babies'] : [])
+			];
+			expect(harmViews(d, 100), d.id).toEqual(want);
 		}
 		expect(harmViews(DISEASES.smallpox, 100)).toEqual(['people', 'babies']);
+		expect(harmViews(DISEASES.ebola, 100)).toEqual(['people', 'babies']);
 		expect(harmViews(DISEASES.covid19, 100)).toEqual(['people']);
+		// Rubella and chickenpox count babies only: a Babies chart with no switch.
+		expect(harmViews(DISEASES.rubella, 100)).toEqual(['babies']);
+		expect(harmViews(DISEASES.chickenpox, 100)).toEqual(['babies']);
+		expect(harmViews(DISEASES.mumps, 100)).toEqual([]);
 		// Like the card, nothing at one person per dot (the guided village).
 		expect(harmViews(DISEASES.smallpox, 1)).toEqual([]);
 	});
@@ -41,6 +48,11 @@ describe('the lasting harm chart (6.17)', () => {
 			expect(babies[babies.length - 1]).toBeCloseTo(r.babies, 2);
 		});
 		expect(Math.max(...t.regions.map((r) => r.harmed[0]))).toBeGreaterThan(100);
+	});
+
+	it('shortens a city to its first word for a narrow caption', () => {
+		expect(shortCity('Harbour City')).toBe('Harbour');
+		expect(shortCity('Island')).toBe('Island');
 	});
 
 	it('tries the caption, then a shorter wording; an empty caption leaves just the controls', () => {

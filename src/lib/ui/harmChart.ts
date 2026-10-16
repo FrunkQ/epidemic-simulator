@@ -5,12 +5,21 @@ import type { DiseaseConfig, RegionHistory } from '../sim/types';
 export type HarmView = 'people' | 'babies';
 
 /**
- * Which views a disease's chart has. The chart shows the card's own numbers, so it follows the card:
- * none at one person per dot (the guided village), and babies only where the disease counts them.
+ * Which views a disease's chart has, in order (the first is shown first). The chart shows the card's
+ * own numbers, so it follows the card: none at one person per dot (the guided village), People where
+ * a harm is counted, and Babies where babies are. A switch appears only with both.
  */
 export function harmViews(disease: DiseaseConfig, peoplePerDot: number): HarmView[] {
-	if (peoplePerDot <= 1 || (disease.lastingHarm?.counted.length ?? 0) === 0) return [];
-	return disease.babyHarm ? ['people', 'babies'] : ['people'];
+	if (peoplePerDot <= 1) return [];
+	const views: HarmView[] = [];
+	if ((disease.lastingHarm?.counted.length ?? 0) > 0) views.push('people');
+	if (disease.babyHarm) views.push('babies');
+	return views;
+}
+
+/** A city's short name for a narrow caption: its first word ("Harbour City" -> "Harbour"). */
+export function shortCity(name: string): string {
+	return name.split(' ')[0] || name;
 }
 
 /**

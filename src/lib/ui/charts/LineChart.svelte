@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Caption from './Caption.svelte';
+	import { about } from '../harmText';
 	import type { Snippet } from 'svelte';
 	import { MARGIN, nearest, niceMax, short, wordings, type Line, type Reference } from './scale';
 
@@ -10,6 +11,10 @@
 		caption?: string;
 		/** A shorter wording still, used when the caption doesn't fit the chart's width. */
 		brief?: string;
+		/** Start from this wording (1: the shorter one), so a row of charts can shorten together. */
+		from?: number;
+		/** Whether the first wording fits, whatever `from` is. */
+		firstFits?: boolean;
 		/** Controls at the end of the header line, such as a view switch, kept within the chart's width. */
 		controls?: Snippet;
 		days: readonly number[];
@@ -35,6 +40,8 @@
 		title,
 		caption,
 		brief,
+		from = 0,
+		firstFits = $bindable(),
 		controls,
 		days,
 		lines,
@@ -132,7 +139,7 @@
 
 <figure style:width="{width}px">
 	<figcaption class="chart-caption">
-		<Caption {title} wordings={wordings(title, caption, brief)} {controls} />
+		<Caption {title} wordings={wordings(title, caption, brief)} {from} bind:firstFits {controls} />
 	</figcaption>
 	<svg
 		{width}
@@ -205,7 +212,11 @@
 		<div class="tip" role="status">
 			<b>Day {days[hover]}</b>
 			{#each lines as l (l.key)}
-				<span>{l.label}: {Math.round(l.values[hover] ?? 0).toLocaleString()}{unit ?? ''}</span>
+				<span
+					>{l.label}: {unit === '%'
+						? `${Math.round(l.values[hover] ?? 0).toLocaleString()}%`
+						: about(l.values[hover] ?? 0)}</span
+				>
 			{/each}
 		</div>
 	{/if}

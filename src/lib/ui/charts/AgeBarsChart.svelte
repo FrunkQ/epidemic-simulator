@@ -10,6 +10,10 @@
 		caption?: string;
 		/** A shorter wording still, used when the caption doesn't fit the chart's width. */
 		brief?: string;
+		/** Start from this wording (1: the shorter one), so a row of charts can shorten together. */
+		from?: number;
+		/** Whether the first wording fits, whatever `from` is. */
+		firstFits?: boolean;
 		/** One value per age band: 0-14, 15-64, 65+. People, or shares when `asShares` is set. */
 		values: readonly [number, number, number];
 		/** Show each band as its share of the total (e.g. who died, by age), in percent. */
@@ -22,6 +26,8 @@
 		title,
 		caption,
 		brief,
+		from = 0,
+		firstFits = $bindable(),
 		values,
 		asShares = false,
 		yLabel,
@@ -46,7 +52,7 @@
 
 <figure style:width="{width}px">
 	<figcaption class="chart-caption">
-		<Caption {title} wordings={wordings(title, caption, brief)} />
+		<Caption {title} wordings={wordings(title, caption, brief)} {from} bind:firstFits />
 	</figcaption>
 	<svg {width} {height} role="img" aria-label={title}>
 		<line

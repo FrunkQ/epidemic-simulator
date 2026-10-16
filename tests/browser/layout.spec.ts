@@ -215,6 +215,11 @@ async function chartRow(page: Page) {
 			const text = f.querySelector('.chart-caption .text') as HTMLElement | null;
 			if (text && text.scrollWidth > text.clientWidth + 0.5)
 				out.push(`chart ${i}: caption "${text.textContent}" is cut`);
+			// One line of text, in whatever font: the caption is as tall as its text, never taller.
+			const cap = f.querySelector('.chart-caption')?.getBoundingClientRect();
+			const line = text?.getBoundingClientRect();
+			if (cap && line && line.height > 0 && Math.abs(cap.height - line.height) > 0.5)
+				out.push(`chart ${i}: caption is ${cap.height}px for a ${line.height}px line`);
 			const controls = f.querySelector('.chart-caption .switch')?.getBoundingClientRect();
 			if (controls && (controls.left < box.left - 0.5 || controls.right > box.right + 0.5))
 				out.push(`chart ${i}: its switch leaves the chart`);
@@ -232,6 +237,19 @@ async function chartRow(page: Page) {
 	);
 }
 
+/** How each city's "caught it" caption is worded: the full title, the long caption or the short one. */
+async function stackCaptions(page: Page) {
+	return page
+		.locator('.charts figure', { has: page.getByRole('img', { name: /who has caught it/ }) })
+		.locator('.chart-caption .text')
+		.evaluateAll((els) =>
+			els.map((e) => {
+				const t = e.textContent ?? '';
+				return t.includes('so far') ? 'title' : /^\S+: /.test(t) ? 'short' : 'long';
+			})
+		);
+}
+
 for (const [w, h] of TARGETS) {
 	test(`${w}x${h}: with the lasting harm chart, the cards float and every chart caption and axis fits`, async ({
 		page
@@ -245,7 +263,18 @@ for (const [w, h] of TARGETS) {
 			const harm = page.locator('.charts figure', { has: page.getByRole('img', { name: /lasting harm/ }) });
 			await expect(harm, disease).toHaveCount(1);
 			expect(await chartRow(page), disease).toEqual([]);
+			// The cities' stacks shorten together, so they read alike.
+			expect(new Set(await stackCaptions(page)).size, disease).toBe(1);
 		}
+		// Rubella counts babies only: a babies chart with no switch.
+		await page.selectOption('select', 'rubella');
+		await settle(page);
+		expect(await docked(page), 'rubella').toBe(0);
+		await expect(page.getByRole('img', { name: /Babies harmed/ })).toHaveCount(1);
+		await expect(page.locator('.charts .switch')).toHaveCount(0);
+		expect(await chartRow(page), 'rubella').toEqual([]);
+		await page.selectOption('select', 'smallpox');
+		await settle(page);
 		// Smallpox counts babies: the switch shows them on their own axis, and keeps the layout.
 		const people = page.getByRole('button', { name: 'People', exact: true });
 		const babies = page.getByRole('button', { name: 'Babies', exact: true });
@@ -436,6 +465,7 @@ test('1280x720 in DejaVu Sans: every disease keeps the cards floating, its blurb
 		await page.selectOption('select', disease);
 		await settle(page);
 		expect(await docked(page), disease).toBe(0);
+		expect(new Set(await stackCaptions(page)).size, `${disease}: stack captions alike`).toBe(1);
 		const lines = await page.locator('p.blurb:not(.measure)').evaluate((p) => {
 			// Distinct line tops of the text shown (the screen-reader copy is clipped out of the layout).
 			const range = document.createRange();
