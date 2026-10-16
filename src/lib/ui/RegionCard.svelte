@@ -155,6 +155,10 @@
 	const EDGE = 8;
 	/** The least height of card body the details may lie over: about two lines of their text. */
 	const MIN_INSET = 40;
+	/** Where the line was when the details were last placed, so a scroll that leaves it put is ignored. */
+	let lineAt = { left: 0, top: 0 };
+	/** Whether the details scroll inside: they then take keyboard focus, so arrow keys reach the rest. */
+	let detailScrolls = $state(false);
 	/** Sent on the window when a card opens its details, so the others close theirs. */
 	const DETAIL_OPENED = 'harm-detail-opened';
 	function toggleDetail(which: 'harm' | 'babies', e: MouseEvent) {
@@ -211,11 +215,11 @@
 			});
 		let spot = tries.find((p) => clear(p.left, p.top));
 		if (!spot) {
-			const top = Math.max(ownHead?.getBoundingClientRect().bottom ?? card.top, 0);
-			const bottom = Math.min(card.bottom, innerHeight);
-			const inside = card.left >= 0 && card.right <= innerWidth;
-			const room = bottom - top;
-			const free =
+			// Inside the card's body, keeping the line in sight: below it, else between the header and
+			// it, else (too little room either side) over the whole body.
+			const head = Math.max(ownHead?.getBoundingClientRect().bottom ?? card.top, 0);
+			const foot = Math.min(card.bottom, innerHeight);
+			const free = (top: number, bottom: number) =>
 				others.every(
 					(r) => card.left >= r.right || card.right <= r.left || top >= r.bottom || bottom <= r.top
 				) &&
@@ -224,11 +228,18 @@
 					const dy = c.y - Math.max(top, Math.min(c.y, bottom));
 					return dx * dx + dy * dy >= c.r * c.r;
 				});
-			if (!inside || room < MIN_INSET || !free) return closeDetail(true);
+			const inset = [
+				{ top: Math.max(line.bottom + 4, head), bottom: foot },
+				{ top: head, bottom: Math.min(line.top - 4, foot) },
+				{ top: head, bottom: foot }
+			].find((r) => r.bottom - r.top >= MIN_INSET && free(r.top, r.bottom));
+			if (card.left < 0 || card.right > innerWidth || !inset) return closeDetail(true);
 			detailBox.style.width = `${card.width}px`;
-			detailBox.style.maxHeight = `${room}px`;
-			spot = { left: card.left, top };
+			detailBox.style.maxHeight = `${inset.bottom - inset.top}px`;
+			spot = { left: card.left, top: inset.top };
 		}
+		lineAt = { left: line.left, top: line.top };
+		detailScrolls = detailBox.scrollHeight > detailBox.clientHeight + 1;
 		if (spot.left !== detailAt.left || spot.top !== detailAt.top) detailAt = spot;
 	}
 	// Placed once the box is drawn (its size depends on its text).
@@ -303,9 +314,13 @@
 		const onopened = (e: Event) => {
 			if ((e as CustomEvent<number | string>).detail !== region.id) closeDetail(false);
 		};
-		// A scroll inside the details themselves (a long text) keeps them open.
+		// A scroll inside the details themselves (a long text) keeps them open, as does one that leaves
+		// their line where it was (the page settling back to the top as the cards float again).
 		const onscroll = (e: Event) => {
-			if (!(e.target instanceof Node) || !detailBox?.contains(e.target)) closeDetail(false);
+			if (e.target instanceof Node && detailBox?.contains(e.target)) return;
+			const r = detailFrom?.getBoundingClientRect();
+			if (r && Math.abs(r.left - lineAt.left) < 0.5 && Math.abs(r.top - lineAt.top) < 0.5) return;
+			closeDetail(false);
 		};
 		addEventListener('keydown', onkey);
 		addEventListener('pointerdown', ondown);
@@ -498,6 +513,8 @@
 		</p>
 	{/if}
 	{#if detail && detailText}
+		<!-- A region that scrolls must take focus so keyboard users can scroll it (WCAG 2.1.1). -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div
 			class="detail"
 			id={detailId}
@@ -506,6 +523,7 @@
 				? 'lasting harm'
 				: 'babies harmed or pregnancies lost'}, what is counted"
 			bind:this={detailBox}
+			tabindex={detailScrolls ? 0 : undefined}
 			style:left="{detailAt.left}px"
 			style:top="{detailAt.top}px"
 		>

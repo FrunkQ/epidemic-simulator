@@ -706,6 +706,7 @@ async function detailCovers(page: Page) {
 
 /** Opens every lasting-harm and babies line in turn: each must open, announce it and cover nothing. */
 async function everyLineOpens(page: Page, when: string) {
+	let scrolled = 0;
 	const lines = page.locator('section.card button.harm');
 	await expect(lines.first()).toBeVisible({ timeout: 60_000 });
 	for (let i = 0; i < (await lines.count()); i++) {
@@ -716,9 +717,25 @@ async function everyLineOpens(page: Page, when: string) {
 		await expect(line, `line ${i} ${when}`).toHaveAttribute('aria-expanded', 'true');
 		await expect(page.locator('section.card div.detail'), `line ${i} ${when}`).toBeVisible();
 		expect(await detailCovers(page), `line ${i} ${when}`).toEqual([]);
+		// The line that opened them stays in sight, so its focus ring shows where they came from.
+		const hidden = await line.evaluate((el) => {
+			const l = el.getBoundingClientRect();
+			const b = document.querySelector('section.card div.detail')!.getBoundingClientRect();
+			return (
+				b.left < l.right - 0.5 && b.right > l.left + 0.5 && b.top < l.bottom - 0.5 && b.bottom > l.top + 0.5
+			);
+		});
+		expect(hidden, `line ${i} ${when} is under its details`).toBe(false);
+		// Details that scroll inside take keyboard focus, so their scroll is reachable without a mouse.
+		const box = page.locator('section.card div.detail');
+		if (await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1)) {
+			scrolled++;
+			await expect(box, `line ${i} ${when} scrolls`).toHaveAttribute('tabindex', '0');
+		}
 		await page.keyboard.press('Escape');
 		await expect(page.locator('section.card div.detail')).toHaveCount(0);
 	}
+	return scrolled;
 }
 
 for (const [w, h] of TARGETS) {
@@ -813,6 +830,36 @@ test('docking for a short window keeps focus on the line whose details were open
 	await expect(page.locator('section.card div.detail')).toBeVisible();
 	expect(await detailCovers(page)).toEqual([]);
 });
+
+for (const which of ['harm', 'babies'] as const) {
+	test(`the ${which} line's open details reopen after docking and floating again, with the page scrolled`, async ({
+		page
+	}) => {
+		await open(page, 1280, 720);
+		await page.selectOption('select', 'smallpox');
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		const lines = () => page.locator('section.card').first().locator('button.harm');
+		await expect(lines().nth(1)).toBeVisible({ timeout: 90_000 });
+		await page.getByRole('button', { name: 'Paused' }).click();
+		const n = which === 'harm' ? 0 : 1;
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await settle(page);
+		expect(await docked(page)).toBe(1);
+		// Scrolled down a little, as reaching a lower line in the strip does.
+		await page.evaluate(() => scrollTo(0, 30));
+		await lines().nth(n).focus();
+		expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+		await page.keyboard.press('Enter');
+		await expect(lines().nth(n)).toHaveAttribute('aria-expanded', 'true');
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await settle(page);
+		expect(await docked(page)).toBe(0);
+		await expect(lines().nth(n)).toBeFocused();
+		await expect(lines().nth(n)).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('section.card div.detail')).toBeVisible();
+		expect(await detailCovers(page)).toEqual([]);
+	});
+}
 
 for (const [from, key] of [
 	['babies', 'Shift+Tab'],
