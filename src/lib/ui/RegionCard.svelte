@@ -1,5 +1,13 @@
+<script module lang="ts">
+	/**
+	 * Docking swaps the floating cards for the strip's, so each card is built again. A card's open
+	 * details, or focus on one of its lines, is carried across to its new copy.
+	 */
+	let carried: { region: Region['id']; which: 'harm' | 'babies'; open: boolean } | null = null;
+</script>
+
 <script lang="ts">
-	import { tick, untrack } from 'svelte';
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
@@ -42,6 +50,8 @@
 		/** A health policy slider moved; applies live, without a restart. */
 		onpolicy: (key: LivePolicyKey, value: number) => void;
 		onseed: () => void;
+		/** The cities' discs in window coordinates, which the harm details must not cover. */
+		discs?: () => { x: number; y: number; r: number }[];
 	}
 
 	let {
@@ -63,7 +73,8 @@
 		onvaccination,
 		onvaccine,
 		onpolicy,
-		onseed
+		onseed,
+		discs = () => []
 	}: Props = $props();
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
@@ -156,17 +167,47 @@
 		detail = null;
 		if (refocus) detailFrom?.focus();
 	}
-	// Kept inside the window: shifted left if it would run off the right, above the line if below.
-	$effect(() => {
-		if (!detailBox || !detailFrom) return;
+	/**
+	 * Where the details go: below their line, else above it, else beside the card, whichever first
+	 * stays inside the window and clear of every card's header and city disc, as cards are (6.17).
+	 * Covering another card's body is allowed. With nowhere clear they close, focus back on the line.
+	 */
+	function placeDetail() {
+		if (!detailBox || !detailFrom || !element) return;
 		const box = detailBox.getBoundingClientRect();
 		const line = detailFrom.getBoundingClientRect();
-		const left = Math.max(EDGE, Math.min(detailAt.left, innerWidth - EDGE - box.width));
-		const top =
-			line.bottom + 4 + box.height > innerHeight - EDGE
-				? Math.max(EDGE, line.top - 4 - box.height)
-				: line.bottom + 4;
-		if (left !== detailAt.left || top !== detailAt.top) detailAt = { left, top };
+		const card = element.getBoundingClientRect();
+		const { width: w, height: h } = box;
+		const clampX = (l: number) => Math.max(EDGE, Math.min(l, innerWidth - EDGE - w));
+		const clampY = (t: number) => Math.max(EDGE, Math.min(t, innerHeight - EDGE - h));
+		const tries = [
+			{ left: clampX(line.left), top: line.bottom + 4 },
+			{ left: clampX(line.left), top: line.top - 4 - h },
+			{ left: card.right + 4, top: clampY(line.top) },
+			{ left: card.left - 4 - w, top: clampY(line.top) }
+		];
+		const headers = [...document.querySelectorAll('section.card > header')].map((el) =>
+			el.getBoundingClientRect()
+		);
+		const cities = discs();
+		const clear = (l: number, t: number) =>
+			l >= EDGE - 0.5 &&
+			t >= EDGE - 0.5 &&
+			l + w <= innerWidth - EDGE + 0.5 &&
+			t + h <= innerHeight - EDGE + 0.5 &&
+			headers.every((r) => l >= r.right || l + w <= r.left || t >= r.bottom || t + h <= r.top) &&
+			cities.every((c) => {
+				const dx = c.x - Math.max(l, Math.min(c.x, l + w));
+				const dy = c.y - Math.max(t, Math.min(c.y, t + h));
+				return dx * dx + dy * dy >= c.r * c.r;
+			});
+		const spot = tries.find((p) => clear(p.left, p.top));
+		if (!spot) return closeDetail(true);
+		if (spot.left !== detailAt.left || spot.top !== detailAt.top) detailAt = spot;
+	}
+	// Placed once the box is drawn (its size depends on its text).
+	$effect(() => {
+		if (detailBox) untrack(placeDetail);
 	});
 	$effect(() => {
 		void disease.id;
@@ -179,10 +220,38 @@
 		void y;
 		void docked;
 		if (!untrack(() => detail) || !detailFrom) return;
-		const from = detailFrom;
+		tick().then(placeDetail);
+	});
+	let harmLine = $state<HTMLButtonElement>();
+	let babiesLine = $state<HTMLButtonElement>();
+	/**
+	 * The line that has focus. A focused element taken out of the page may lose focus before this card
+	 * is destroyed, so it is tracked here, and cleared only when focus leaves a line still on the page.
+	 */
+	let focusedLine: 'harm' | 'babies' | null = null;
+	function lineBlurred(e: FocusEvent) {
+		const el = e.currentTarget as HTMLElement;
+		setTimeout(() => {
+			if (el.isConnected && document.activeElement !== el) focusedLine = null;
+		});
+	}
+	onDestroy(() => {
+		const which = detail ?? focusedLine;
+		if (which) carried = { region: region.id, which, open: detail !== null };
+	});
+	// The new copy can mount before the old one is destroyed, so it looks once both have run.
+	onMount(() => {
 		tick().then(() => {
-			const r = from.getBoundingClientRect();
-			detailAt = { left: r.left, top: r.bottom + 4 };
+			if (carried?.region !== region.id) return;
+			const { which, open: wasOpen } = carried;
+			carried = null;
+			const line = which === 'harm' ? harmLine : babiesLine;
+			if (!line) return;
+			line.focus();
+			if (wasOpen) {
+				detailFrom = line;
+				detail = which;
+			}
 		});
 	});
 	$effect(() => {
@@ -375,6 +444,9 @@
 			{#if harm?.line}
 				<button
 					class="harm"
+					bind:this={harmLine}
+					onfocus={() => (focusedLine = 'harm')}
+					onblur={lineBlurred}
 					aria-expanded={detail === 'harm'}
 					aria-controls={detail === 'harm' ? detailId : undefined}
 					onclick={(e) => toggleDetail('harm', e)}>{harm.line}</button
@@ -384,6 +456,9 @@
 			{#if harm?.babies}
 				<button
 					class="harm"
+					bind:this={babiesLine}
+					onfocus={() => (focusedLine = 'babies')}
+					onblur={lineBlurred}
 					aria-expanded={detail === 'babies'}
 					aria-controls={detail === 'babies' ? detailId : undefined}
 					onclick={(e) => toggleDetail('babies', e)}>{harm.babies}</button
@@ -530,7 +605,8 @@
 	/* A line that opens its details: reads as text, with a dotted underline to show it opens. */
 	.counts .harm {
 		align-self: flex-start;
-		/* Taller to tap, with the same line spacing. */
+		/* Taller to tap, with the same line spacing; above the next row, which would cover its lower part. */
+		position: relative;
 		padding: 5px 0 5px 14px;
 		margin: -5px 0;
 		border: none;

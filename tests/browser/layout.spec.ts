@@ -658,3 +658,118 @@ test('the blurb\'s "more" overlay stays open on a new height alone', async ({ pa
 	await settle(page);
 	await expect(page.locator('#blurb-full')).toHaveCount(1);
 });
+
+/** What an open harm details box covers that it must not: another card's header, or a city's disc. */
+async function detailCovers(page: Page) {
+	const stage = (await page.locator('canvas').first().boundingBox())!;
+	const { discs } = await probe(page);
+	return page.evaluate(
+		({ discs, sx, sy }) => {
+			const box = document.querySelector('section.card div.detail');
+			if (!box) return [];
+			const b = box.getBoundingClientRect();
+			const own = box.closest('section.card')!;
+			const out: string[] = [];
+			document.querySelectorAll('section.card').forEach((card, i) => {
+				if (card === own) return;
+				const h = card.querySelector(':scope > header')!.getBoundingClientRect();
+				if (
+					b.left < h.right - 0.5 &&
+					b.right > h.left + 0.5 &&
+					b.top < h.bottom - 0.5 &&
+					b.bottom > h.top + 0.5
+				)
+					out.push(`covers card ${i}'s header`);
+			});
+			discs.forEach((d, k) => {
+				const cx = d.x + sx;
+				const cy = d.y + sy;
+				const nx = Math.min(Math.max(cx, b.left), b.right);
+				const ny = Math.min(Math.max(cy, b.top), b.bottom);
+				if (Math.hypot(nx - cx, ny - cy) < d.r - 0.5) out.push(`covers city ${k}`);
+			});
+			if (b.left < 0 || b.top < 0 || b.right > innerWidth || b.bottom > innerHeight)
+				out.push('leaves the window');
+			return out;
+		},
+		{ discs, sx: stage.x, sy: stage.y }
+	);
+}
+
+for (const [w, h] of TARGETS) {
+	test(`${w}x${h}: the harm details never cover a city or another card's header, on open, zoom out and New map`, async ({
+		page
+	}) => {
+		await open(page, w, h);
+		await page.selectOption('select', 'smallpox');
+		await settle(page);
+		const lines = page.locator('section.card button.harm');
+		await expect(lines.first()).toBeVisible({ timeout: 60_000 });
+		for (let i = 0; i < (await lines.count()); i++) {
+			const line = lines.nth(i);
+			await line.click();
+			await settle(page);
+			expect(await detailCovers(page), `line ${i}, on open`).toEqual([]);
+			// A click elsewhere closes the details, so the map moves by the wheel and the keyboard.
+			const stage = (await page.locator('canvas').first().boundingBox())!;
+			for (const step of ['wheel out', 'wheel out', 'Back to the start view', 'New map']) {
+				if (step === 'wheel out') {
+					await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2);
+					await page.mouse.wheel(0, 400);
+				} else {
+					await page.getByRole('button', { name: step }).focus();
+					await page.keyboard.press('Enter');
+				}
+				await settle(page);
+				expect(await detailCovers(page), `line ${i}, after ${step}`).toEqual([]);
+				// Closed for want of room (or by a new map's cards): open it again for the next step.
+				if ((await page.locator('section.card div.detail').count()) === 0 && (await lines.count()) > i) {
+					await lines.nth(i).click();
+					await settle(page);
+					expect(await detailCovers(page), `line ${i}, reopened after ${step}`).toEqual([]);
+				}
+			}
+			await page.keyboard.press('Escape');
+		}
+	});
+
+	test(`${w}x${h}: cards float again when the window's height shrinks and grows back`, async ({ page }) => {
+		await open(page, w, h);
+		expect(await docked(page)).toBe(0);
+		await page.setViewportSize({ width: w, height: 600 });
+		await settle(page);
+		await page.setViewportSize({ width: w, height: h });
+		await settle(page);
+		expect(await docked(page)).toBe(0);
+	});
+}
+
+test('docking for a short window keeps focus on the line whose details were open, and the details only where they fit', async ({
+	page
+}) => {
+	await open(page, 1280, 720);
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	const line = page.locator('section.card button.harm').first();
+	await expect(line).toBeVisible({ timeout: 60_000 });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await line.focus();
+	await page.keyboard.press('Enter');
+	await expect(page.locator('section.card div.detail')).toHaveCount(1);
+	await page.setViewportSize({ width: 1280, height: 600 });
+	await settle(page);
+	expect(await docked(page)).toBe(1);
+	// The card is built again in the strip: focus follows to the same line, and the details open again
+	// unless no place beside the line keeps clear of the headers and cities (here, 600 px tall, none does).
+	const after = page.locator('section.card button.harm').first();
+	await expect(after).toBeFocused();
+	expect(await detailCovers(page)).toEqual([]);
+	// Back to a tall window: the cards float, and the details open again from the keyboard.
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await settle(page);
+	expect(await docked(page)).toBe(0);
+	const floating = page.locator('section.card button.harm').first();
+	await expect(floating).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(page.locator('section.card div.detail')).toHaveCount(1);
+	expect(await detailCovers(page)).toEqual([]);
+});

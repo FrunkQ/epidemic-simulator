@@ -222,6 +222,33 @@ describe('lasting harm on the map (6.17)', () => {
 		expect(end(false)).toBeCloseTo(50 + 10 - (10 * 50) / 60, 9);
 	});
 
+	it('works out a trip group’s share over the whole pool, the dot’s other reinfected people included', () => {
+		// One dot: 30 recovered and 20 whose immunity wore off, 40 of the 50 counted as survivors. All
+		// 20 catch it again; 10 fall ill on a trip (an away group), 10 at home, and all end on one tick.
+		// Each holds 40/50 of a survivor while ill. The away group ends first, over the pool of 50:
+		// 40 - 10 x 0.8 + 10 = 42. Then the 10 at home, over 40 recovered plus themselves: 42 - 10 x
+		// 42/50 + 10 = 43.6. Leaving the home group out of the first pool (30 + 10) would give 42.
+		const disease = { ...loadDisease('covid19'), asymptomaticFraction: 0 };
+		const p = new People(new Agents(), disease, 100, false);
+		p.recovered[0] = 30;
+		p.susceptibleAgain[0] = 20;
+		p.illSurvivors[0] = 40;
+		const hooks = {
+			onInfected() {},
+			onIllnessEnd() {},
+			onSymptoms(i: number, _first: number, again: number, tick: number) {
+				if (again === 20) p.markAway(i, tick, 0, 10, 1);
+			}
+		};
+		const rng = new Rng(1);
+		p.infect(0, 20, 0, rng, hooks, false);
+		expect(p.illAgain[0] + p.silentAgain[0]).toBe(20);
+		for (let tick = 1; tick <= disease.silentTicks + disease.illTicks + 1; tick++)
+			p.advance(tick, rng, hooks, () => 0, true);
+		expect(p.illAgain[0] + p.silentAgain[0]).toBe(0);
+		expect(p.illSurvivors[0]).toBeCloseTo(43.6, 9);
+	});
+
 	it('counts people whose immunity has worn off, who still live with the harm', () => {
 		const sim = createSimulation(microcosm(), { seed: 2, diseaseId: 'covid19' });
 		sim.send({ type: 'seed', region: 0, count: 20 });
@@ -276,6 +303,16 @@ describe('what the card says about lasting harm (6.17)', () => {
 		expect(ebola.babies).toBe('Fewer than 1 baby harmed or pregnancy lost here');
 		expect(harmText(DISEASES.ebola, [1, 1, 1, 1, 1, 1], 1, true).babies).toBe(
 			'About 1 baby harmed or pregnancy lost here'
+		);
+	});
+
+	it('says none so far, not "at least 0", before anyone is harmed', () => {
+		expect(harmText(DISEASES.ebola, [0, 0, 0, 0, 0, 0], 0, true).line).toBe(
+			'of whom none so far live with lasting harm'
+		);
+		expect(harmText(DISEASES.covid19, [0], 0, false).line).toBe('nobody here lives with lasting harm so far');
+		expect(harmText(DISEASES.ebola, [0, 0, 0, 0, 0, 0], 0, true).babies).toBe(
+			'No babies harmed or pregnancies lost here so far'
 		);
 	});
 

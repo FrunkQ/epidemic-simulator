@@ -26,6 +26,7 @@ export function about(n: number): string {
  * `shown` is the count written after the qualifier (the largest of several harms), when it isn't `n`.
  */
 function counted(n: number, qualifier: 'about' | 'at least', shown = n): string {
+	if (n <= 0) return 'none so far';
 	if (about(n) === 'fewer than 1') return 'fewer than 1';
 	return `${qualifier} ${about(shown)}`;
 }
@@ -70,9 +71,14 @@ export function harmText(
 			? `up to ${about(sum)}`
 			: counted(several ? sum : most, several ? 'at least' : 'about', most);
 		const one = isOne(below ? sum : most);
-		line = ofRecovered
-			? `of whom ${amount} ${one ? 'lives' : 'live'} with lasting harm`
-			: `${amount} ${one ? 'person here lives' : 'people here live'} with lasting harm`;
+		if (sum <= 0)
+			line = ofRecovered
+				? 'of whom none so far live with lasting harm'
+				: 'nobody here lives with lasting harm so far';
+		else
+			line = ofRecovered
+				? `of whom ${amount} ${one ? 'lives' : 'live'} with lasting harm`
+				: `${amount} ${one ? 'person here lives' : 'people here live'} with lasting harm`;
 		hover.push(WHO_COUNTED);
 		if (!ofRecovered) hover.push(WANED_TOO);
 		harm.counted.forEach((h, k) => hover.push(`${capital(counted(harmed[k] ?? 0, 'about'))}: ${h.label}.`));
@@ -81,9 +87,11 @@ export function harmText(
 	return {
 		line,
 		hover: hover.join('\n'),
-		babies: baby
-			? `${capital(counted(babies, 'about'))} ${isOne(babies) ? 'baby harmed or pregnancy lost' : 'babies harmed or pregnancies lost'} here`
-			: null,
+		babies: !baby
+			? null
+			: babies <= 0
+				? 'No babies harmed or pregnancies lost here so far'
+				: `${capital(counted(babies, 'about'))} ${isOne(babies) ? 'baby harmed or pregnancy lost' : 'babies harmed or pregnancies lost'} here`,
 		babiesHover: baby ? [`${baby.label}.`, BABIES_WHERE, ...baby.notes].join('\n') : ''
 	};
 }
