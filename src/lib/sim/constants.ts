@@ -16,6 +16,8 @@ export const TICK_BUDGET_MS = 8;
 /** Fixed size of the dot pool. */
 export const MAX_AGENTS = 6000;
 /** Most diseases circulating at once (6.12); illness arrays have one block per disease. */
+/** Most lasting harms counted for one disease (6.17; Ebola has six). */
+export const MAX_HARMS = 8;
 export const MAX_DISEASES = 2;
 /** Smallest number of dots any population gets, however many people it has. */
 export const MIN_DOTS_PER_REGION = 30;

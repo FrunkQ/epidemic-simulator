@@ -5,6 +5,7 @@ import { SpatialGrid } from './grid';
 import { Rng } from './rng';
 import { breakthroughSevereProtection, defaultVaccine, vaccineKey } from '../config/vaccines';
 import { perSymptomaticBands } from '../config/diseases';
+import { PREGNANCY_YEARS, WEEKS_PER_YEAR } from '../config/derived';
 import { originOf } from './transit';
 import {
 	type Bands,
@@ -79,6 +80,20 @@ function bands(config: DiseaseConfig, banded: DiseaseConfig['mortalityByAge'], a
 	return banded ? perSymptomaticBands(banded, config.asymptomaticFraction) : [allAges, allAges, allAges];
 }
 
+/**
+ * Babies harmed or lost per person aged 15-64 whose illness ends, per unit of pregnant share
+ * (6.17). The pregnant share counts the whole pregnancy, so a risk covering only its first weeks
+ * applies to that part of it; a risk per infection also covers silent infections, which never
+ * reach the end of an illness, so it is scaled up to every case with symptoms.
+ */
+export function babyRiskPerCase(config: DiseaseConfig): number {
+	const harm = config.babyHarm;
+	if (!harm) return 0;
+	const window = harm.weeks ? harm.weeks.value / WEEKS_PER_YEAR / PREGNANCY_YEARS : 1;
+	const perCase = harm.perInfection ? 1 / (1 - config.asymptomaticFraction.value) : 1;
+	return harm.risk.value * Math.min(1, window) * perCase;
+}
+
 /** Convert a disease from config (days) to engine units (ticks), once, at load. */
 export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration): DiseaseRuntime {
 	const days = (d: number) => Math.max(1, Math.round(d * TICKS_PER_DAY));
@@ -104,6 +119,9 @@ export function toRuntime(config: DiseaseConfig, calibration: DiseaseCalibration
 		waningMeanTicks: halfLifeTicks(config.waningDays.value),
 		afterInfectionSevere: after ? breakthrough(after.infection.value, after.severe.value) : 0,
 		vaccines: def ? [def, ...others].map(toVaccineRuntime) : [{ ...NO_VACCINE }],
+		harmRates: (config.lastingHarm?.counted ?? []).map((h) => [...h.rate.value] as Bands),
+		harmVaccinatedFactor: config.lastingHarm?.fullyVaccinated?.value ?? 1,
+		babyRiskPerCase: babyRiskPerCase(config),
 		beta: calibration.beta,
 		transmissionRadius: calibration.transmissionRadius
 	};

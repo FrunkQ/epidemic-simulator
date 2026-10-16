@@ -1,6 +1,6 @@
 import { Agents } from './agents';
 import type { People } from './people';
-import { HISTORY_DAYS, MAX_DISEASES } from './constants';
+import { HISTORY_DAYS, MAX_DISEASES, MAX_HARMS } from './constants';
 import {
 	AGE_CHANNELS,
 	HISTORY_CHANNELS,
@@ -62,6 +62,17 @@ export class TelemetryCounters {
 	 * where they happened: a traveller's at the trip's origin (6.8).
 	 */
 	readonly died: Int32Array;
+	/**
+	 * Expected people here now living with each counted lasting harm (6.17), per region plus the
+	 * in-transit bucket ((regionCount + 1) x MAX_HARMS): each dot's survivors x the rate for its age
+	 * band. Worked out in recount, so it follows the people wherever they move.
+	 */
+	readonly harmed: Float64Array;
+	/** Expected babies harmed or lost per region and disease slot (regionCount x MAX_DISEASES). */
+	readonly babies: Float64Array;
+	/** The counted harms' rates by band, and the share left for a fully vaccinated person (6.17). */
+	private harmRates: Bands[] = [];
+	private harmVaccinated = 1;
 	private readonly history: Float64Array;
 	private readonly ageHistory: Float64Array;
 	/** Expected patients by the tick their symptoms started: a ring of bedRing ticks x regions x bands. */
@@ -81,6 +92,8 @@ export class TelemetryCounters {
 		this.patients = new Float64Array(regionCount);
 		this.agesInHospital = new Float64Array(regionCount * BANDS);
 		this.died = new Int32Array(regionCount * MAX_DISEASES * BANDS);
+		this.harmed = new Float64Array((regionCount + 1) * MAX_HARMS);
+		this.babies = new Float64Array(regionCount * MAX_DISEASES);
 		this.history = new Float64Array(HISTORY_DAYS * regionCount * CHANNELS);
 		this.ageHistory = new Float64Array(HISTORY_DAYS * regionCount * A_SLOTS);
 		this.historyDay = new Int32Array(HISTORY_DAYS);
@@ -92,9 +105,11 @@ export class TelemetryCounters {
 	 * cities and every person is counted exactly once.
 	 */
 	recount(agents: Agents, people: People): void {
-		const { counts, ages } = this;
+		const { counts, ages, harmed, harmRates } = this;
 		counts.fill(0);
 		ages.fill(0);
+		harmed.fill(0);
+		const harms = harmRates.length;
 		const n = agents.activeCount;
 		for (let i = 0; i < n; i++) {
 			let r = agents.region[i];
@@ -115,6 +130,11 @@ export class TelemetryCounters {
 			counts[base + C_SILENT] += silent;
 			counts[base + C_SYMPTOMATIC] += ill;
 			counts[base + C_RECOVERED] += rec;
+			const survivors = people.illSurvivors[i];
+			if (harms > 0 && survivors > 0) {
+				const factor = p === Protection.FULL ? this.harmVaccinated : 1;
+				for (let h = 0; h < harms; h++) harmed[r * MAX_HARMS + h] += survivors * harmRates[h][band] * factor;
+			}
 			if (r === this.regionCount) continue;
 
 			const ab = r * A_SLOTS + band;
@@ -202,6 +222,34 @@ export class TelemetryCounters {
 		this.died[(region * MAX_DISEASES + slot) * BANDS + band] += people;
 	}
 
+	/** Set the counted harms for this run (6.17). */
+	setHarms(rates: Bands[], fullyVaccinated: number): void {
+		this.harmRates = rates.slice(0, MAX_HARMS);
+		this.harmVaccinated = fullyVaccinated;
+	}
+
+	addBabies(region: number, slot: number, babies: number): void {
+		this.babies[region * MAX_DISEASES + slot] += babies;
+	}
+
+	/** Expected people living with each counted harm in region r (r = regionCount: in transit), as of the last recount. */
+	harms(r: number): number[] {
+		return Array.from(this.harmed.subarray(r * MAX_HARMS, r * MAX_HARMS + this.harmRates.length));
+	}
+
+	/** The lasting harm headline (6.17): the largest counted harm, since one person can have several. */
+	harmHeadline(r: number): number {
+		let most = 0;
+		for (let h = 0; h < this.harmRates.length; h++) most = Math.max(most, this.harmed[r * MAX_HARMS + h]);
+		return most;
+	}
+
+	babiesHarmed(region: number): number {
+		let total = 0;
+		for (let s = 0; s < MAX_DISEASES; s++) total += this.babies[region * MAX_DISEASES + s];
+		return total;
+	}
+
 	/** Deaths so far in a region, in people, by age band, over every disease. */
 	deathsByAge(region: number): Bands {
 		const out: Bands = [0, 0, 0];
@@ -232,6 +280,8 @@ export class TelemetryCounters {
 			history[h + 4] = counts[b + C_UNPROTECTED] + counts[b + C_PARTIAL];
 			history[h + 5] = Math.round(this.patients[r] * HOSPITAL_SCALE);
 			history[h + 6] = Math.round(pressure[r] * 1000);
+			history[h + 7] = Math.round(this.harmHeadline(r) * HOSPITAL_SCALE);
+			history[h + 8] = Math.round(this.babiesHarmed(r) * HOSPITAL_SCALE);
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {

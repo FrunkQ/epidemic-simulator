@@ -28,6 +28,8 @@ export interface HealthPolicy {
 	testingCooldownDays: Sourced;
 	/** How often people travel, relative to the default trip rates (1 = normal). Live. */
 	travelFrequency: Sourced;
+	/** Share of people aged 15-64 pregnant at any time, for harm to babies (6.17). A slider from step 4. */
+	pregnantShare: Sourced;
 }
 
 /** The fields a step 2 card can change during a run, with their slider ranges and explainers. */
@@ -90,7 +92,8 @@ export const DEFAULT_POLICY: HealthPolicy = {
 		value: 1,
 		sources: [],
 		provisional: 'A relative setting: 1 means the default trip rates, which are not yet sourced.'
-	}
+	},
+	pregnantShare: POPULATION.pregnantShare
 };
 
 /**
@@ -101,6 +104,7 @@ export const DEFAULT_POLICY: HealthPolicy = {
 export const ENGLAND_POLICY: HealthPolicy = {
 	...DEFAULT_POLICY,
 	ageMix: POPULATION.ukAgeMix,
+	pregnantShare: POPULATION.ukPregnantShare,
 	hospitalBedsPerThousand: {
 		value: ENGLAND_ACUTE_BEDS_PER_1000,
 		sources: ['nhs-england-kh03-q2-2023-24', 'ons-england-pop-mid2023']

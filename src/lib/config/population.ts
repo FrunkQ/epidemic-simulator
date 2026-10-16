@@ -1,5 +1,5 @@
 import type { Banded, Bands, Sourced } from '../sim/types';
-import { ageMixOf } from './derived';
+import { ageMixOf, pregnantShareOf } from './derived';
 
 export interface PopulationConfig {
 	/** Share of people in each age band (0-14, 15-64, 65+); the general default is the EU. */
@@ -9,6 +9,13 @@ export interface PopulationConfig {
 	/** A young and an old country (Nigeria about 3% aged 65+, Japan about 30%), for the age lesson. */
 	youngAgeMix: Sourced<Bands>;
 	oldAgeMix: Sourced<Bands>;
+	/**
+	 * Share of people aged 15-64 pregnant at any time (6.17), from the birth rate (EU); an area
+	 * value, a slider from step 4.
+	 */
+	pregnantShare: Sourced;
+	/** The same for the UK, for the England (NHS) preset. */
+	ukPregnantShare: Sourced;
 	/** Everyday deaths from all causes, per person per year, by band (EU-27). */
 	backgroundDeathRate: Banded;
 	/** The same for the UK, kept for the step 4 country preset. */
@@ -20,6 +27,26 @@ export const POPULATION: PopulationConfig = {
 	ukAgeMix: { value: ageMixOf('UK'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
 	youngAgeMix: { value: ageMixOf('Nigeria'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
 	oldAgeMix: { value: ageMixOf('Japan'), sources: ['worldbank-pop-0014', 'worldbank-pop-65up'] },
+	pregnantShare: {
+		value: pregnantShareOf('EU'),
+		sources: [
+			'worldbank-births-2024',
+			'worldbank-pop-0014',
+			'worldbank-pop-65up',
+			'cdc-nchs-gestation-2022',
+			'hse-0-to-8-weeks'
+		]
+	},
+	ukPregnantShare: {
+		value: pregnantShareOf('UK'),
+		sources: [
+			'worldbank-births-2024',
+			'worldbank-pop-0014',
+			'worldbank-pop-65up',
+			'cdc-nchs-gestation-2022',
+			'hse-0-to-8-weeks'
+		]
+	},
 	// EU-27 2023: 19,177 / 699,423 / 4,137,597 deaths over 66,433,028 / 285,755,090 / 95,507,232 people.
 	backgroundDeathRate: {
 		value: [0.000289, 0.00245, 0.0433],

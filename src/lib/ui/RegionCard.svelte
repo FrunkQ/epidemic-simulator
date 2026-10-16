@@ -9,6 +9,7 @@
 	import { COLOURS } from '../sim/render';
 	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';
 	import LevelGauge from './charts/LevelGauge.svelte';
+	import { harmText } from './harmText';
 
 	interface Props {
 		region: Region;
@@ -118,6 +119,13 @@
 	let unprotected = $derived(unvaccinatedShare(region.vaccinatedFull, region.vaccinatedPartial, vaccine));
 	let fullOverall = $derived(overallSevere(vaccine.fullInfection, vaccine.fullSevere));
 	let partialOverall = $derived(overallSevere(vaccine.partialInfection, vaccine.partialSevere));
+	/**
+	 * Lasting harm and babies (6.17). Hidden at one person per dot (the guided village) until a
+	 * chapter narrates it.
+	 */
+	let harm = $derived(
+		t && peoplePerDot > 1 ? harmText(disease, t.harmed, t.babies, runtime.waningMeanTicks === 0) : null
+	);
 </script>
 
 <section
@@ -269,7 +277,14 @@
 				{incubatingOnly ? 'infected, not ill yet' : 'spreading unaware'}</span
 			>
 			<span><i style:background={COLOURS.symptomatic}></i>{people(t.counts.symptomatic)} ill</span>
+			<span><i style:background={COLOURS.recovered}></i>{people(t.counts.recovered)} recovered</span>
+			{#if harm?.line}
+				<span class="harm" title={harm.hover}>{harm.line}</span>
+			{/if}
 			<span><i style:background={COLOURS.deceased}></i>{t.deaths.toLocaleString()} died</span>
+			{#if harm?.babies}
+				<span class="harm" title={harm.babiesHover}>{harm.babies}</span>
+			{/if}
 		</p>
 	{/if}
 	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
@@ -390,6 +405,11 @@
 		gap: 1px;
 		margin: 6px 0 0;
 		color: #c7d4e2;
+	}
+	.counts .harm {
+		padding-left: 14px;
+		color: #9fb3c8;
+		cursor: help;
 	}
 	.counts i {
 		display: inline-block;

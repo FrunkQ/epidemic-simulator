@@ -69,6 +69,12 @@ export class People {
 	/** The vaccine worked: can't catch it until it wanes. */
 	readonly vaccineImmune: Int32Array;
 	readonly recovered: Int32Array;
+	/**
+	 * People in the dot, alive, who have survived an illness with symptoms at least once (6.17): the
+	 * base lasting harm is counted on. An expected value, so moving one person moves their expected
+	 * share of it with no random draw; it never exceeds the people who have had it.
+	 */
+	readonly illSurvivors: Float64Array;
 	readonly dead: Int32Array;
 	/** Infected and not yet ill (will get symptoms). */
 	readonly silentSymptomatic: Int32Array;
@@ -129,6 +135,7 @@ export class People {
 		this.susceptibleAgain = counts();
 		this.vaccineImmune = counts();
 		this.recovered = counts();
+		this.illSurvivors = new Float64Array(cap);
 		this.dead = counts();
 		this.silentSymptomatic = counts();
 		this.silentAsymptomatic = counts();
@@ -449,9 +456,15 @@ export class People {
 		hooks: PeopleHooks,
 		deathChance: (i: number, again: boolean, region: number) => number
 	): void {
-		let died = 0;
-		if (first > 0) died += rng.binomial(first, deathChance(i, false, region));
-		if (twice > 0) died += rng.binomial(twice, deathChance(i, true, region));
+		const diedFirst = first > 0 ? rng.binomial(first, deathChance(i, false, region)) : 0;
+		const diedTwice = twice > 0 ? rng.binomial(twice, deathChance(i, true, region)) : 0;
+		const died = diedFirst + diedTwice;
+		// Reinfected people who die take their expected share of earlier survivors with them.
+		if (diedTwice > 0 && this.illSurvivors[i] > 0) {
+			const hadIt = this.recovered[i] + this.susceptibleAgain[i] + twice;
+			this.illSurvivors[i] -= (diedTwice * this.illSurvivors[i]) / Math.max(hadIt, this.illSurvivors[i]);
+		}
+		this.illSurvivors[i] += first - diedFirst;
 		this.dead[i] += died;
 		this.recovered[i] += first + twice - died;
 		hooks.onIllnessEnd(i, first + twice, died, region);
@@ -493,6 +506,16 @@ export class People {
 		buf[f] = 0;
 	}
 
+	/** One person who has had it leaves `from` for `to`: they take the dot's survivor share with them. */
+	private moveSurvivorShare(from: number, to: number): void {
+		const have = this.illSurvivors[from];
+		if (have <= 0) return;
+		const hadIt = this.recovered[from] + this.susceptibleAgain[from];
+		const share = hadIt > 0 ? Math.min(1, have / hadIt) : 0;
+		this.illSurvivors[from] -= share;
+		this.illSurvivors[to] += share;
+	}
+
 	/**
 	 * Move one living person who isn't ill, picked at random, from dot `from` to dot `to`, with
 	 * their state and their place on the clock. Returns false if `from` has nobody to give.
@@ -503,6 +526,8 @@ export class People {
 		let u = rng.int(total);
 		for (const counts of [this.susceptible, this.susceptibleAgain, this.vaccineImmune, this.recovered]) {
 			if (u < counts[from]) {
+				// Someone who has had it carries their expected share of the dot's survivors (6.17).
+				if (counts === this.recovered || counts === this.susceptibleAgain) this.moveSurvivorShare(from, to);
 				counts[from]--;
 				counts[to]++;
 				return true;

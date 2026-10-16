@@ -9,7 +9,13 @@ import { DEFAULT_POLICY, ENGLAND_POLICY } from '../../src/lib/config/healthPolic
 import { POPULATION } from '../../src/lib/config/population';
 import { MICROCOSM_COVERAGE } from '../../src/lib/config/scenarios';
 import { vaccineKey } from '../../src/lib/config/vaccines';
-import type { Sourced, Vaccine, VaccineDeathRate } from '../../src/lib/sim/types';
+import type {
+	BabyHarmConfig,
+	LastingHarmConfig,
+	Sourced,
+	Vaccine,
+	VaccineDeathRate
+} from '../../src/lib/sim/types';
 
 /*
  * Walks all research config, including inside each disease's vaccine list, and returns every
@@ -83,6 +89,35 @@ export function walk(): {
 						seen.add(nv);
 						sourced.push({ key: `${key}.${nk}`, value: nv });
 					} else bare.push(`${key}.${nk}`);
+			} else if (k === 'lastingHarm' && v && typeof v === 'object') {
+				// Lasting harm (6.17): each counted rate under its key, e.g. ebola.lastingHarm.jointPain.
+				const harm = v as LastingHarmConfig;
+				for (const h of harm.counted) {
+					seen.add(h.rate);
+					sourced.push({ key: `${key}.${h.key}`, value: h.rate as unknown as Sourced<number | null> });
+				}
+				for (const [ck, cv] of Object.entries(harm.context ?? {})) {
+					seen.add(cv);
+					sourced.push({ key: `${key}.context.${ck}`, value: cv as unknown as Sourced<number | null> });
+				}
+				if (harm.fullyVaccinated) {
+					seen.add(harm.fullyVaccinated);
+					sourced.push({ key: `${key}.fullyVaccinated`, value: harm.fullyVaccinated });
+				}
+			} else if (k === 'babyHarm' && v && typeof v === 'object') {
+				const baby = v as BabyHarmConfig;
+				for (const [ck, cv] of Object.entries(baby.context ?? {})) {
+					seen.add(cv);
+					sourced.push({ key: `${key}.context.${ck}`, value: cv as unknown as Sourced<number | null> });
+				}
+				for (const [nk, nv] of [
+					['risk', baby.risk],
+					['weeks', baby.weeks]
+				] as const)
+					if (nv) {
+						seen.add(nv);
+						sourced.push({ key: `${key}.${nk}`, value: nv });
+					}
 			} else if (k === 'vaccines' && Array.isArray(v)) {
 				for (const vaccine of v as Vaccine[]) walkVaccine(`${key}.${vaccineKey(vaccine)}`, '', vaccine);
 			} else if (isSourced(v)) {

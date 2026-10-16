@@ -587,3 +587,127 @@ export const FLECK_DERDERIAN_UNTREATED_CASES = 136;
 export const HARTLEY_2023 = { year: 2023, trials: 2 };
 /** Godfred-Cato 2020: deaths among treated bubonic plague cases, for the "curable today" line. */
 export const PLAGUE_BUBONIC_TREATED_CFR = 0.142;
+
+// --- Lasting harm (research/lasting-harm.md, as corrected by lasting-harm-verify.md) ---
+
+/** GBD Long COVID Collaborators 2022, Table 3: long COVID 12 months after symptoms, % of survivors. */
+export const GBD_LONG_COVID_12M = { under20: 0.3, women20up: 1.7, men20up: 0.8, all: 0.9 };
+/** World Bank 2025, European Union: women and everyone aged 15-64 and 65+. */
+export const WORLD_BANK_EU_BY_SEX_2025 = {
+	women15to64: 141_911_542,
+	all15to64: 285_788_232,
+	women65up: 57_277_814,
+	all65up: 101_245_577
+};
+const EU_WOMEN_15_64 = WORLD_BANK_EU_BY_SEX_2025.women15to64 / WORLD_BANK_EU_BY_SEX_2025.all15to64;
+const EU_WOMEN_65_UP = WORLD_BANK_EU_BY_SEX_2025.women65up / WORLD_BANK_EU_BY_SEX_2025.all65up;
+/** GBD's women and men aged 20 and over, mixed by a band's share of women. */
+const longCovidAdults = (women: number) =>
+	(women * GBD_LONG_COVID_12M.women20up + (1 - women) * GBD_LONG_COVID_12M.men20up) / 100;
+/** Long COVID a year on, per survivor: GBD's under-20 row for 0-14, its adult rows sex-weighted for the rest. */
+export const LONG_COVID_BANDS: [number, number, number] = [
+	GBD_LONG_COVID_12M.under20 / 100,
+	longCovidAdults(EU_WOMEN_15_64),
+	longCovidAdults(EU_WOMEN_65_UP)
+];
+export const LONG_COVID_WOMEN_SHARES = { band15to64: EU_WOMEN_15_64, band65up: EU_WOMEN_65_UP };
+/** Watanabe 2023: two doses, odds ratio of long COVID against no vaccination. */
+export const WATANABE_TWO_DOSE_OR = 0.64;
+
+/** CDC, before the measles vaccine: people left disabled by measles encephalitis a year, and people infected. */
+export const CDC_MEASLES_PREVACCINE = {
+	disabledPerYear: 1000,
+	infectedPerYear: [3_000_000, 4_000_000] as const
+};
+/** Lasting disability after measles encephalitis, per infection (the sim's measles red dot is every infection). */
+export const MEASLES_LASTING_DISABILITY =
+	CDC_MEASLES_PREVACCINE.disabledPerYear / midpoint(...CDC_MEASLES_PREVACCINE.infectedPerYear);
+
+/** WHO: "One in 200 infections leads to irreversible paralysis". Pink Book: still weak at 12 months in two-thirds. */
+export const POLIO_PARALYSIS = { perInfection: 1 / 200, stillAt12Months: 2 / 3 };
+/**
+ * Lasting paralysis per surviving polio red dot. Red dots are the `redShare` of infections with
+ * meningitis or paralysis, of whom `death` die: paralysed survivors (paralysis less the deaths)
+ * still weak at 12 months, over the red dots who survive. WHO's reading alone (no two-thirds) gives
+ * `whoOnly`.
+ */
+export function polioLastingParalysis(redShare: number, death: number) {
+	const paralysedSurvivors = POLIO_PARALYSIS.perInfection - redShare * death;
+	const survivors = redShare * (1 - death);
+	return {
+		rate: (paralysedSurvivors * POLIO_PARALYSIS.stillAt12Months) / survivors,
+		whoOnly: paralysedSurvivors / survivors
+	};
+}
+
+/** Fenner 1988 p. 49: "permanent facial pockmarks occurred in 65-80% of survivors". */
+export const SMALLPOX_POCKMARKS_RANGE = [0.65, 0.8] as const;
+export const SMALLPOX_POCKMARKS = midpoint(...SMALLPOX_POCKMARKS_RANGE);
+/** Fenner 1988 p. 50 (Rao): 24 lost the sight of one eye and 1 of both, among 5,459 survivors. */
+export const SMALLPOX_BLINDNESS = { oneEye: 24, bothEyes: 1, survivors: 5459 };
+export const SMALLPOX_BLIND_SHARE =
+	(SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes) / SMALLPOX_BLINDNESS.survivors;
+/** Fenner 1988 p. 54, Table 1.15 (Rao): fetal deaths plus women who died undelivered, of all pregnant women ill. */
+export const SMALLPOX_PREGNANCY = { lost: 120, women: 384 };
+
+/**
+ * Sneller 2019 (PREVAIL III), abstract: % of Ebola survivors and of uninfected close contacts with
+ * each problem, a median of 358 days after symptoms began. The sim counts the excess.
+ */
+export const SNELLER_2019 = {
+	jointPain: [47.5, 17.5],
+	memoryLoss: [29.2, 4.8],
+	uveitis: [26.4, 12.1],
+	musclePain: [23.1, 10.1],
+	tiredness: [18.4, 6.3],
+	headache: [47.6, 35.6]
+} as const;
+export const ebolaExcess = (k: keyof typeof SNELLER_2019) => (SNELLER_2019[k][0] - SNELLER_2019[k][1]) / 100;
+/** Sneller 2019: uveitis a year later, survivors against contacts (hover only). */
+export const SNELLER_UVEITIS_YEAR_1 = [33.3, 15.4] as const;
+
+/** CDC MMWR 2001: congenital rubella syndrome in 20% of infants born to women infected in the first 20 weeks. */
+export const RUBELLA_CRS = { risk: 0.2, weeks: 20 };
+/** Ahn 2016: congenital varicella syndrome after chickenpox at any time in pregnancy. */
+export const CHICKENPOX_CVS = 0.0059;
+/** Kayem 2021: pregnancies lost to Ebola (foetal losses). */
+export const EBOLA_FETAL_LOSS = 0.769;
+
+/**
+ * CDC NCHS NVSR 73(1), 2022: singleton births by weeks of pregnancy, % (Table 1 and the page-6
+ * table), each placed at its middle week (<34 at 31; a convention, worth under 1% of the result).
+ */
+export const NCHS_GESTATION_2022: readonly (readonly [number, number])[] = [
+	[31, 2.16],
+	[35.5, 6.51],
+	[37.5, 11.63],
+	[38.5, 17.45],
+	[39.5, 38.84],
+	[40.5, 18.26],
+	[41.5, 4.88],
+	[42.5, 0.27]
+];
+export const MEAN_GESTATION_WEEKS =
+	NCHS_GESTATION_2022.reduce((a, [w, pct]) => a + w * pct, 0) /
+	NCHS_GESTATION_2022.reduce((a, [, pct]) => a + pct, 0);
+/** HSE: weeks of pregnancy count from the last period, and "in the first 2 weeks or so, you are not pregnant". */
+export const WEEKS_BEFORE_CONCEPTION = 2;
+export const WEEKS_PER_YEAR = DAYS_PER_YEAR / 7;
+/** Years a birth spends pregnant: the mean pregnancy less the weeks before conception (about 0.71). */
+export const PREGNANCY_YEARS = (MEAN_GESTATION_WEEKS - WEEKS_BEFORE_CONCEPTION) / WEEKS_PER_YEAR;
+
+/** World Bank SP.DYN.CBRT.IN, 2024: births per 1,000 people a year. */
+export const WORLD_BANK_BIRTHS_2024 = {
+	EU: 7.90904617792167,
+	UK: 9.892,
+	Nigeria: 32.493,
+	Japan: 5.7
+} as const;
+/**
+ * Share of people aged 15-64 who are pregnant at any time: births per person aged 15-64, times the
+ * years each birth was pregnant. Dividing by everyone aged 15-64 folds in the share of women, so the
+ * model needs no sex. Pregnancies that end before a birth are left out, so it is slightly low.
+ */
+export function pregnantShareOf(place: keyof typeof WORLD_BANK_BIRTHS_2024): number {
+	return (WORLD_BANK_BIRTHS_2024[place] / 1000 / ageMixOf(place)[1]) * PREGNANCY_YEARS;
+}
