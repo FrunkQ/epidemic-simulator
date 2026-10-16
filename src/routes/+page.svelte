@@ -66,7 +66,6 @@
 	/** When the cards docked: the window, the floating stage's height and the stage's top. */
 	let dockedAt = { width: 0, height: 0, stage: 0, top: 0 };
 	let stageElement: HTMLElement | undefined = $state();
-	let mapCanvas: SimCanvas | undefined = $state();
 	/** The docked cards' strip while it is on the page. */
 	let stripElement: HTMLElement | undefined = $state();
 	/** Set by a disease or map change: the next frame checks again whether the cards still dock. */
@@ -108,7 +107,6 @@
 				});
 			size = { width: stageElement.clientWidth, height: stageElement.clientHeight };
 			frame(resized);
-			mapCanvas?.redraw();
 		});
 	}
 
@@ -329,7 +327,16 @@
 	if (import.meta.env.VITE_LAYOUT_PROBE === '1') {
 		const probe = window as unknown as {
 			__layoutProbe: () => unknown;
-			__layoutLog: { scale: number; docked: boolean; frame: number }[];
+			__layoutLog: {
+				scale: number;
+				docked: boolean;
+				frame: number;
+				drawn: [number, number];
+				bitmap: [number, number];
+				box: [number, number];
+				dpr: number;
+				window: [number, number];
+			}[];
 		};
 		probe.__layoutProbe = () => ({
 			stage: { ...size },
@@ -352,9 +359,21 @@
 		probe.__layoutLog = [];
 		const render = sim.render.bind(sim);
 		sim.render = (...args) => {
-			// Every map drawn in one frame has the same timeline time; the last one is painted.
+			// Every map drawn in one frame has the same timeline time; the last one is painted. Each
+			// entry also has the size the map was drawn for, the canvas's pixels and its box on the page.
 			const frame = Number(document.timeline.currentTime ?? 0);
-			probe.__layoutLog.push({ scale: sim.view.scale, docked: !!stripElement, frame });
+			const [ctx, drawn] = args;
+			const canvas = ctx.canvas as HTMLCanvasElement;
+			probe.__layoutLog.push({
+				scale: sim.view.scale,
+				docked: !!stripElement,
+				frame,
+				drawn: [drawn.width, drawn.height],
+				bitmap: [canvas.width, canvas.height],
+				box: [canvas.clientWidth, canvas.clientHeight],
+				dpr: window.devicePixelRatio || 1,
+				window: [window.innerWidth, window.innerHeight]
+			});
 			render(...args);
 		};
 	}
@@ -419,7 +438,6 @@
 
 	<div class="stage" bind:this={stageElement}>
 		<SimCanvas
-			bind:this={mapCanvas}
 			{sim}
 			ontelemetry={setTelemetry}
 			onresize={(w, h) => {

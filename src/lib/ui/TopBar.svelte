@@ -55,11 +55,27 @@
 		moreOpen = false;
 		fit();
 	});
+	// Nothing left to show: no "less" button to close it with.
+	$effect(() => {
+		if (!clipped) moreOpen = false;
+	});
 
 	onMount(() => {
 		// A window resize event comes before this frame's resize observers and paint, so the page
 		// sees the bar's final height when it frames the map.
-		const onresize = () => fit();
+		// The overlay is placed when it opens, so a new width closes it rather than leave it astray.
+		let width = blurb?.clientWidth ?? 0;
+		const refit = () => {
+			if (blurb && blurb.clientWidth !== width) {
+				width = blurb.clientWidth;
+				moreOpen = false;
+			}
+			fit();
+		};
+		const onresize = () => {
+			moreOpen = false;
+			refit();
+		};
 		const onkey = (e: KeyboardEvent) => {
 			if (e.key === 'Escape' && moreOpen) {
 				moreOpen = false;
@@ -71,12 +87,15 @@
 			if (moreOpen && !overlay?.contains(t) && !moreButton?.contains(t)) moreOpen = false;
 		};
 		// Anything else that changes its width (a scrollbar coming or going) is caught a frame late.
-		const observer = new ResizeObserver(() => fit());
+		const observer = new ResizeObserver(refit);
 		if (blurb) observer.observe(blurb);
 		addEventListener('resize', onresize);
 		addEventListener('keydown', onkey);
 		addEventListener('pointerdown', ondown);
-		tick().then(fit);
+		tick().then(() => {
+			width = blurb?.clientWidth ?? 0;
+			fit();
+		});
 		return () => {
 			observer.disconnect();
 			removeEventListener('resize', onresize);
@@ -100,7 +119,7 @@
 			{/each}
 		</select>
 	</label>
-	<p class="blurb" bind:this={blurb} title={clipped ? full : undefined} data-overlong={overlong || undefined}>
+	<p class="blurb" bind:this={blurb} data-overlong={overlong || undefined}>
 		{#if clipped}
 			<span aria-hidden="true">{parts.slice(0, shown).join(' ')}</span>
 			<span class="sr-only">{full}</span>
@@ -108,7 +127,7 @@
 				class="more"
 				bind:this={moreButton}
 				aria-expanded={moreOpen}
-				aria-controls="blurb-full"
+				aria-controls={moreOpen ? 'blurb-full' : undefined}
 				onclick={() => (moreOpen = !moreOpen)}>{moreOpen ? 'less' : 'more'}</button
 			>
 		{:else}
