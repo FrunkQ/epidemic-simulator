@@ -106,6 +106,8 @@ export class People {
 	private readonly asymBuf: Buffer | null;
 	/** Mean ticks until immunity after infection fades; 0 when it doesn't. */
 	private readonly recoveredWaneMean: number;
+	/** Whether immunity after infection wears off, so anyone who had it may catch it again (6.3). */
+	private readonly reinfects: boolean;
 	private readonly severeAgainFloor: number;
 
 	/** Dots with anyone infected, so the clocks only visit those. */
@@ -154,6 +156,7 @@ export class People {
 		this.againBuf = disease.afterInfectionSevere > 0 ? buffer(cap * this.length, perDot) : null;
 		this.asymBuf = disease.asymptomaticFraction > 0 ? buffer(cap * this.length, perDot) : null;
 		this.recoveredWaneMean = disease.waningMeanTicks;
+		this.reinfects = disease.waningMeanTicks > 0;
 		this.severeAgainFloor = disease.afterInfectionSevere;
 		this.active = new Int32Array(cap);
 		this.isActive = new Uint8Array(cap);
@@ -364,6 +367,8 @@ export class People {
 				this.illAgain[i] -= twice;
 				let localFirst = first;
 				let localTwice = twice;
+				// Reinfected people ending this tick and not yet handled: still in the pool (6.17).
+				let pendingAgain = twice;
 				const away = this.away.size > 0 ? this.away.get(i) : undefined;
 				if (away) {
 					// Those whose symptoms started on a trip end their illness in the hospital that took them.
@@ -372,13 +377,14 @@ export class People {
 						if (g.end !== tick) continue;
 						localFirst -= g.first;
 						localTwice -= g.again;
-						this.endIllness(i, g.first, g.again, g.region, rng, hooks, deathChance);
+						this.endIllness(i, g.first, g.again, pendingAgain, g.region, rng, hooks, deathChance);
+						pendingAgain -= g.again;
 						away.splice(e, 1);
 					}
 					if (away.length === 0) this.away.delete(i);
 				}
 				if (localFirst + localTwice > 0)
-					this.endIllness(i, localFirst, localTwice, -1, rng, hooks, deathChance);
+					this.endIllness(i, localFirst, localTwice, pendingAgain, -1, rng, hooks, deathChance);
 			}
 			if (quiet > 0) {
 				this.silentAsymptomatic[i] -= quiet;
@@ -456,6 +462,8 @@ export class People {
 		i: number,
 		first: number,
 		twice: number,
+		/** Reinfected people ending this tick and not yet handled, `twice` included. */
+		pendingAgain: number,
 		region: number,
 		rng: Rng,
 		hooks: PeopleHooks,
@@ -468,7 +476,7 @@ export class People {
 		// a survivor (even if their first time had no symptoms), and those who die take their share.
 		if (twice > 0) {
 			const have = this.illSurvivors[i];
-			const share = have > 0 ? have / Math.max(this.hadIt(i) + twice, have) : 0;
+			const share = have > 0 ? have / Math.max(this.hadIt(i) + pendingAgain, have) : 0;
 			this.illSurvivors[i] += twice - diedTwice - twice * share;
 		}
 		this.illSurvivors[i] += first - diedFirst;
@@ -517,7 +525,9 @@ export class People {
 
 	/**
 	 * Living people in a dot who may have had it before, the pool its survivors are among: recovered,
-	 * immunity worn off, ill or silent again, and silent with no symptoms (some of whom are reinfected).
+	 * immunity worn off, and ill or silent again. Where immunity wears off, silent people who will
+	 * never get symptoms are in it too, since some of them are reinfected; with lifelong immunity none
+	 * of them can be.
 	 */
 	private hadIt(i: number): number {
 		return (
@@ -525,7 +535,7 @@ export class People {
 			this.susceptibleAgain[i] +
 			this.illAgain[i] +
 			this.silentAgain[i] +
-			this.silentAsymptomatic[i]
+			(this.reinfects ? this.silentAsymptomatic[i] : 0)
 		);
 	}
 
@@ -580,8 +590,9 @@ export class People {
 					u -= buf[f];
 					continue;
 				}
-				// Someone reinfected, or silent with no symptoms (perhaps reinfected), carries the share.
-				if (again || !symptomatic) this.moveSurvivorShare(from, to);
+				// Someone reinfected, or, where immunity wears off, silent with no symptoms (perhaps
+				// reinfected), carries the share.
+				if (again || (!symptomatic && this.reinfects)) this.moveSurvivorShare(from, to);
 				if (again) {
 					this.silentAgain[from]--;
 					this.silentAgain[to]++;

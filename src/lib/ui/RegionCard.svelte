@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
@@ -130,8 +131,8 @@
 	/**
 	 * The details behind the harm and babies lines: each line is a button that opens them over the
 	 * map, so keyboard, touch and screen readers reach them and the card never changes size. They
-	 * close on Escape (focus goes back to the line), a click elsewhere, a resize, a scroll or a new
-	 * disease.
+	 * close on Escape (focus goes back to the line), a click elsewhere, a new window width, a scroll,
+	 * a new disease, or another card's details opening, and follow their line when the card moves.
 	 */
 	let detail: 'harm' | 'babies' | null = $state(null);
 	let detailFrom: HTMLButtonElement | undefined;
@@ -141,12 +142,15 @@
 	const detailId = $derived(`harm-detail-${region.id}`);
 	/** Room kept between the details and the window's edge. */
 	const EDGE = 8;
+	/** Sent on the window when a card opens its details, so the others close theirs. */
+	const DETAIL_OPENED = 'harm-detail-opened';
 	function toggleDetail(which: 'harm' | 'babies', e: MouseEvent) {
 		if (detail === which) return closeDetail(false);
 		detailFrom = e.currentTarget as HTMLButtonElement;
 		const r = detailFrom.getBoundingClientRect();
 		detailAt = { left: r.left, top: r.bottom + 4 };
 		detail = which;
+		dispatchEvent(new CustomEvent(DETAIL_OPENED, { detail: region.id }));
 	}
 	function closeDetail(refocus: boolean) {
 		detail = null;
@@ -168,6 +172,19 @@
 		void disease.id;
 		detail = null;
 	});
+	// The details are fixed to the window, so when the card moves (a zoom, a new map, a new window
+	// height) they move with their line rather than being left behind over another card.
+	$effect(() => {
+		void x;
+		void y;
+		void docked;
+		if (!untrack(() => detail) || !detailFrom) return;
+		const from = detailFrom;
+		tick().then(() => {
+			const r = from.getBoundingClientRect();
+			detailAt = { left: r.left, top: r.bottom + 4 };
+		});
+	});
 	$effect(() => {
 		if (!detail) return;
 		const onkey = (e: KeyboardEvent) => {
@@ -177,7 +194,15 @@
 			const n = e.target as Node;
 			if (!detailBox?.contains(n) && !detailFrom?.contains(n)) closeDetail(false);
 		};
-		const onresize = () => closeDetail(false);
+		// Only a new window width closes them, as for the blurb's "more": a phone's address bar showing
+		// or hiding changes only the height.
+		const windowWidth = innerWidth;
+		const onresize = () => {
+			if (innerWidth !== windowWidth) closeDetail(false);
+		};
+		const onopened = (e: Event) => {
+			if ((e as CustomEvent<number | string>).detail !== region.id) closeDetail(false);
+		};
 		// A scroll inside the details themselves (a long text) keeps them open.
 		const onscroll = (e: Event) => {
 			if (!(e.target instanceof Node) || !detailBox?.contains(e.target)) closeDetail(false);
@@ -186,7 +211,9 @@
 		addEventListener('pointerdown', ondown);
 		addEventListener('resize', onresize);
 		addEventListener('scroll', onscroll, true);
+		addEventListener(DETAIL_OPENED, onopened);
 		return () => {
+			removeEventListener(DETAIL_OPENED, onopened);
 			removeEventListener('keydown', onkey);
 			removeEventListener('pointerdown', ondown);
 			removeEventListener('resize', onresize);
@@ -369,7 +396,9 @@
 			class="detail"
 			id={detailId}
 			role="region"
-			aria-label="{region.name}: {detail === 'harm' ? 'lasting harm' : 'babies'}, what is counted"
+			aria-label="{region.name}: {detail === 'harm'
+				? 'lasting harm'
+				: 'babies harmed or pregnancies lost'}, what is counted"
 			bind:this={detailBox}
 			style:left="{detailAt.left}px"
 			style:top="{detailAt.top}px"
@@ -501,7 +530,9 @@
 	/* A line that opens its details: reads as text, with a dotted underline to show it opens. */
 	.counts .harm {
 		align-self: flex-start;
-		padding: 0 0 0 14px;
+		/* Taller to tap, with the same line spacing. */
+		padding: 5px 0 5px 14px;
+		margin: -5px 0;
 		border: none;
 		background: none;
 		font: inherit;

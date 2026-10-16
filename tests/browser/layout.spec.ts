@@ -604,3 +604,57 @@ test('the lasting-harm details open from the keyboard, close on Escape, a click 
 	await page.setViewportSize({ width: 1366, height: 768 });
 	await expect(page.locator(`#${id}`)).toHaveCount(0);
 });
+
+test('the lasting-harm details stay open on a new height alone, follow their card when it moves, and only one is open', async ({
+	page
+}) => {
+	await open(page, 1400, 900);
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	const lines = page.locator('section.card button.harm');
+	await expect(lines.nth(1)).toBeVisible({ timeout: 60_000 });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	const first = lines.first();
+	await first.click();
+	const detail = page.locator(`#${await first.getAttribute('aria-controls')}`);
+	await expect(detail).toBeVisible();
+	// A phone's address bar showing or hiding changes only the height.
+	await page.setViewportSize({ width: 1400, height: 820 });
+	await settle(page);
+	await expect(detail).toBeVisible();
+	// From the keyboard, opening another card's details closes the first card's.
+	const second = lines.nth(1);
+	await second.focus();
+	await page.keyboard.press('Enter');
+	await expect(second).toHaveAttribute('aria-expanded', 'true');
+	await expect(first).toHaveAttribute('aria-expanded', 'false');
+	const shown = page.locator('section.card div.detail');
+	await expect(shown).toHaveCount(1);
+	// A zoom moves the cards; the details move with their line rather than being left behind.
+	const card = page.locator('section.card').nth(1);
+	const before = (await card.boundingBox())!;
+	await page.mouse.move(700, 450);
+	await page.mouse.wheel(0, -600);
+	await settle(page);
+	const after = (await card.boundingBox())!;
+	expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(5);
+	await expect(shown).toHaveCount(1);
+	const line = (await second.boundingBox())!;
+	const box = (await shown.boundingBox())!;
+	expect(Math.abs(box.x - line.x)).toBeLessThan(2);
+	const below = Math.abs(box.y - (line.y + line.height + 4));
+	const above = Math.abs(box.y + box.height - (line.y - 4));
+	expect(Math.min(below, above)).toBeLessThan(2);
+});
+
+test('the blurb\'s "more" overlay stays open on a new height alone', async ({ page }) => {
+	await forceFont(page, 'DejaVu Sans');
+	await open(page, 1366, 768);
+	await requireFont(page, 'DejaVu Sans');
+	await page.selectOption('select', 'plague');
+	await settle(page);
+	await page.getByRole('button', { name: 'more' }).click();
+	await expect(page.locator('#blurb-full')).toHaveCount(1);
+	await page.setViewportSize({ width: 1366, height: 700 });
+	await settle(page);
+	await expect(page.locator('#blurb-full')).toHaveCount(1);
+});

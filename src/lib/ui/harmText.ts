@@ -21,9 +21,20 @@ export function about(n: number): string {
 	return Math.round(n).toLocaleString('en-GB');
 }
 
-/** Babies are an event, counted in the hospital's city, as deaths are (6.8). */
+/** "about 12", or "fewer than 1" with no "about" or "at least" in front, which would read wrongly. */
+function counted(n: number, qualifier: 'about' | 'at least'): string {
+	const shown = about(n);
+	return shown === 'fewer than 1' ? shown : `${qualifier} ${shown}`;
+}
+/** Whether the count reads as one person ("fewer than 1" and "about 1"), for the singular. */
+function isOne(n: number): boolean {
+	return n > 0 && Math.round(n) <= 1;
+}
+const capital = (s: string) => s[0].toUpperCase() + s.slice(1);
+
+/** Babies are an event, counted in the same city as deaths (6.8). */
 export const BABIES_WHERE =
-	'Counted in the city where the mother’s symptoms began, whose hospital took her, as deaths are.';
+	'Counted in the same city as deaths: where the mother fell ill, or, if she fell ill on a trip, the city she set out from.';
 
 /** The hover's first line: who the count is among (6.17). */
 export const WHO_COUNTED =
@@ -47,19 +58,22 @@ export function harmText(
 	const hover: string[] = [];
 	if (harm && harm.counted.length > 0) {
 		const most = Math.max(0, ...harmed);
-		const amount = harm.counted.length > 1 ? `at least ${about(most)}` : `about ${about(most)}`;
+		const amount = counted(most, harm.counted.length > 1 ? 'at least' : 'about');
+		const one = isOne(most);
 		line = ofRecovered
-			? `of whom ${amount} live with lasting harm`
-			: `${amount} people here live with lasting harm`;
+			? `of whom ${amount} ${one ? 'lives' : 'live'} with lasting harm`
+			: `${amount} ${one ? 'person here lives' : 'people here live'} with lasting harm`;
 		hover.push(WHO_COUNTED);
 		if (!ofRecovered) hover.push(WANED_TOO);
-		harm.counted.forEach((h, k) => hover.push(`About ${about(harmed[k] ?? 0)}: ${h.label}.`));
+		harm.counted.forEach((h, k) => hover.push(`${capital(counted(harmed[k] ?? 0, 'about'))}: ${h.label}.`));
 	} else if (harm) line = 'lasting harm: not counted';
 	if (harm) hover.push(...harm.notes, ...(harm.footnotes ?? []));
 	return {
 		line,
 		hover: hover.join('\n'),
-		babies: baby ? `About ${about(babies)} babies harmed or pregnancies lost here` : null,
+		babies: baby
+			? `${capital(counted(babies, 'about'))} ${isOne(babies) ? 'baby harmed or pregnancy lost' : 'babies harmed or pregnancies lost'} here`
+			: null,
 		babiesHover: baby ? [`${baby.label}.`, BABIES_WHERE, ...baby.notes].join('\n') : ''
 	};
 }

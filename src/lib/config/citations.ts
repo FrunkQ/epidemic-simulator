@@ -2096,7 +2096,7 @@ export const CITATIONS: Citation[] = [
 			'smallpox.babyHarm.risk'
 		],
 		quote:
-			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors',
+			'This serological evidence indicates that subclinical infection that was accompanied by enough replication of virus to stimulate the production of complement-fixing and haemagglutinin-inhibiting antibodies occurred in many of the vaccinated close contacts of cases of variola major. … permanent facial pockmarks occurred in 65-80% of survivors … Rao (1972) noted 60 patients with keratitis and/or corneal ulcer, of whom 24 had loss of vision in one eye and 1 in both eyes … among 5459 survivors … Table 1.15, totals: 384 cases; 36 died before the pregnancy ended; 52 abortions; 23 premature and 9 full-term stillbirths',
 		location:
 			'Chapter 1, Clinical Features: subclinical infection; p. 49 (pockmarks); p. 50 (eye complications, Rao); Table 1.13 (Rao’s Madras series, 1961-1969); pp. 54-55, Table 1.15 (pregnancy, Rao)',
 		why:
@@ -5342,6 +5342,132 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-16',
 			ok: true,
 			note: 'Full text from the PMC open-data bucket, PMC9290210 (lasting-harm-code-verify.md should-fix 1).'
+		}
+	},
+	{
+		id: 'wei2021-covid-pregnancy',
+		authors: 'Wei SQ, Bilodeau-Bertrand M, Liu S, Auger N',
+		title: 'The impact of COVID-19 on pregnancy outcomes: a systematic review and meta-analysis',
+		journal: 'CMAJ',
+		year: 2021,
+		evidence: 'meta-analysis',
+		doi: '10.1503/cmaj.202604',
+		usedFor: ['covid19.lastingHarm.hover'],
+		quote: 'stillbirth (OR 2.11, 95% CI 1.14 to 3.90; I2 = 24%; 6 studies)',
+		location: 'Results (and abstract)',
+		why: 'One of the two pooled studies the COVID-19 hover says disagree on stillbirth: this one finds stillbirth about twice as likely with COVID-19 in pregnancy. Smith 2023 finds no link, so stillbirth is not counted.',
+		context: 'COVID-19 era',
+		verified: {
+			by: 'build thread (full text, PMC open-data bucket, PMC8084555)',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Also confirmed in lasting-harm-verify.md row 25.'
+		}
+	},
+	{
+		id: 'smith2023-covid-pregnancy-ipd',
+		authors: 'Smith ER, Oakley E, Grandner GW, et al.',
+		title:
+			'Adverse maternal, fetal, and newborn outcomes among pregnant women with SARS-CoV-2 infection: an individual participant data meta-analysis',
+		journal: 'BMJ Global Health',
+		year: 2023,
+		evidence: 'meta-analysis',
+		doi: '10.1136/bmjgh-2022-009495',
+		usedFor: ['covid19.lastingHarm.hover'],
+		quote: 'Infection was not linked to stillbirth.',
+		location: 'Abstract (Results); 12 studies, 13,136 pregnant women',
+		why: 'The other pooled study the COVID-19 hover says disagrees: with individual data from 12 studies it finds no link to stillbirth, against Wei 2021. With the two at odds, stillbirth is not counted.',
+		context: 'COVID-19 era',
+		verified: {
+			by: 'build thread (full text, BORIS repository PDF)',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Also confirmed in lasting-harm-verify.md row 26.'
+		}
+	},
+	{
+		id: 'cdc-pinkbook-mumps-harm',
+		authors: 'Centers for Disease Control and Prevention (Marin M, Leung J, et al., eds.)',
+		title: 'Chapter 15: Mumps — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2024,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-15-mumps.html',
+		usedFor: ['mumps.lastingHarm.hover'],
+		quote:
+			'Hearing loss is usually transient but may be permanent. … no study has demonstrated a risk for sterility in men with mumps orchitis compared to those without mumps orchitis.',
+		location: 'Clinical Features — Complications',
+		why: 'Backs the mumps hover lines on deafness (usually temporary, sometimes permanent) and sterility (no study shows a higher risk). Neither gives a lasting share, so neither is counted.',
+		context: 'Official US reference text.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'lasting-harm-verify.md rows 56 and 60 (read on cdc.gov).'
+		}
+	},
+	{
+		id: 'cdc-pinkbook-rubella-harm',
+		authors: 'Centers for Disease Control and Prevention (Hall E, Wodi AP, et al., eds.)',
+		title: 'Chapter 20: Rubella — Epidemiology and Prevention of Vaccine-Preventable Diseases (Pink Book)',
+		journal: 'CDC Pink Book (online edition)',
+		year: 2021,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/pinkbook/hcp/table-of-contents/chapter-20-rubella.html',
+		usedFor: ['rubella.lastingHarm.hover'],
+		quote: 'may last for up to 1 month … Chronic arthritis is rare.',
+		location: 'Clinical Features — Complications (arthralgia and arthritis)',
+		why: 'Backs the rubella hover line: joint pain can last up to a month, and long-term arthritis is rare, so no lasting harm is counted in the person ill.',
+		context: 'Official US reference text.',
+		verified: {
+			by: 'independent verification pass',
+			on: '2026-10-10',
+			ok: true,
+			note: 'lasting-harm-verify.md row 63 (read on cdc.gov).'
+		}
+	},
+	{
+		id: 'cdc-pertussis-complications',
+		authors: 'Centers for Disease Control and Prevention',
+		title: 'Whooping Cough: Signs and Symptoms',
+		journal: 'CDC',
+		year: 2025,
+		evidence: 'official',
+		publisher: 'CDC',
+		url: 'https://www.cdc.gov/pertussis/signs-symptoms/index.html',
+		usedFor: ['pertussis.lastingHarm.hover'],
+		quote:
+			'Babies younger than 1 year old who are treated in the hospital can have: … Encephalopathy (disease of the brain): 1 in 150 (0.6%)',
+		location: 'Complications (page last reviewed 2 December 2025)',
+		why: 'Backs the whooping cough hover line that some babies treated in hospital get encephalopathy. The page gives how often it happens, not how many are left with lasting damage, so it is not counted.',
+		context: 'Official US public health page.',
+		verified: {
+			by: 'build thread, read on cdc.gov',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Also lasting-harm-verify.md row 67.'
+		}
+	},
+	{
+		id: 'hoffman2017-encephalitis-lethargica',
+		authors: 'Hoffman LA, Vilensky JA',
+		title: 'Encephalitis lethargica: 100 years after the epidemic',
+		journal: 'Brain',
+		year: 2017,
+		evidence: 'review',
+		doi: '10.1093/brain/awx177',
+		usedFor: ['flu1918.lastingHarm.hover'],
+		quote: 'the findings in the majority of studies refute the influenza hypothesis',
+		location: 'Aetiology',
+		why: 'Backs the 1918 flu hover line that a link to sleeping sickness (encephalitis lethargica) is refuted by most studies, so nothing is counted for it.',
+		context: 'Historical review',
+		verified: {
+			by: 'build thread, read on academic.oup.com',
+			on: '2026-10-16',
+			ok: true,
+			note: 'Also lasting-harm-verify.md row 20.'
 		}
 	},
 	{

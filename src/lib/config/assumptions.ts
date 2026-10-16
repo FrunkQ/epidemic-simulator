@@ -128,7 +128,7 @@ export const ASSUMPTIONS = {
 	bedWhereIll:
 		'A patient’s bed is in the city where their symptoms started, for the whole stay, and how full that city’s hospitals are sets their chance of dying, and any death is counted there too. Someone who falls ill on a trip has their bed in the city they set out from, even after they arrive somewhere else.',
 	harmPerIllness:
-		'Lasting harm is counted once per person who survived an illness with symptoms, even if they catch it again, and moves with them from city to city. Harm to babies is counted in the city where the mother’s symptoms began, whose hospital took her, as deaths are.',
+		'Lasting harm is counted once per person who survived an illness with symptoms, even if they catch it again, and moves with them from city to city. Harm to babies is counted in the same city as deaths: where the mother fell ill, or, if she fell ill on a trip, the city she set out from.',
 	harmLongCovid: `Long COVID a year on comes from a pooled estimate (GBD 2022): ${fmt(GBD_LONG_COVID_12M.all, 1)}% of survivors. Pooled studies with no comparison group find far more, ${HARM_CONTEXT.houOneToTwoYears.value}% at ${HARM_CONTEXT.houWindowYears.value[0]} to ${HARM_CONTEXT.houWindowYears.value[1]} years (Hou 2025). The first is used because it covers everyone who had symptoms and leaves out symptoms people already had before.`,
 	harmPregnancy:
 		'The share of people pregnant counts only pregnancies that end in a birth, so it is slightly low, and harm to babies is undercounted.',
