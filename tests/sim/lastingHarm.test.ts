@@ -200,7 +200,7 @@ describe('what the card says about lasting harm (6.17)', () => {
 				expect(v.sources.length, `${d.id}.${k}`).toBeGreaterThan(0);
 			}
 		}
-		expect(Object.keys(DISEASES.ebola.lastingHarm.context!)).toHaveLength(4);
+		expect(Object.keys(DISEASES.ebola.lastingHarm.context!)).toHaveLength(6);
 	});
 
 	it('gives every disease something to say, and every counted harm a line', () => {

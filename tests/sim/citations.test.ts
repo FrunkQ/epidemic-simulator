@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CITATIONS, EVIDENCE_RANK, OFFICIAL_PUBLISHERS } from '../../src/lib/config/citations';
+import {
+	CITATIONS,
+	COVID_ERA_EXEMPTIONS,
+	EVIDENCE_RANK,
+	OFFICIAL_PUBLISHERS
+} from '../../src/lib/config/citations';
 import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
 import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
@@ -108,6 +113,8 @@ describe('citations', () => {
 			expect(c.context.trim().length, c.id).toBeGreaterThan(0);
 			expect(c.verified.by.trim().length, c.id).toBeGreaterThan(0);
 			expect(c.verified.on, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			// An undated page records when it was read, so a reader can find the same version.
+			if (c.year === 'n.d.') expect(c.accessed, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 			expect(c.doi ?? c.url, c.id).toBeTruthy();
 		}
 	});
@@ -119,12 +126,20 @@ describe('citations', () => {
 	});
 
 	it('uses COVID-era research for behaviour and COVID-19 itself, never for other diseases', () => {
-		const misused = CITATIONS.filter(
-			(c) =>
-				c.context === 'COVID-19 era' &&
-				c.usedFor.some((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.'))
-		).map((c) => c.id);
+		const exempt = (id: string, u: string) => COVID_ERA_EXEMPTIONS.some((e) => e.id === id && e.key === u);
+		const misused = CITATIONS.filter((c) => c.context === 'COVID-19 era').flatMap((c) =>
+			c.usedFor
+				.filter((u) => !u.startsWith('behaviour.') && !u.startsWith('covid19.') && !exempt(c.id, u))
+				.map((u) => `${c.id} -> ${u}`)
+		);
 		expect(misused).toEqual([]);
+		// Each named exemption is still a use of a COVID-era source, with its reason.
+		for (const e of COVID_ERA_EXEMPTIONS) {
+			const c = CITATIONS.find((c) => c.id === e.id);
+			expect(c?.context, e.id).toBe('COVID-19 era');
+			expect(c?.usedFor, e.id).toContain(e.key);
+			expect(e.reason.length, e.id).toBeGreaterThan(20);
+		}
 	});
 
 	it('uses only peer-reviewed papers and named public bodies (Alex: no random websites)', () => {

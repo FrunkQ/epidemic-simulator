@@ -18,7 +18,10 @@ export function derivedKeys(ids: DiseaseId[]): string[] {
 	return ids.map((id) => `${id}.herdImmunityThreshold`);
 }
 
-/** Facts a source backs that appear only as words on the About page (e.g. why Ebola burns out). */
+/**
+ * Facts a source backs that appear only as words: on the About page (e.g. why Ebola burns out), or
+ * in a line of the lasting harm hover with no figure (6.17).
+ */
 export function aboutKeys(ids: DiseaseId[]): string[] {
-	return ids.map((id) => `${id}.about`);
+	return ids.flatMap((id) => [`${id}.about`, `${id}.lastingHarm.hover`]);
 }
