@@ -166,6 +166,29 @@ it('a lockdown sent while paused runs exactly as one sent while running, at the 
 	expect(state(true)).toBe(state(false));
 });
 
+it('a lockdown turned on and off again while paused never ran: no mark, no stamp, the same run', () => {
+	const run = (press: boolean) => {
+		const sim = createSimulation(microcosm(0), { seed: 3, diseaseId: 'covid19' });
+		sim.seedNow(0, INDEX_CASES);
+		sim.step(7 * TICKS_PER_DAY + 5);
+		if (press) {
+			sim.send({ type: 'lockdown', region: 0, on: true });
+			sim.snapshot();
+			sim.send({ type: 'lockdown', region: 0, on: false });
+		}
+		sim.step(20 * TICKS_PER_DAY);
+		const a = sim.agents;
+		return JSON.stringify({
+			snap: sim.snapshot(),
+			x: Array.from(a.x.subarray(0, a.activeCount)),
+			history: sim.history(0)
+		});
+	};
+	const pressed = run(true);
+	expect(JSON.parse(pressed).snap.regions[0].lockedSince).toBe(-1);
+	expect(pressed).toBe(run(false));
+});
+
 it('a restart lifts every lockdown, and its key-worker chart starts again empty', () => {
 	const scenario = microcosm(0);
 	const sim = createSimulation(scenario, { seed: 2, diseaseId: 'covid19' });

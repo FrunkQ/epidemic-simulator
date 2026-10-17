@@ -957,51 +957,63 @@ for (const [from, key] of [
  * scrollbars (headless Chromium hides them, which would hide a card that scrolls sideways): the
  * card never scrolls sideways, and its charts' captions and labels fit, floating and docked, in the
  * default font and in DejaVu Sans (CI's fallback, whose wider text first showed a caption's hidden
- * measuring copy widening the card).
+ * measuring copy widening the card); and on a 2x screen and at browser zooms that dock the cards
+ * (150% of 1366x768, 120% of 1280x720, as CSS sizes with their device scale).
  */
+const LOCK_PANEL_RUNS: { w: number; h: number; scale: number; font?: string }[] = [
+	...[undefined, 'DejaVu Sans'].flatMap((font) =>
+		[...TARGETS, [1280, 600] as const].map(([w, h]) => ({ w, h, scale: 1, font }))
+	),
+	{ w: 1280, h: 720, scale: 2 },
+	{ w: 1920, h: 1080, scale: 2 },
+	{ w: 911, h: 512, scale: 1.5 },
+	{ w: 1067, h: 600, scale: 1.2 }
+];
 test.describe('with classic scrollbars', () => {
-	for (const font of [undefined, 'DejaVu Sans'])
-		for (const [w, h] of [...TARGETS, [1280, 600] as const]) {
-			test(`${w}x${h}${font ? ` in ${font}` : ''}: an open card with its lockdown charts never scrolls sideways, and the charts fit`, async ({
-				playwright
-			}, testInfo) => {
-				// Its own browser: the shared one is launched with scrollbars hidden.
-				const browser = await playwright.chromium.launch({
-					...testInfo.project.use.launchOptions,
-					ignoreDefaultArgs: ['--hide-scrollbars']
-				});
-				const page = await browser.newPage({ baseURL: testInfo.project.use.baseURL });
-				if (font) await forceFont(page, font);
-				await open(page, w, h);
-				if (font) await requireFont(page, font);
-				await page.selectOption('select', 'covid19');
-				await settle(page);
-				const card = page.locator('section.card').first();
-				await card.getByRole('button', { name: /^Bring in/ }).click();
-				await page.getByRole('button', { name: /\(8×\)/ }).click();
-				await card.getByRole('button', { name: 'Lockdown' }).click();
-				await expect(card.getByRole('button', { name: 'Lockdown' })).toHaveAttribute('aria-pressed', 'true');
-				await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
-				await page.waitForFunction(() => Number(/Day (\d+)/.exec(document.body.innerText)?.[1] ?? 0) >= 20);
-				await page.getByRole('button', { name: 'Paused' }).click();
-				await card.getByRole('button', { name: 'Health policy' }).click();
-				await settle(page);
-				await card.locator('.lockcharts').scrollIntoViewIfNeeded();
-				const sideways = await card.evaluate((el) => {
-					const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
-						const o = getComputedStyle(e).overflowX;
-						return o === 'auto' || o === 'scroll';
-					});
-					return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
-				});
-				expect(sideways).toEqual([]);
-				expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
-				await expect(
-					card.getByText(/since it began, \d+% of key workers and \d+% of those who stayed home at first/)
-				).toBeVisible();
-				await browser.close();
+	for (const { w, h, scale, font } of LOCK_PANEL_RUNS) {
+		test(`${w}x${h}${scale !== 1 ? ` at ${scale}x` : ''}${font ? ` in ${font}` : ''}: an open card with its lockdown charts never scrolls sideways, and the charts fit`, async ({
+			playwright
+		}, testInfo) => {
+			// Its own browser: the shared one is launched with scrollbars hidden.
+			const browser = await playwright.chromium.launch({
+				...testInfo.project.use.launchOptions,
+				ignoreDefaultArgs: ['--hide-scrollbars']
 			});
-		}
+			const page = await browser.newPage({
+				baseURL: testInfo.project.use.baseURL,
+				deviceScaleFactor: scale
+			});
+			if (font) await forceFont(page, font);
+			await open(page, w, h);
+			if (font) await requireFont(page, font);
+			await page.selectOption('select', 'covid19');
+			await settle(page);
+			const card = page.locator('section.card').first();
+			await card.getByRole('button', { name: /^Bring in/ }).click();
+			await page.getByRole('button', { name: /\(8×\)/ }).click();
+			await card.getByRole('button', { name: 'Lockdown' }).click();
+			await expect(card.getByRole('button', { name: 'Lockdown' })).toHaveAttribute('aria-pressed', 'true');
+			await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
+			await page.waitForFunction(() => Number(/Day (\d+)/.exec(document.body.innerText)?.[1] ?? 0) >= 20);
+			await page.getByRole('button', { name: 'Paused' }).click();
+			await card.getByRole('button', { name: 'Health policy' }).click();
+			await settle(page);
+			await card.locator('.lockcharts').scrollIntoViewIfNeeded();
+			const sideways = await card.evaluate((el) => {
+				const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
+					const o = getComputedStyle(e).overflowX;
+					return o === 'auto' || o === 'scroll';
+				});
+				return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
+			});
+			expect(sideways).toEqual([]);
+			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
+			await expect(
+				card.getByText(/since it began, \d+% of key workers and \d+% of those who stayed home at first/)
+			).toBeVisible();
+			await browser.close();
+		});
+	}
 });
 
 test('a lockdown asked for while paused shows on the card at once, and lifts on Restart', async ({

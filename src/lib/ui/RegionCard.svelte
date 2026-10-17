@@ -827,8 +827,11 @@
 		margin: 4px 0 0;
 		color: #c7d4e2;
 	}
+	/* On reads like the chosen speed: a light fill with dark text. */
 	.lockdown[aria-pressed='true'] {
-		background: #3a2a2a;
+		background: #9cc3ea;
+		color: #0b1a2e;
+		font-weight: 600;
 	}
 	.note {
 		margin: 2px 0 4px;

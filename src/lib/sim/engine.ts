@@ -678,6 +678,9 @@ export class Simulation {
 	}
 
 	private applyCommands(): void {
+		// A city's lockdown starts only if it begins the tick unlocked and ends it locked, so "on" then
+		// "off" sent while paused (both applied at this tick) never stamps a cohort or marks a start.
+		const wasOn = this.lockdown.on.slice();
 		for (const c of this.queue) {
 			if (c.type === 'seed') {
 				for (const dot of this.seedCases(c.region, c.count)) {
@@ -688,13 +691,14 @@ export class Simulation {
 			} else if (c.type === 'policy') this.setPolicy(c.region, c.policy);
 			else if (c.type === 'lockdown') {
 				if (this.subsystems.interventions && this.scenario.regions[c.region]) {
-					if (c.on && this.lockdown.on[c.region] === 0) this.stampCohort(c.region);
 					this.lockdown.on[c.region] = c.on ? 1 : 0;
 				}
 			}
 			// flights, route and massTest arrive with later slices of step 3b.
 		}
 		this.queue.length = 0;
+		for (let r = 0; r < wasOn.length; r++)
+			if (wasOn[r] === 0 && this.lockdown.on[r] === 1) this.stampCohort(r);
 	}
 
 	/**
