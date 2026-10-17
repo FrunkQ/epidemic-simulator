@@ -897,41 +897,48 @@ for (const which of ['harm', 'babies'] as const) {
 	});
 }
 
-test('docked, Tab goes from a line into its details when they scroll, and Page Down scrolls them', async ({
-	page
-}) => {
-	await open(page, 1280, 720);
-	await page.selectOption('select', 'smallpox');
-	await page.getByRole('button', { name: /\(8×\)/ }).click();
-	await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
-		timeout: 90_000
-	});
-	await page.getByRole('button', { name: 'Paused' }).click();
-	await page.setViewportSize({ width: 1280, height: 600 });
-	await settle(page);
-	expect(await docked(page)).toBe(1);
-	const lines = page.locator('section.card button.harm');
-	const box = page.locator('section.card .detail');
-	let tried = 0;
-	for (let i = 0; i < (await lines.count()); i++) {
-		await lines.nth(i).focus();
-		await page.keyboard.press('Enter');
-		await expect(box).toBeVisible();
-		if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+for (const font of [undefined, 'DejaVu Sans']) {
+	test(`docked${font ? ` in ${font}` : ''}, Tab goes from a line into its details when they scroll, and Page Down scrolls them`, async ({
+		page
+	}) => {
+		if (font) await forceFont(page, font);
+		await open(page, 1280, 720);
+		if (font) await requireFont(page, font);
+		await page.selectOption('select', 'smallpox');
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
+			timeout: 90_000
+		});
+		await page.getByRole('button', { name: 'Paused' }).click();
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await settle(page);
+		expect(await docked(page)).toBe(1);
+		// Taller details, so that in any font some find no clear spot and scroll inside their card (in
+		// DejaVu Sans their own size fits beside the card here, and nothing would scroll).
+		await page.addStyleTag({ content: 'section.card .detail .para { line-height: 2.5; }' });
+		const lines = page.locator('section.card button.harm');
+		const box = page.locator('section.card .detail');
+		let tried = 0;
+		for (let i = 0; i < (await lines.count()); i++) {
+			await lines.nth(i).focus();
+			await page.keyboard.press('Enter');
+			await expect(box).toBeVisible();
+			if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+				await page.keyboard.press('Escape');
+				continue;
+			}
+			tried++;
+			await page.keyboard.press('Tab');
+			await expect(box, `line ${i}`).toBeFocused();
+			await page.keyboard.press('PageDown');
+			await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
+			await expect(box, `line ${i} still open`).toBeVisible();
 			await page.keyboard.press('Escape');
-			continue;
+			await expect(lines.nth(i)).toBeFocused();
 		}
-		tried++;
-		await page.keyboard.press('Tab');
-		await expect(box, `line ${i}`).toBeFocused();
-		await page.keyboard.press('PageDown');
-		await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
-		await expect(box, `line ${i} still open`).toBeVisible();
-		await page.keyboard.press('Escape');
-		await expect(lines.nth(i)).toBeFocused();
-	}
-	expect(tried, 'some docked details scroll').toBeGreaterThan(0);
-});
+		expect(tried, 'some docked details scroll').toBeGreaterThan(0);
+	});
+}
 
 for (const [from, key] of [
 	['babies', 'Shift+Tab'],
