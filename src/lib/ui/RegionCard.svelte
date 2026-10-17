@@ -28,6 +28,7 @@
 	import LevelGauge from './charts/LevelGauge.svelte';
 	import LineChart from './charts/LineChart.svelte';
 	import StackedAreaChart from './charts/StackedAreaChart.svelte';
+	import { percentReading } from './charts/scale';
 	import { harmText } from './harmText';
 
 	interface Props {
@@ -118,6 +119,14 @@
 	const lockStatus = $derived(lockOn ? `Locked down since day ${lockSince}` : 'No lockdown');
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
+	/**
+	 * The open card's sticky header covers the top of its scroller, so focus scrolls a control clear
+	 * of it (WCAG 2.4.11): scroll padding of the header's height, less the HEADER_TUCK px it sits
+	 * above the scroller's top (its `top`), plus a small gap.
+	 */
+	let headerHeight = $state(0);
+	const HEADER_TUCK = 8;
+	const FOCUS_GAP = 4;
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
 	$effect(() => {
@@ -144,7 +153,7 @@
 	let startingPeople = $derived(region.population.toLocaleString('en-GB', { maximumSignificantDigits: 2 }));
 	const people = (n: number) => Math.round(n).toLocaleString();
 	const protects = (efficacy: number) => `protects about ${Math.round(efficacy * 100)} in 100`;
-	const pctOf = (v: number) => `${Math.round(v * 100)}%`;
+	const pctOf = (v: number) => percentReading(v * 100);
 	/** The vaccine given here, as the engine uses it (the same helper, so the card can't disagree). */
 	let runtime = $derived(loadDisease(disease.id as DiseaseId));
 	let vaccine = $derived(vaccineFor(runtime, region.vaccine));
@@ -391,8 +400,9 @@
 	style:left={docked ? null : `${x}px`}
 	style:top={docked ? null : `${y}px`}
 	style:max-height={docked || maxHeight === undefined ? null : `${maxHeight}px`}
+	style:scroll-padding-top={open ? `${headerHeight - HEADER_TUCK + FOCUS_GAP}px` : null}
 >
-	<header>
+	<header bind:offsetHeight={headerHeight}>
 		<h2>{region.name}</h2>
 		<div class="toggles">
 			<button
@@ -429,7 +439,8 @@
 	{#if onlockdown}
 		<p class="lockrow">
 			<button class="lockdown" aria-pressed={lockOn} onclick={() => onlockdown(!lockOn)}>Lockdown</button>
-			<span role="status">{lockStatus}</span>
+			<!-- On its own line, so "Locked down since day N" is never broken in two. -->
+			<span class="lockstatus" role="status">{lockStatus}</span>
 		</p>
 	{/if}
 	{#if panel === 'policy'}
@@ -738,6 +749,7 @@
 	/* An open card scrolls inside: its name and toggles stay in view so it can be closed. */
 	.card.open header {
 		position: sticky;
+		/* HEADER_TUCK: it covers the card's top padding. */
 		top: -8px;
 		z-index: 1;
 		margin-top: -8px;
@@ -822,10 +834,14 @@
 	}
 	.lockrow {
 		display: flex;
-		align-items: center;
-		gap: 6px;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
 		margin: 4px 0 0;
 		color: #c7d4e2;
+	}
+	.lockstatus {
+		white-space: nowrap;
 	}
 	/* On reads like the chosen speed: a light fill with dark text. */
 	.lockdown[aria-pressed='true'] {

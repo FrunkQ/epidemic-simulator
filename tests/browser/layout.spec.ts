@@ -62,7 +62,10 @@ async function slowDown(page: Page) {
 	await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
 }
 
-/** Wait until 30 frames in a row drew the same layout and every card has its final size. */
+/**
+ * Wait until 30 frames in a row drew the same layout for the window as it is now, and every card
+ * has its final size (frames from before a resize can agree with each other but not the window).
+ */
 async function settle(page: Page) {
 	await page
 		.waitForFunction(() => '__layoutLog' in window, null, { timeout: 10_000 })
@@ -72,10 +75,18 @@ async function settle(page: Page) {
 			);
 		});
 	await page.waitForFunction(() => {
-		const log = (window as unknown as { __layoutLog: Frame[] }).__layoutLog;
+		const log = (window as unknown as { __layoutLog: Logged[] }).__layoutLog;
 		if (log.length < 30) return false;
 		const last = log[log.length - 1];
-		return log.slice(-30).every((f) => f.docked === last.docked && Math.abs(f.scale - last.scale) < 1e-9);
+		return log
+			.slice(-30)
+			.every(
+				(f) =>
+					f.window[0] === innerWidth &&
+					f.window[1] === innerHeight &&
+					f.docked === last.docked &&
+					Math.abs(f.scale - last.scale) < 1e-9
+			);
 	});
 }
 
@@ -964,10 +975,12 @@ const LOCK_PANEL_RUNS: { w: number; h: number; scale: number; font?: string }[] 
 	...[undefined, 'DejaVu Sans'].flatMap((font) =>
 		[...TARGETS, [1280, 600] as const].map(([w, h]) => ({ w, h, scale: 1, font }))
 	),
-	{ w: 1280, h: 720, scale: 2 },
-	{ w: 1920, h: 1080, scale: 2 },
-	{ w: 911, h: 512, scale: 1.5 },
-	{ w: 1067, h: 600, scale: 1.2 }
+	...[undefined, 'DejaVu Sans'].flatMap((font) => [
+		{ w: 1280, h: 720, scale: 2, font },
+		{ w: 1920, h: 1080, scale: 2, font },
+		{ w: 911, h: 512, scale: 1.5, font },
+		{ w: 1067, h: 600, scale: 1.2, font }
+	])
 ];
 test.describe('with classic scrollbars', () => {
 	for (const { w, h, scale, font } of LOCK_PANEL_RUNS) {
@@ -1009,12 +1022,54 @@ test.describe('with classic scrollbars', () => {
 			expect(sideways).toEqual([]);
 			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
 			await expect(
-				card.getByText(/since it began, \d+% of key workers and \d+% of those who stayed home at first/)
+				card.getByText(
+					/since it began, (\d+%|under 1%) of key workers and (\d+%|under 1%) of those who stayed home at first/
+				)
 			).toBeVisible();
 			await browser.close();
 		});
 	}
 });
+
+for (const font of [undefined, 'DejaVu Sans']) {
+	for (const [w, h] of TARGETS) {
+		test(`${w}x${h}${font ? ` in ${font}` : ''}: every control in an open card shows in full below its sticky header when it takes focus going backwards (WCAG 2.4.11)`, async ({
+			page
+		}) => {
+			if (font) await forceFont(page, font);
+			await open(page, w, h);
+			if (font) await requireFont(page, font);
+			const card = page.locator('section.card').first();
+			await card.getByRole('button', { name: /^Bring in/ }).click();
+			await card.getByRole('button', { name: 'Health policy' }).click();
+			await settle(page);
+			// Start at the card's last control and go back up through it with Shift+Tab.
+			await card.evaluate((el) => {
+				const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+				all[all.length - 1].focus();
+			});
+			const hidden: string[] = [];
+			for (let step = 0; step < 120; step++) {
+				const seen = await card.evaluate((el) => {
+					const f = document.activeElement as HTMLElement | null;
+					if (!f || !el.contains(f) || f.closest('header')) return null;
+					const r = f.getBoundingClientRect();
+					const head = el.querySelector('header')!.getBoundingClientRect();
+					const box = el.getBoundingClientRect();
+					const bottom = box.top + el.clientTop + el.clientHeight;
+					const name = f.getAttribute('aria-label') || f.textContent?.trim().slice(0, 40) || f.tagName;
+					return r.top >= head.bottom - 0.5 && r.bottom <= bottom + 0.5
+						? ''
+						: `${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`;
+				});
+				if (seen === null) break;
+				if (seen) hidden.push(seen);
+				await page.keyboard.press('Shift+Tab');
+			}
+			expect(hidden).toEqual([]);
+		});
+	}
+}
 
 test('a lockdown asked for while paused shows on the card at once, and lifts on Restart', async ({
 	page

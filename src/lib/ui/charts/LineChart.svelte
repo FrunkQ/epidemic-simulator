@@ -2,7 +2,16 @@
 	import Caption from './Caption.svelte';
 	import { about } from '../harmText';
 	import type { Snippet } from 'svelte';
-	import { MARGIN, nearest, niceMax, short, wordings, type Line, type Reference } from './scale';
+	import {
+		MARGIN,
+		nearest,
+		niceMax,
+		percentReading,
+		short,
+		wordings,
+		type Line,
+		type Reference
+	} from './scale';
 
 	interface Props {
 		/** Plain words saying what the chart shows. */
@@ -266,7 +275,7 @@
 					>{l.label}: {!Number.isFinite(l.values[hover] ?? 0)
 						? 'not yet'
 						: unit === '%'
-							? `${Math.round(l.values[hover] ?? 0).toLocaleString()}%`
+							? percentReading(l.values[hover] ?? 0)
 							: about(l.values[hover] ?? 0)}</span
 				>
 			{/each}
