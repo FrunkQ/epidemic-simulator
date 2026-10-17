@@ -502,11 +502,13 @@ export interface RegionTelemetry {
 	out: { key: number; ignoring: number; tired: number };
 	/**
 	 * Of the key workers here when this city's lockdown last began, the share who have caught it
-	 * since, followed wherever they go and counted in the dot where they caught it (6.4).
+	 * since, followed wherever they go; each person counts once, in the dot they are in now (6.4).
 	 */
 	keyWorkersCaught: number;
-	/** The same for working-age people who aren't key workers and keep to a lockdown. */
+	/** The same for working-age people who aren't key workers and stayed home when it began. NaN for both before the first lockdown. */
 	stayHomeCaught: number;
+	/** The day this city's latest lockdown began, or −1 before its first. */
+	lockedSince: number;
 	testCooldown: number;
 }
 
@@ -570,7 +572,8 @@ export const HISTORY_CHANNELS = [
 	'outIgnoring',
 	'outTired',
 	'keyWorkersCaught',
-	'stayHomeCaught'
+	'stayHomeCaught',
+	'lockedSince'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 

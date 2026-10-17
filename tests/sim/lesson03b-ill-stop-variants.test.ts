@@ -1,7 +1,7 @@
 import { it } from 'vitest';
 import { shareOf } from './helpers';
 import { LESSON_TIMEOUT, SEEDS } from './lessonRuns';
-import { lesson3 } from './lesson03-lockdown.test';
+import { lesson3 } from './lockdownRuns';
 
 /*
  * The majority-movement recheck (coordinator ruling, 16 Oct): lesson 3 asserts only the shipped rule

@@ -52,3 +52,8 @@ export function lockdownRun(seed: number, options: LockdownOptions): LockdownRun
 	}
 	return { sim, peakIll, peakPressure, overDay };
 }
+
+/** Lesson 3 (10): COVID-19 in one city, lockdown from day 5 against none, same seed. */
+export const lesson3 = (seed: number, scenario: Partial<Scenario> = {}) =>
+	lockdownRun(seed, { lockdownDay: 5, scenario }).peakIll <
+	lockdownRun(seed, { lockdownDay: null, scenario }).peakIll;

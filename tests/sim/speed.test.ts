@@ -45,6 +45,7 @@ describe('speed', () => {
 			let busiest = 0;
 			let peakActive = 0;
 			let lockedActive = 0;
+			let held = 0;
 			for (let day = 0; day < 150; day += 5) {
 				if (lockdown && day === LOCK_DAY) sim.send({ type: 'lockdown', region: 0, on: true });
 				const t0 = performance.now();
@@ -55,14 +56,22 @@ describe('speed', () => {
 					busiest = day;
 				}
 				peakActive = Math.max(peakActive, sim.people.activeCount);
-				if (lockdown && day >= LOCK_DAY) lockedActive = Math.max(lockedActive, sim.people.activeCount);
+				if (lockdown && day >= LOCK_DAY) {
+					lockedActive = Math.max(lockedActive, sim.people.activeCount);
+					held = Math.max(
+						held,
+						sim.agents.held.reduce((s, h) => s + h, 0)
+					);
+				}
 			}
 			console.log(
 				`busiest 5 days of COVID-19${lockdown ? ' in a lockdown' : ''} (from day ${busiest}): ${worst.toFixed(3)} ms per step`
 			);
 			// The run did reach a peak where nearly every dot holds someone infected.
 			expect(peakActive).toBeGreaterThan(4500);
+			// And the lockdown really held people home, so its per-tick work was timed.
 			if (lockdown) expect(lockedActive).toBeGreaterThan(4500);
+			if (lockdown) expect(held).toBeGreaterThan(0);
 			expect(worst).toBeLessThan(4);
 		}
 	);

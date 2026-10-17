@@ -160,22 +160,17 @@ export class Simulation {
 	private world: World | null = null;
 	private lockdown!: Lockdown;
 	/**
-	 * People who first caught it in each dot (lesson 21 and the key-worker chart, 6.4): an event
-	 * tally, counted in the dot where the infection happened. It stays with that dot when the
-	 * boarding swap moves people, since the dot's key-worker and compliance ranks are what put the
-	 * infection on one side of the line or the other.
-	 */
-	private caught!: Int32Array;
-	/**
 	 * The lockdown cohorts (6.4), one per city, each regions × dots: whether a dot was in the city when
-	 * that city's lockdown last began, and its caught tally at that moment. A city's key-worker chart
-	 * follows its cohort wherever those dots go, and counts only what they caught since; another
-	 * city's lockdown never changes it.
+	 * that city's lockdown last began, and how many of its people had ever caught it at that moment
+	 * (People.everCaught). A city's key-worker chart follows its cohort wherever those dots go, and
+	 * counts only the rise since; another city's lockdown never changes it.
 	 */
 	private cohort!: Uint8Array;
 	private caughtAtLock!: Int32Array;
 	/** Whether each city has had a lockdown yet, so cities that never locked skip the tally. */
 	private everLocked!: Uint8Array;
+	/** The day each city's latest lockdown began, or −1 before its first. */
+	private lockStart!: Int32Array;
 	/** Person-days under lockdown so far, per region (6.4). */
 	private personDays!: Float64Array;
 	/** A dot stops for illness once this share of its people are ill (Scenario.illStopShare). */
@@ -194,7 +189,6 @@ export class Simulation {
 				const r = this.agents.region[dot];
 				if (r < 0) return;
 				this.counters.addInfections(r, this.agents.ageBand[dot], people);
-				this.caught[dot] += people;
 				if (this.firstCaseSeen[r] === 0) {
 					this.firstCaseSeen[r] = 1;
 					this.pushEvent({ kind: 'firstCase', region: r, day: this.day });
@@ -319,10 +313,10 @@ export class Simulation {
 		this.radii = new Float32Array(regions.length);
 		this.lockdown = new Lockdown(regions.length);
 		this.personDays = new Float64Array(regions.length);
-		this.caught = new Int32Array(this.agents.capacity);
 		this.cohort = new Uint8Array(regions.length * this.agents.capacity);
 		this.caughtAtLock = new Int32Array(regions.length * this.agents.capacity);
 		this.everLocked = new Uint8Array(regions.length);
+		this.lockStart = new Int32Array(regions.length).fill(-1);
 		this.illStopShare = scenario.illStopShare ?? 0.5;
 
 		const { dots, peoplePerDot } = allocateDots(regions, this.agents.capacity);
@@ -504,20 +498,24 @@ export class Simulation {
 			const alive = p.perDot - p.dead[i];
 			if (this.lockdown.on[r] === 1) {
 				out[r * LOCK_SLOTS] += alive;
+				// A dot stopped by illness, isolation or deaths isn't out, whatever its reason would be.
+				const stopped =
+					a.dead[i] === 1 || a.isolated[i] === 1 || (this.rules.illStopsMovement && a.ill[i] === 1);
 				const why = outReason(a, i, policy, this.lockdown.ticks[r]);
-				if (why !== Out.HOME) out[r * LOCK_SLOTS + 2 + why] += alive;
+				if (why !== Out.HOME && !stopped) out[r * LOCK_SLOTS + 2 + why] += alive;
 			}
 		}
 		// The key-worker chart: each lockdown city's cohort, wherever its dots are now (on a trip too).
-		// A dot's tally counts first infections there, but the boarding swap can bring it new people,
-		// so what it adds is capped at the people it holds and the share never passes 100%.
+		// People who have ever caught it move with their people in the boarding swap, so each person
+		// counts once and a group's rise never passes its people. The swap can also swap out someone
+		// who caught it, so a group's rise is shown as at least 0.
 		for (let c = 0; c < regions.length; c++) {
 			if (this.everLocked[c] === 0) continue;
 			const policy = regions[c].policy;
 			const at = c * a.capacity;
 			for (let i = 0; i < a.activeCount; i++) {
 				if (this.cohort[at + i] === 0 || a.ageBand[i] !== 1) continue;
-				const since = Math.min(this.caught[i] - this.caughtAtLock[at + i], p.perDot);
+				const since = p.everCaught(i) - this.caughtAtLock[at + i];
 				if (isKeyWorker(a, i, policy)) {
 					key[c * 2] += since;
 					key[c * 2 + 1] += p.perDot;
@@ -530,17 +528,19 @@ export class Simulation {
 		for (let r = 0; r < regions.length; r++) {
 			if (day && this.lockdown.on[r] === 1) this.personDays[r] += out[r * LOCK_SLOTS];
 			out[r * LOCK_SLOTS + 1] = this.personDays[r];
-			out[r * LOCK_SLOTS + 5] = key[r * 2 + 1] > 0 ? key[r * 2] / key[r * 2 + 1] : 0;
-			out[r * LOCK_SLOTS + 6] = home[r * 2 + 1] > 0 ? home[r * 2] / home[r * 2 + 1] : 0;
+			// No share before a city's first lockdown: its chart draws nothing until then.
+			const locked = this.everLocked[r] === 1;
+			out[r * LOCK_SLOTS + 5] = !locked ? NaN : shareSince(key, r);
+			out[r * LOCK_SLOTS + 6] = !locked ? NaN : shareSince(home, r);
+			out[r * LOCK_SLOTS + 7] = this.lockStart[r];
 		}
 		return out;
 	}
 
 	/**
-	 * Lesson 21 (10): people who have caught it in key-worker dots and in non-key 15-64 dots told to
-	 * stay home, each over the people those dots hold, world-wide. Counted by the dot they caught it
-	 * in, whose flags never change; the boarding swap can later move a person into a dot on the other
-	 * side of the line, which this ignores.
+	 * Lesson 21 (10): people who have ever caught it in key-worker dots and in non-key 15-64 dots told
+	 * to stay home, each over the people those dots hold, world-wide. Counted in the dot they are in
+	 * now (People.everCaught), so each person counts once.
 	 */
 	keyWorkerInfection(): { key: number; home: number } {
 		const a = this.agents;
@@ -552,7 +552,7 @@ export class Simulation {
 			const policy = this.scenario.regions[r].policy;
 			const k = isKeyWorker(a, i, policy) ? 0 : a.complyRank[i] < policy.lockdownCompliance.value ? 2 : -1;
 			if (k < 0) continue;
-			t[k] += this.caught[i];
+			t[k] += this.people.everCaught(i);
 			t[k + 1] += this.people.perDot;
 		}
 		return { key: t[1] > 0 ? t[0] / t[1] : 0, home: t[3] > 0 ? t[2] / t[3] : 0 };
@@ -699,16 +699,18 @@ export class Simulation {
 
 	/**
 	 * A lockdown begins in region r: the dots in the city now (not travellers) become its cohort,
-	 * replacing any cohort from an earlier lockdown there, each with its caught tally as the baseline.
+	 * replacing any cohort from an earlier lockdown there, each with its people who had ever caught it
+	 * as the baseline.
 	 */
 	private stampCohort(r: number): void {
 		const a = this.agents;
 		const at = r * a.capacity;
 		this.everLocked[r] = 1;
+		this.lockStart[r] = this.day;
 		for (let i = 0; i < a.activeCount; i++) {
 			const here = a.region[i] === r && a.route[i] < 0;
 			this.cohort[at + i] = here ? 1 : 0;
-			this.caughtAtLock[at + i] = here ? this.caught[i] : 0;
+			this.caughtAtLock[at + i] = here ? this.people.everCaught(i) : 0;
 		}
 	}
 
@@ -844,6 +846,7 @@ export class Simulation {
 			},
 			keyWorkersCaught: lock[r * LOCK_SLOTS + 5],
 			stayHomeCaught: lock[r * LOCK_SLOTS + 6],
+			lockedSince: lock[r * LOCK_SLOTS + 7],
 			testCooldown: 0
 		}));
 		const inTransit = c.regionCounts(this.scenario.regions.length);
@@ -866,6 +869,11 @@ export class Simulation {
 }
 
 /** All hospital beds for this many people. Spare beds are this x spareBedShare. */
+/** A group's share caught since its city's lockdown began, from [rise, people] pairs per city, at least 0. */
+function shareSince(group: Float64Array, r: number): number {
+	return group[r * 2 + 1] > 0 ? Math.max(0, group[r * 2]) / group[r * 2 + 1] : 0;
+}
+
 function allBeds(people: number, policy: HealthPolicy): number {
 	return (people * policy.hospitalBedsPerThousand.value) / 1000;
 }

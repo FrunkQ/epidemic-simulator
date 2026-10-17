@@ -11,8 +11,8 @@ import { createSimulation } from '../../src/lib/sim/engine';
  * share who have caught it is higher among people in key-worker dots than among people in non-key
  * 15-64 dots that keep to a lockdown. Both groups are fixed by their ranks, not by who happens to be
  * out, and both are aged 15-64, so age can't explain the gap. The direction is all the narration
- * claims; the ratio is reported, never tuned (§5.7). A person counts in the dot where they caught it:
- * that dot's flags never change, though the boarding swap can later move them across the line.
+ * claims; the ratio is reported, never tuned (§5.7). People who have caught it are counted in the
+ * dot they are in now (People.everCaught), so each person counts once.
  */
 it(
 	'lesson 21: in a lockdown, key workers catch it more often than working-age people who stay home',
@@ -36,10 +36,13 @@ it(
 /*
  * The same direction on the 3-city map, as the card's chart counts it (6.4): city 0 locks down on
  * day 5, and of the people there when it began, followed wherever they go, key workers have caught
- * it more often since than working-age people who stay home. Counting whoever is in the city now
- * read backwards here, as travellers from other cities mix into the key-worker dots. Only runs
- * where the outbreak took off in that cohort are judged.
+ * it more often since than working-age people who stayed home at first. A day-5 lockdown stops
+ * most outbreaks seeded with 10 cases here, so this seeds 200, and judges only runs where at least
+ * TOOK_OFF people in city 0 have caught it by day 60.
  */
+const TOOK_OFF = 1500;
+const INDEX_CASES = 200;
+
 it(
 	'lesson 21 on the 3-city map: of the people in a city when its lockdown began, key workers catch it more often since',
 	() => {
@@ -48,12 +51,12 @@ it(
 		const ratios: number[] = [];
 		for (let seed = 1; seed <= SEEDS; seed++) {
 			const sim = createSimulation(microcosm(0), { seed, diseaseId: 'covid19' });
-			sim.seedNow(0, 10);
+			sim.seedNow(0, INDEX_CASES);
 			sim.step(5 * TICKS_PER_DAY);
 			sim.send({ type: 'lockdown', region: 0, on: true });
 			sim.step(55 * TICKS_PER_DAY);
 			const { keyWorkersCaught: key, stayHomeCaught: home } = sim.snapshot().regions[0];
-			if (key + home === 0) continue;
+			if (sim.everInfectedByAge(0).reduce((s, n) => s + n, 0) < TOOK_OFF) continue;
 			tookOff++;
 			ratios.push(home > 0 ? key / home : Infinity);
 			if (key > home) right++;
@@ -63,7 +66,7 @@ it(
 		console.log(
 			`lesson 21, 3-city map: ${tookOff} of ${SEEDS} runs took off; key workers / stay-home share caught since day 5, median ${sorted[sorted.length >> 1]?.toFixed(2)}; pass share ${share}`
 		);
-		expect(tookOff).toBeGreaterThanOrEqual(SEEDS / 4);
+		expect(tookOff).toBeGreaterThanOrEqual(SEEDS / 2);
 		expect(share).toBeGreaterThanOrEqual(0.8);
 	},
 	LESSON_TIMEOUT
@@ -71,7 +74,7 @@ it(
 
 it('a city that locks down again counts its key-worker chart from the new start', () => {
 	const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
-	sim.seedNow(0, 10);
+	sim.seedNow(0, INDEX_CASES);
 	sim.step(5 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
 	sim.step(40 * TICKS_PER_DAY);
@@ -86,36 +89,127 @@ it('a city that locks down again counts its key-worker chart from the new start'
 	expect(again.stayHomeCaught).toBeLessThan(first.stayHomeCaught / 10 + 1e-9);
 });
 
-it("another city's lockdown never changes a city's key-worker chart", () => {
-	const run = (lockOther: boolean) => {
-		const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
-		sim.seedNow(0, 10);
-		sim.step(5 * TICKS_PER_DAY);
-		sim.send({ type: 'lockdown', region: 0, on: true });
-		sim.step(25 * TICKS_PER_DAY);
-		if (lockOther) sim.send({ type: 'lockdown', region: 1, on: true });
-		sim.step(1);
-		return sim.snapshot().regions[0];
-	};
-	const alone = run(false);
-	const both = run(true);
-	expect(alone.keyWorkersCaught).toBeGreaterThan(0);
-	expect(both.keyWorkersCaught).toBe(alone.keyWorkersCaught);
-	expect(both.stayHomeCaught).toBe(alone.stayHomeCaught);
+/*
+ * Each city keeps its own cohort and baseline: another city's lockdown starting never re-stamps them.
+ * (Its numbers still move with the epidemic, which that lockdown changes.)
+ */
+it("another city's lockdown never re-stamps a city's key-worker cohort", () => {
+	const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(5 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(25 * TICKS_PER_DAY);
+	const inside = sim as unknown as { cohort: Uint8Array; caughtAtLock: Int32Array };
+	const cap = sim.agents.capacity;
+	const cohort = inside.cohort.slice(0, cap);
+	const base = inside.caughtAtLock.slice(0, cap);
+	expect(base.some((n) => n > 0)).toBe(true);
+	sim.send({ type: 'lockdown', region: 1, on: true });
+	sim.step(1);
+	expect(inside.cohort.slice(0, cap)).toEqual(cohort);
+	expect(inside.caughtAtLock.slice(0, cap)).toEqual(base);
+	expect(inside.cohort.slice(cap, 2 * cap).some((n) => n === 1)).toBe(true);
 });
 
-it.each(['covid19omicron', 'flu'] as const)(
-	'the key-worker chart never shows more than everyone caught it, for %s through a year-long lockdown',
-	(diseaseId) => {
-		const sim = createSimulation(microcosm(0), { seed: 2, diseaseId });
+/*
+ * The engine review's case where the old per-dot tally passed 100% (1.044 by day 365): Omicron, three
+ * times the usual travel, every city locked from day 5, River City seeded. Each person counts once,
+ * so no group's share ever passes 1.
+ */
+it(
+	'the key-worker chart never passes 100% for Omicron with much travel and every city locked',
+	() => {
+		const scenario = microcosm(0);
+		for (const region of scenario.regions) {
+			const p = region.policy;
+			region.policy = { ...p, travelFrequency: { ...p.travelFrequency, value: 3 } };
+		}
+		const river = scenario.regions.findIndex((r) => r.name === 'River City');
+		const sim = createSimulation(scenario, { seed: 2, diseaseId: 'covid19omicron' });
+		sim.seedNow(river, INDEX_CASES);
+		sim.step(5 * TICKS_PER_DAY);
+		for (let r = 0; r < scenario.regions.length; r++) sim.send({ type: 'lockdown', region: r, on: true });
+		let most = 0;
+		for (let d = 5; d < 365; d += 5) {
+			sim.step(5 * TICKS_PER_DAY);
+			for (const r of sim.snapshot().regions) {
+				expect(r.keyWorkersCaught).toBeLessThanOrEqual(1);
+				expect(r.stayHomeCaught).toBeLessThanOrEqual(1);
+				most = Math.max(most, r.keyWorkersCaught, r.stayHomeCaught);
+			}
+		}
+		expect(most).toBeGreaterThan(0.05);
+	},
+	LESSON_TIMEOUT
+);
+
+it('a lockdown sent while paused runs exactly as one sent while running, at the same tick', () => {
+	const state = (paused: boolean) => {
+		const sim = createSimulation(microcosm(0), { seed: 3, diseaseId: 'covid19' });
 		sim.seedNow(0, 10);
+		// Another city already locked down, so a paused read that counted anything would show.
+		sim.send({ type: 'lockdown', region: 1, on: true });
+		sim.step(7 * TICKS_PER_DAY + 5);
+		// Paused, the page keeps reading snapshots before the next tick.
+		if (paused) for (let k = 0; k < 5; k++) sim.snapshot();
 		sim.send({ type: 'lockdown', region: 0, on: true });
+		if (paused) sim.snapshot();
+		sim.step(20 * TICKS_PER_DAY);
+		const a = sim.agents;
+		return JSON.stringify({
+			snap: sim.snapshot(),
+			x: Array.from(a.x.subarray(0, a.activeCount)),
+			region: Array.from(a.region.subarray(0, a.activeCount)),
+			history: sim.history(0)
+		});
+	};
+	expect(state(true)).toBe(state(false));
+});
+
+it('a restart lifts every lockdown, and its key-worker chart starts again empty', () => {
+	const scenario = microcosm(0);
+	const sim = createSimulation(scenario, { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, 10);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(10 * TICKS_PER_DAY);
+	expect(sim.snapshot().regions[0].lockedDown).toBe(true);
+	sim.setup(scenario, 'covid19', 2);
+	const r = sim.snapshot().regions[0];
+	expect(r.lockedDown).toBe(false);
+	expect(r.lockedSince).toBe(-1);
+	expect(Number.isNaN(r.keyWorkersCaught)).toBe(true);
+});
+
+/*
+ * The engine review's case where the old per-dot tally passed 100% (6.4): polio, 3% key workers,
+ * three times the usual travel, every city locked down for a year. Each person counts once, so no
+ * group's share ever passes 1, and the chart is not empty.
+ */
+it(
+	'the key-worker chart never passes 100% with few key workers, much travel and every city locked',
+	() => {
+		const scenario = microcosm(0);
+		for (const region of scenario.regions) {
+			const p = region.policy;
+			region.policy = {
+				...p,
+				keyWorkerShare: { ...p.keyWorkerShare, value: 0.03 },
+				travelFrequency: { ...p.travelFrequency, value: 3 }
+			};
+		}
+		const sim = createSimulation(scenario, { seed: 2, diseaseId: 'polio' });
+		for (let r = 0; r < scenario.regions.length; r++) sim.seedNow(r, INDEX_CASES);
+		for (let r = 0; r < scenario.regions.length; r++) sim.send({ type: 'lockdown', region: r, on: true });
+		let most = 0;
 		for (let d = 0; d < 365; d += 5) {
 			sim.step(5 * TICKS_PER_DAY);
-			const r = sim.snapshot().regions[0];
-			expect(r.keyWorkersCaught).toBeLessThanOrEqual(1);
-			expect(r.stayHomeCaught).toBeLessThanOrEqual(1);
+			for (const r of sim.snapshot().regions) {
+				expect(r.keyWorkersCaught).toBeLessThanOrEqual(1);
+				expect(r.stayHomeCaught).toBeLessThanOrEqual(1);
+				most = Math.max(most, r.keyWorkersCaught, r.stayHomeCaught);
+			}
 		}
+		expect(most).toBeGreaterThan(0.05);
 	},
 	LESSON_TIMEOUT
 );

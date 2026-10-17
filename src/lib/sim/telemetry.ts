@@ -26,9 +26,10 @@ const CHANNELS = HISTORY_CHANNELS.length;
 /**
  * Lockdown figures per region (6.4), as the engine passes them to sample: people under lockdown
  * now, person-days so far, people out as key workers, ignoring it and tired of it, then the share
- * of key workers and of working-age people told to stay home who have caught it.
+ * of key workers and of working-age people told to stay home who have caught it, and the day
+ * the latest lockdown began.
  */
-export const LOCK_SLOTS = 7;
+export const LOCK_SLOTS = 8;
 /** The history channel each lockdown figure goes in, in LOCK_SLOTS order. */
 const LOCK_CHANNEL = HISTORY_CHANNELS.indexOf('underLockdown');
 
