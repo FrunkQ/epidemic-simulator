@@ -25,7 +25,7 @@ import { People, type PeopleHooks } from './people';
 import { setLook } from './look';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
-import { isKeyWorker, Lockdown, Out, outReason } from './lockdown';
+import { isKeyWorker, Lockdown, lockdownGroup, Out, outReason } from './lockdown';
 import { generateWorld, type World } from './geography';
 import { Renderer } from './render';
 import { generateRoutes } from './routes';
@@ -507,8 +507,10 @@ export class Simulation {
 		}
 		// The key-worker chart: each lockdown city's cohort, wherever its dots are now (on a trip too).
 		// People who have ever caught it move with their people in the boarding swap, so each person
-		// counts once and a group's rise never passes its people. The swap can also swap out someone
-		// who caught it, so a group's rise is shown as at least 0.
+		// counts once and a group's rise never passes its people. In a locked city the swap keeps to
+		// the same group and side of the cohort when it can; only a fallback swap can trade someone who
+		// caught it for someone who hasn't, so a group's rise is shown as at least 0. No test reaches
+		// that: re-locks of smallpox, measles and COVID-19 at three times the travel never went below 0.
 		for (let c = 0; c < regions.length; c++) {
 			if (this.everLocked[c] === 0) continue;
 			const policy = regions[c].policy;
@@ -621,7 +623,10 @@ export class Simulation {
 	 * Before a dot boards (4.4): nobody ill ever travels. Its ill people swap places with as many
 	 * people who aren't ill from the nearest dot staying in the same city with the same age band and
 	 * vaccination level, so every dot's attributes stay true for its people. Each person keeps their
-	 * own state and clock. Returns false (the dot doesn't board) if no dot can swap.
+	 * own state and clock. In a locked-down city the nearest dot in the same lockdown group (key
+	 * worker, keeping to it, other) and on the same side of that city's cohort is preferred, so the
+	 * swap doesn't move people across the key-worker chart's lines; unlocked, it is always the nearest. Returns false (the dot doesn't
+	 * board) if no dot can swap.
 	 */
 	private readonly readyToBoard = (i: number): boolean => {
 		const p = this.people;
@@ -629,8 +634,14 @@ export class Simulation {
 		if (k === 0) return true;
 		const a = this.agents;
 		const r = a.region[i];
+		const locked = this.lockdown.on[r] === 1;
+		const policy = this.scenario.regions[r].policy;
+		const group = locked ? lockdownGroup(a, i, policy) : 0;
+		const at = r * a.capacity;
 		let best = -1;
 		let bestD = Infinity;
+		let same = -1;
+		let sameD = Infinity;
 		for (let j = 0; j < a.activeCount; j++) {
 			if (j === i || a.region[j] !== r || a.route[j] >= 0) continue;
 			if (a.ageBand[j] !== a.ageBand[i] || a.protection[j] !== a.protection[i]) continue;
@@ -640,7 +651,17 @@ export class Simulation {
 				bestD = d;
 				best = j;
 			}
+			if (
+				locked &&
+				d < sameD &&
+				this.cohort[at + j] === this.cohort[at + i] &&
+				lockdownGroup(a, j, policy) === group
+			) {
+				sameD = d;
+				same = j;
+			}
 		}
+		if (same >= 0) best = same;
 		if (best < 0) return false;
 		// Pick the people who aren't ill first, while the partner's own counts still say who they are.
 		for (let n = 0; n < k; n++) {

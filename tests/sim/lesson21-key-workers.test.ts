@@ -36,37 +36,31 @@ it(
 /*
  * The same direction on the 3-city map, as the card's chart counts it (6.4): city 0 locks down on
  * day 5, and of the people there when it began, followed wherever they go, key workers have caught
- * it more often since than working-age people who stayed home at first. A day-5 lockdown stops
- * most outbreaks seeded with 10 cases here, so this seeds 200, and judges only runs where at least
- * TOOK_OFF people in city 0 have caught it by day 60.
+ * it more often since than working-age people who stayed home at first, judged on every seed. A
+ * day-5 lockdown stops most outbreaks seeded with 10 cases here, so this seeds 200; every seed then
+ * has cases after the lockdown.
  */
-const TOOK_OFF = 1500;
 const INDEX_CASES = 200;
 
 it(
 	'lesson 21 on the 3-city map: of the people in a city when its lockdown began, key workers catch it more often since',
 	() => {
-		let tookOff = 0;
-		let right = 0;
 		const ratios: number[] = [];
-		for (let seed = 1; seed <= SEEDS; seed++) {
+		const share = shareOf(SEEDS, (seed) => {
 			const sim = createSimulation(microcosm(0), { seed, diseaseId: 'covid19' });
 			sim.seedNow(0, INDEX_CASES);
 			sim.step(5 * TICKS_PER_DAY);
 			sim.send({ type: 'lockdown', region: 0, on: true });
 			sim.step(55 * TICKS_PER_DAY);
 			const { keyWorkersCaught: key, stayHomeCaught: home } = sim.snapshot().regions[0];
-			if (sim.everInfectedByAge(0).reduce((s, n) => s + n, 0) < TOOK_OFF) continue;
-			tookOff++;
+			expect(key + home).toBeGreaterThan(0);
 			ratios.push(home > 0 ? key / home : Infinity);
-			if (key > home) right++;
-		}
-		const share = right / tookOff;
+			return key > home;
+		});
 		const sorted = ratios.slice().sort((a, b) => a - b);
 		console.log(
-			`lesson 21, 3-city map: ${tookOff} of ${SEEDS} runs took off; key workers / stay-home share caught since day 5, median ${sorted[sorted.length >> 1]?.toFixed(2)}; pass share ${share}`
+			`lesson 21, 3-city map: key workers / stayed-home share caught since day 5, median ${sorted[sorted.length >> 1].toFixed(2)} (range ${sorted[0].toFixed(2)}-${sorted[sorted.length - 1].toFixed(2)}); pass share ${share}`
 		);
-		expect(tookOff).toBeGreaterThanOrEqual(SEEDS / 2);
 		expect(share).toBeGreaterThanOrEqual(0.8);
 	},
 	LESSON_TIMEOUT
@@ -132,11 +126,15 @@ it(
 		let most = 0;
 		for (let d = 5; d < 365; d += 5) {
 			sim.step(5 * TICKS_PER_DAY);
-			for (const r of sim.snapshot().regions) {
+			const regions = sim.snapshot().regions;
+			for (const r of regions) {
 				expect(r.keyWorkersCaught).toBeLessThanOrEqual(1);
 				expect(r.stayHomeCaught).toBeLessThanOrEqual(1);
 				most = Math.max(most, r.keyWorkersCaught, r.stayHomeCaught);
 			}
+			// The direction while most who stayed home still keep to it (fatigue's mean is 60 days).
+			// Later both groups are out and both near everyone, so they meet; that is not judged.
+			if (d + 5 === 60) for (const r of regions) expect(r.keyWorkersCaught).toBeGreaterThan(r.stayHomeCaught);
 		}
 		expect(most).toBeGreaterThan(0.05);
 	},

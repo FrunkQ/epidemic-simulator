@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { microcosm } from '../../src/lib/config/scenarios';
+import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { Exposure, transmit } from '../../src/lib/sim/disease';
 import { createSimulation, type Simulation } from '../../src/lib/sim/engine';
-import { isKeyWorker } from '../../src/lib/sim/lockdown';
+import { isKeyWorker, lockdownGroup, Out, outReason } from '../../src/lib/sim/lockdown';
 import type { SpatialGrid } from '../../src/lib/sim/grid';
 import type { PeopleHooks } from '../../src/lib/sim/people';
 import type { Rng } from '../../src/lib/sim/rng';
@@ -254,4 +254,82 @@ describe('who stays home', () => {
 			expect(a.contact[i]).toBe(1);
 		}
 	});
+});
+
+it.each(['covid19omicron', 'flu'] as const)(
+	'people who have caught it never fall in a dot as immunity wanes, and add up to everyone ever infected (%s)',
+	(diseaseId) => {
+		const sim = createSimulation(singleCity({ population: 200_000 }), { seed: 2, diseaseId });
+		sim.seedNow(0, INDEX_CASES);
+		const a = sim.agents;
+		const p = sim.people;
+		const last = new Int32Array(a.activeCount);
+		let waned = 0;
+		for (let d = 0; d < 365; d++) {
+			sim.step(TICKS_PER_DAY);
+			let sum = 0;
+			for (let i = 0; i < a.activeCount; i++) {
+				const n = p.everCaught(i);
+				expect(n).toBeGreaterThanOrEqual(last[i]);
+				last[i] = n;
+				sum += n;
+				waned += p.susceptibleAgain[i];
+			}
+			expect(sum).toBe(sim.everInfectedByAge(0).reduce((s, n) => s + n, 0));
+		}
+		// Immunity did wane back to catchable, so a tally that lost those people would show.
+		expect(waned).toBeGreaterThan(0);
+	},
+	600_000
+);
+
+it('walkers on their way home and held dots have the held contact; everyone kept home is exactly who outReason says', () => {
+	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(3 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	const a = sim.agents;
+	const policy = microcosm(0).regions[0].policy;
+	const cut = policy.lockdownContactCut.value;
+	let walkers = 0;
+	for (let t = 0; t < 80 * TICKS_PER_DAY; t += 7) {
+		sim.step(7);
+		const inner = sim as unknown as { lockdown: { ticks: Int32Array }; tick: number };
+		const ticks = inner.lockdown.ticks[0];
+		for (let i = 0; i < a.activeCount; i++) {
+			// Who stays home is worked out at the start of the tick, before this tick's arrivals land.
+			if (a.landedTick[i] === inner.tick) continue;
+			const home = a.region[i] === 0 && outReason(a, i, policy, ticks) === Out.HOME;
+			// A walker that reached its spot this tick is held from the next one.
+			const reached = a.held[i] === 0 && a.x[i] === a.goalX[i] && a.y[i] === a.goalY[i];
+			if (!reached) expect(a.held[i] + a.walking[i]).toBe(home ? 1 : 0);
+			expect(a.contact[i]).toBeCloseTo(home ? 1 - cut : 1, 6);
+			walkers += a.walking[i];
+		}
+	}
+	expect(walkers).toBeGreaterThan(0);
+});
+
+it("a locked city's boarding swap takes a partner from the same group and the same side of the cohort", () => {
+	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(3 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(15 * TICKS_PER_DAY);
+	const a = sim.agents;
+	const p = sim.people;
+	const policy = microcosm(0).regions[0].policy;
+	const inner = sim as unknown as { readyToBoard: (i: number) => boolean; cohort: Uint8Array };
+	let swaps = 0;
+	for (let i = 0; i < a.activeCount && swaps < 40; i++) {
+		if (a.region[i] !== 0 || a.route[i] >= 0 || p.ill[i] === 0 || a.held[i] === 1) continue;
+		const ill = Array.from(p.ill.subarray(0, a.activeCount));
+		if (!inner.readyToBoard(i)) continue;
+		const partner = ill.findIndex((n, j) => j !== i && p.ill[j] > n);
+		expect(partner).toBeGreaterThanOrEqual(0);
+		expect(lockdownGroup(a, partner, policy)).toBe(lockdownGroup(a, i, policy));
+		expect(inner.cohort[partner]).toBe(inner.cohort[i]);
+		swaps++;
+	}
+	expect(swaps).toBeGreaterThan(5);
 });
