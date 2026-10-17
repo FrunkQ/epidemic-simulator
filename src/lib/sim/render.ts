@@ -153,6 +153,7 @@ export class Renderer {
 			this.lastTick = NaN;
 		}
 		this.place(agents, transit, tick, scene.alpha);
+		this.jitter(agents, scene.now, spacing);
 		const ax = this.atX;
 		const ay = this.atY;
 		const s = camera.scale;
@@ -381,6 +382,21 @@ export class Renderer {
 			const jump = dx * dx + dy * dy > GLIDE_LIMIT * GLIDE_LIMIT;
 			this.atX[i] = jump ? this.lastX[i] : this.lastX[i] - dx * k;
 			this.atY[i] = jump ? this.lastY[i] : this.lastY[i] - dy * k;
+		}
+	}
+
+	/**
+	 * Dots close to tiring of a lockdown jitter where they are drawn (6.4): an offset from the frame's
+	 * time only, so it uses no random numbers and never changes the simulation.
+	 */
+	private jitter(agents: Agents, now: number, spacing: number): void {
+		const { restless } = agents;
+		const by = 0.12 * spacing;
+		for (let i = 0; i < agents.activeCount; i++) {
+			if (restless[i] === 0) continue;
+			const t = now * 0.025 + i * 1.7;
+			this.atX[i] += Math.sin(t) * by;
+			this.atY[i] += Math.cos(t * 1.3) * by;
 		}
 	}
 

@@ -23,6 +23,14 @@ const C_DECEASED = 6;
 const C_EVER = 7;
 const C_SLOTS = 8;
 const CHANNELS = HISTORY_CHANNELS.length;
+/**
+ * Lockdown figures per region (6.4), as the engine passes them to sample: people under lockdown
+ * now, person-days so far, people out as key workers, ignoring it and tired of it, then the share
+ * of key workers and of working-age people told to stay home who have caught it.
+ */
+export const LOCK_SLOTS = 7;
+/** The history channel each lockdown figure goes in, in LOCK_SLOTS order. */
+const LOCK_CHANNEL = HISTORY_CHANNELS.indexOf('underLockdown');
 
 /** Hospital channels are expected values (6.6), so history stores them in thousandths of a person. */
 export const HOSPITAL_SCALE = 1000;
@@ -266,8 +274,11 @@ export class TelemetryCounters {
 		return a + b + c;
 	}
 
-	/** Store today's sample for every region; `pressure` is each region's hospital pressure (6.6). */
-	sample(day: number, pressure: Float32Array): void {
+	/**
+	 * Store today's sample for every region; `pressure` is each region's hospital pressure (6.6) and
+	 * `lockdown` its lockdown figures (LOCK_SLOTS each).
+	 */
+	sample(day: number, pressure: Float32Array, lockdown: Float64Array): void {
 		const slot = this.historyHead;
 		const { counts, history, ageHistory, ages, agesInHospital } = this;
 		for (let r = 0; r < this.regionCount; r++) {
@@ -282,6 +293,7 @@ export class TelemetryCounters {
 			history[h + 6] = Math.round(pressure[r] * 1000);
 			history[h + 7] = Math.round(this.harmHeadline(r) * HOSPITAL_SCALE);
 			history[h + 8] = Math.round(this.babiesHarmed(r) * HOSPITAL_SCALE);
+			for (let k = 0; k < LOCK_SLOTS; k++) history[h + LOCK_CHANNEL + k] = lockdown[r * LOCK_SLOTS + k];
 			const a = (slot * this.regionCount + r) * A_SLOTS;
 			ageHistory.set(ages.subarray(r * A_SLOTS, (r + 1) * A_SLOTS), a);
 			for (let band = 0; band < BANDS; band++) {

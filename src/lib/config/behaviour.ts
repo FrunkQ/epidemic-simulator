@@ -1,11 +1,24 @@
 import type { Sourced } from '../sim/types';
-import { EU_CURATIVE_BEDS_PER_1000, EU_CURATIVE_OCCUPANCY, STRAIN } from './derived';
+import {
+	EU_CURATIVE_BEDS_PER_1000,
+	EU_CURATIVE_OCCUPANCY,
+	KEY_WORKER_SHARE,
+	LOCKDOWN_COMPLIANCE,
+	LOCKDOWN_CONTACT_CUT,
+	STRAIN
+} from './derived';
 
 /**
  * How people and health systems respond. COVID-19 era research backs the behaviour mechanics
  * only, never another disease's numbers.
  */
 export interface BehaviourConfig {
+	/** Share of people aged 15-64 who are key workers and keep working in a lockdown (6.4). */
+	keyWorkerShare: Sourced;
+	/** Share of everyone else who stay home from the start of a lockdown (6.4). */
+	lockdownCompliance: Sourced;
+	/** How much less contact outside the home people staying home in a lockdown have (6.4). */
+	lockdownContactCut: Sourced;
 	/** Average days of lockdown before a person starts to drift back out. */
 	lockdownFatigueMeanDays: Sourced;
 	/** Spread of that point between people, in days. */
@@ -37,6 +50,15 @@ const TRAVEL_PLACEHOLDER =
 	'Sized so a few dots a day travel between the 3 cities; real trip and flight rates per city pair come with country data in step 4.';
 
 export const BEHAVIOUR: BehaviourConfig = {
+	keyWorkerShare: {
+		value: KEY_WORKER_SHARE,
+		sources: ['ons2020-key-workers', 'worldbank-pop-total-2019', 'worldbank-pop-1564-2019']
+	},
+	lockdownCompliance: { value: LOCKDOWN_COMPLIANCE, sources: ['smith2020-lockdown-adherence'] },
+	lockdownContactCut: {
+		value: LOCKDOWN_CONTACT_CUT,
+		sources: ['jarvis2020-comix-uk', 'liu2021-contact-review']
+	},
 	lockdownFatigueMeanDays: {
 		value: 60,
 		sources: ['joshi2021-lockdown-mobility']

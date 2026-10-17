@@ -400,6 +400,12 @@ export interface Scenario {
 	regions: Region[];
 	/** Switch subsystems off, one at a time, for guided mode (6.14). Everything is on when unset. */
 	subsystems?: Partial<Subsystems>;
+	/**
+	 * With illStopsMovement on, a dot stops (and can't board) once this share of its people are ill:
+	 * 0.5 (the majority rule) when unset; 0 stops it for anyone ill. Not in the UI: lesson tests use
+	 * it to recheck lessons under other rules (10).
+	 */
+	illStopShare?: number;
 }
 
 /**
@@ -486,7 +492,18 @@ export interface RegionTelemetry {
 	 */
 	strain: number;
 	lockedDown: boolean;
+	/** Of the people under lockdown here, the share out because they have tired of it (6.4). */
 	fatiguedShare: number;
+	/** Living people in this city's dots (not travellers) while it is locked down; 0 otherwise. */
+	underLockdown: number;
+	/** Person-days under lockdown so far: underLockdown added up over each locked-down day. */
+	personDays: number;
+	/** People out during this city's lockdown, by reason (0 when it isn't locked down). */
+	out: { key: number; ignoring: number; tired: number };
+	/** Share of key workers here who have caught it, counted in the dot where they caught it (6.4). */
+	keyWorkersCaught: number;
+	/** The same for working-age people who aren't key workers and keep to a lockdown. */
+	stayHomeCaught: number;
 	testCooldown: number;
 }
 
@@ -529,7 +546,10 @@ export interface RegionHistory {
 /**
  * Daily channels per region, in people. inHospital (here and per age band), lastingHarm and babies
  * are expected values in thousandths of a person (HOSPITAL_SCALE), and pressure is in thousandths
- * (1000 = 100%). lastingHarm is the headline: the largest counted harm (6.17).
+ * (1000 = 100%). lastingHarm is the headline: the largest counted harm (6.17). The lockdown
+ * channels (6.4) are people under lockdown that day, person-days so far, people out as key workers,
+ * ignoring it or tired of it, and the share (0 to 1) of key workers and of working-age people told
+ * to stay home who have caught it.
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -540,7 +560,14 @@ export const HISTORY_CHANNELS = [
 	'inHospital',
 	'pressure',
 	'lastingHarm',
-	'babies'
+	'babies',
+	'underLockdown',
+	'personDays',
+	'outKey',
+	'outIgnoring',
+	'outTired',
+	'keyWorkersCaught',
+	'stayHomeCaught'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 

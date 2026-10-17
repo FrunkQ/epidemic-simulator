@@ -11,13 +11,22 @@
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
-	import { LIVE_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
+	import { LIVE_POLICY_FIELDS, LOCKDOWN_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
 	import { waningWords } from '../config/waning';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
 	import { COLOURS } from '../sim/render';
-	import type { DiseaseConfig, DiseaseId, PressureBand, Region, RegionTelemetry } from '../sim/types';
+	import type {
+		DiseaseConfig,
+		DiseaseId,
+		PressureBand,
+		Region,
+		RegionHistory,
+		RegionTelemetry
+	} from '../sim/types';
 	import LevelGauge from './charts/LevelGauge.svelte';
+	import LineChart from './charts/LineChart.svelte';
+	import StackedAreaChart from './charts/StackedAreaChart.svelte';
 	import { harmText } from './harmText';
 
 	interface Props {
@@ -49,6 +58,10 @@
 		onvaccine: (key: string) => void;
 		/** A health policy slider moved; applies live, without a restart. */
 		onpolicy: (key: LivePolicyKey, value: number) => void;
+		/** Start or end this population's lockdown (6.4). */
+		onlockdown?: (on: boolean) => void;
+		/** This population's daily history, for the lockdown charts. */
+		history?: RegionHistory;
 		onseed: () => void;
 		/** The cities' discs in window coordinates, which the harm details must not cover. */
 		discs?: () => { x: number; y: number; r: number }[];
@@ -73,9 +86,20 @@
 		onvaccination,
 		onvaccine,
 		onpolicy,
+		onlockdown,
+		history,
 		onseed,
 		discs = () => []
 	}: Props = $props();
+	/** The lockdown charts' fills: greys, so they never read as a dot's state; each band is labelled. */
+	const OUT_BANDS = [
+		{ key: 'outKey', label: 'Key workers', colour: '#cfd6de' },
+		{ key: 'outIgnoring', label: 'Not keeping to it', colour: '#97a3b0' },
+		{ key: 'outTired', label: 'Tired of it', colour: '#647181' }
+	] as const;
+	const lockdownDays = $derived(history ? Array.from(history.days) : []);
+	/** Whether this run has had a lockdown here yet: the charts show from then on. */
+	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
 	$effect(() => {
@@ -406,6 +430,91 @@
 				Spare beds for outbreak patients: about <b>{people(t.capacity)}</b> of {people(t.beds)}.
 			</p>
 		{/if}
+		<h3>Lockdown</h3>
+		{#if onlockdown}
+			<button
+				class="lockdown"
+				aria-pressed={t?.lockedDown ?? false}
+				onclick={() => onlockdown(!(t?.lockedDown ?? false))}
+				>{t?.lockedDown ? 'End lockdown' : 'Start lockdown'}</button
+			>
+		{/if}
+		{#if t?.lockedDown}
+			<p class="note">
+				Still going out: <b>{people(t.out.key)}</b> key workers, <b>{people(t.out.ignoring)}</b> not keeping
+				to it and <b>{people(t.out.tired)}</b> tired of it, of {people(t.underLockdown)}.
+			</p>
+		{/if}
+		{#each LOCKDOWN_POLICY_FIELDS as f (f.key)}
+			{@const value = region.policy[f.key].value}
+			<label>
+				<span>{f.label} <b>{f.format(value)}</b></span>
+				<input
+					type="range"
+					min={f.min}
+					max={f.max}
+					step={f.step}
+					{value}
+					onchange={(e) => onpolicy(f.key, Number(e.currentTarget.value))}
+				/>
+				<small>{f.explain}</small>
+			</label>
+		{/each}
+		{#if hadLockdown && history && t}
+			<div class="lockcharts">
+				<StackedAreaChart
+					title="{region.name}: people out during the lockdown, by reason"
+					caption="Out in lockdown"
+					days={lockdownDays}
+					bands={OUT_BANDS.map((b) => ({ ...b, values: Array.from(history.series[b.key]) }))}
+					max={Math.max(1, ...history.series.underLockdown)}
+					width={190}
+				/>
+				<ul class="key">
+					{#each OUT_BANDS as b (b.key)}
+						<li><i style:background={b.colour}></i>{b.label}</li>
+					{/each}
+				</ul>
+				<LineChart
+					title="{region.name}: share who have caught it, key workers and working-age people who stay home"
+					caption="Caught it: key workers vs home"
+					days={lockdownDays}
+					lines={[
+						{
+							key: 'key',
+							label: 'Key workers',
+							colour: '#cfd6de',
+							values: Array.from(history.series.keyWorkersCaught, (v) => v * 100)
+						},
+						{
+							key: 'home',
+							label: 'Stay home',
+							colour: '#cfd6de',
+							dash: '4 3',
+							values: Array.from(history.series.stayHomeCaught, (v) => v * 100)
+						}
+					]}
+					unit="%"
+					yLabel="% caught it"
+					width={190}
+				/>
+				<LineChart
+					title="{region.name}: person-days under lockdown so far"
+					caption="Person-days in lockdown"
+					days={lockdownDays}
+					lines={[
+						{
+							key: 'personDays',
+							label: 'Person-days',
+							colour: '#cfd6de',
+							values: Array.from(history.series.personDays)
+						}
+					]}
+					yLabel="person-days"
+					width={190}
+				/>
+			</div>
+		{/if}
 	{/if}
 	{#if panel === 'vaccination' && !vaccine.exists}
 		<p class="unprotected">No vaccine exists for this disease.</p>
@@ -647,6 +756,36 @@
 	}
 	.toggle.active {
 		background: #3a6590;
+	}
+	.lockcharts {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-top: 6px;
+	}
+	.key {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2px 10px;
+		margin: -6px 0 0;
+		padding: 0;
+		list-style: none;
+		font-size: 11px;
+	}
+	.key i {
+		display: inline-block;
+		width: 9px;
+		height: 9px;
+		margin-right: 4px;
+		border-radius: 2px;
+	}
+	h3 {
+		margin: 8px 0 4px;
+		font-size: 12px;
+		font-weight: 600;
+	}
+	.lockdown[aria-pressed='true'] {
+		background: #3a2a2a;
 	}
 	.note {
 		margin: 2px 0 4px;

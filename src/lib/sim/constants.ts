@@ -44,8 +44,6 @@ export const WANDER_TURN = 0.6;
 /** Days of history kept for charts (ring buffer). */
 export const HISTORY_DAYS = 730;
 
-/** Share of dots that keep moving during a lockdown. */
-export const ESSENTIAL_SHARE = 0.1;
 /** Map grid resolution: world units per heightmap cell. */
 export const MAP_CELL = 12;
 /** Share of the world that is land. */

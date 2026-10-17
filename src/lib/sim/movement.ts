@@ -10,7 +10,7 @@ export function regionRadius(dots: number, density: number): number {
 
 /**
  * Wandering inside each population's disc. Dots turn a little now and then and bounce off
- * the edge. Red (with any disease), isolated and dead dots stay put.
+ * the edge. Red (with any disease), isolated, dead and lockdown-held dots stay put.
  */
 export function moveInRegions(
 	agents: Agents,
@@ -20,12 +20,12 @@ export function moveInRegions(
 	rng: Rng,
 	illStopsMovement: boolean
 ): void {
-	const { x, y, vx, vy, ill, dead, region, isolated } = agents;
+	const { x, y, vx, vy, ill, dead, region, isolated, held } = agents;
 	const n = agents.activeCount;
 	for (let i = 0; i < n; i++) {
 		const r = region[i];
 		if (r < 0) continue;
-		if (dead[i] === 1 || isolated[i] === 1 || (illStopsMovement && ill[i] === 1)) continue;
+		if (dead[i] === 1 || isolated[i] === 1 || held[i] === 1 || (illStopsMovement && ill[i] === 1)) continue;
 
 		let dx = vx[i];
 		let dy = vy[i];

@@ -46,6 +46,46 @@ export function ageMixOf(place: keyof typeof WORLD_BANK_AGES_2025): [number, num
 	return [under15 / 100, (100 - under15 - over64) / 100, over64 / 100];
 }
 
+// --- Lockdown (6.4, research/lockdown-movers.md §4) ---
+
+/** ONS, "Coronavirus and key workers in the UK" (15 May 2020): people employed in key worker jobs in 2019. */
+export const ONS_KEY_WORKERS_2019 = 10_600_000;
+/** World Bank via FRED: the UK's population in 2019 (POPTOTGBA647NWDB) and its share aged 15-64, % (SPPOP1564TOZSGBR). */
+export const UK_POPULATION_2019 = 66_628_000;
+export const UK_AGED_15_64_2019 = 63.5198822523142;
+/**
+ * Key workers as a share of people aged 15-64, since only 15-64 dots can be key workers (6.4). ONS
+ * counts workers aged 16 and over, so a few older key workers are folded in: slightly high.
+ */
+export const KEY_WORKER_SHARE = ONS_KEY_WORKERS_2019 / (UK_POPULATION_2019 * (UK_AGED_15_64_2019 / 100));
+/**
+ * Smith 2020, Table 6: of people with no symptoms at home, those who had and had not been out
+ * shopping for things other than groceries, toiletries or medicines in the past week (6-7 May 2020).
+ */
+export const SMITH_2020_SHOPPING = { stayedIn: 1469, wentOut: 476 };
+/** The share who kept to the lockdown: those who had not been out shopping for non-essentials. */
+export const LOCKDOWN_COMPLIANCE =
+	SMITH_2020_SHOPPING.stayedIn / (SMITH_2020_SHOPPING.stayedIn + SMITH_2020_SHOPPING.wentOut);
+
+/**
+ * Jarvis 2020 (CoMix UK, 24-27 March 2020, against POLYMOD 2005-06): contacts per person per day,
+ * and the share of them at home, before and in the first week of the UK lockdown.
+ */
+export const JARVIS_2020_CONTACTS = {
+	before: 10.8,
+	lockdown: 2.8,
+	homeShareBefore: 0.337,
+	homeShareLockdown: 0.576
+};
+/**
+ * How much contact outside the home fell in that lockdown week (6.4). The model has no homes, so
+ * only contact outside the home applies between dots.
+ */
+export const LOCKDOWN_CONTACT_CUT =
+	1 -
+	(JARVIS_2020_CONTACTS.lockdown * (1 - JARVIS_2020_CONTACTS.homeShareLockdown)) /
+		(JARVIS_2020_CONTACTS.before * (1 - JARVIS_2020_CONTACTS.homeShareBefore));
+
 // --- Hospitals (6.6, 4.2) ---
 
 /** Eurostat hlth_rs_bds1: EU-27 curative care beds (HBEDT_CUR, somatic), per 100,000, 2023. */

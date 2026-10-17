@@ -1,7 +1,12 @@
-import { ESSENTIAL_SHARE } from '../sim/constants';
 import type { Bands, Sourced } from '../sim/types';
 import { BEHAVIOUR } from './behaviour';
-import { ENGLAND_ACUTE_BEDS_PER_1000, KH03_Q2_2023 } from './derived';
+import {
+	ENGLAND_ACUTE_BEDS_PER_1000,
+	KEY_WORKER_SHARE,
+	KH03_Q2_2023,
+	LOCKDOWN_COMPLIANCE,
+	ONS_KEY_WORKERS_2019
+} from './derived';
 import { POPULATION } from './population';
 
 /**
@@ -16,12 +21,19 @@ export interface HealthPolicy {
 	hospitalBedsPerThousand: Sourced;
 	/** Share of those beds normally free; only spare beds count as capacity. Live. */
 	spareBedShare: Sourced;
-	/** Share who stay home in a lockdown. Engine hook arrives in step 3. */
+	/** Share of people aged 15-64 who are key workers: they keep going out in a lockdown (6.4). Live. */
+	keyWorkerShare: Sourced;
+	/** Share of everyone else who stay home in a lockdown from its first day (6.4). Live. */
 	lockdownCompliance: Sourced;
-	/** Average days of lockdown before people drift back out. Engine hook in step 3. */
+	/** Average days of lockdown before people drift back out (6.4). Live. */
 	lockdownFatigueMeanDays: Sourced;
-	/** Spread of that point between people, in days. Engine hook in step 3. */
+	/** Spread of that point between people, in days (6.4). Live. */
 	lockdownFatigueSdDays: Sourced;
+	/**
+	 * How much less contact outside the home people staying home in a lockdown have (6.4): a pair of
+	 * dots where at least one stays home has its chance scaled by 1 minus this, once. Live.
+	 */
+	lockdownContactCut: Sourced;
 	/** Share of silent cases a mass test finds. Engine hook in step 3. */
 	testingReach: Sourced;
 	/** Days before a population can mass test again. Engine hook in step 3. */
@@ -72,10 +84,52 @@ export const LIVE_POLICY_FIELDS = [
 	explain: string;
 }[];
 
-export type LivePolicyKey = (typeof LIVE_POLICY_FIELDS)[number]['key'];
+/**
+ * The lockdown settings (6.4), on the same card. They apply live: each dot's ranks were drawn once
+ * at the start, so moving a slider changes who stays home without reshuffling anyone.
+ */
+export const LOCKDOWN_POLICY_FIELDS = [
+	{
+		key: 'keyWorkerShare',
+		label: 'Key workers',
+		min: 0,
+		max: 0.6,
+		step: 0.01,
+		format: (v: number) => `${Math.round(v * 100)}%`,
+		explain: `Of people of working age: those who keep working in a lockdown, such as in health, food and transport. In the UK about ${Math.round((ONS_KEY_WORKERS_2019 / 1e6) * 10) / 10} million people did key work in 2019, about ${Math.round(KEY_WORKER_SHARE * 100)} in 100 of those aged 15-64.`
+	},
+	{
+		key: 'lockdownCompliance',
+		label: 'Stay home in a lockdown',
+		min: 0,
+		max: 1,
+		step: 0.01,
+		format: (v: number) => `${Math.round(v * 100)}%`,
+		explain: `Of everyone who isn't a key worker. In May 2020 about ${Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 people in the UK kept to the rules; about ${4 - Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 had been out shopping for things they didn't need.`
+	},
+	{
+		key: 'lockdownFatigueMeanDays',
+		label: 'Days until people tire',
+		min: 7,
+		max: 180,
+		step: 1,
+		format: (v: number) => `${Math.round(v)}`,
+		explain:
+			'On average, how long people who stay home keep it up before they start going out again. Some give up sooner and some later.'
+	}
+] as const satisfies readonly {
+	key: keyof HealthPolicy;
+	label: string;
+	min: number;
+	max: number;
+	step: number;
+	format: (v: number) => string;
+	explain: string;
+}[];
 
-const COMPLIANCE_PLACEHOLDER =
-	'The step 1 default (90% stay home, the rest are essential workers); a COVID-era source comes with the step 3 lockdown hook.';
+export type LivePolicyKey =
+	(typeof LIVE_POLICY_FIELDS)[number]['key'] | (typeof LOCKDOWN_POLICY_FIELDS)[number]['key'];
+
 const TESTING_PLACEHOLDER = 'Mass testing arrives in step 3, with its sourced reach and cooldown.';
 
 /** The general default policy (4.2), built from the sourced behaviour and population config. */
@@ -83,7 +137,9 @@ export const DEFAULT_POLICY: HealthPolicy = {
 	ageMix: POPULATION.ageMix,
 	hospitalBedsPerThousand: BEHAVIOUR.hospitalBedsPerThousand,
 	spareBedShare: BEHAVIOUR.spareBedShare,
-	lockdownCompliance: { value: 1 - ESSENTIAL_SHARE, sources: [], provisional: COMPLIANCE_PLACEHOLDER },
+	keyWorkerShare: BEHAVIOUR.keyWorkerShare,
+	lockdownCompliance: BEHAVIOUR.lockdownCompliance,
+	lockdownContactCut: BEHAVIOUR.lockdownContactCut,
 	lockdownFatigueMeanDays: BEHAVIOUR.lockdownFatigueMeanDays,
 	lockdownFatigueSdDays: BEHAVIOUR.lockdownFatigueSdDays,
 	testingReach: { value: 1, sources: [], provisional: TESTING_PLACEHOLDER },

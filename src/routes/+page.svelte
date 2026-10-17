@@ -517,6 +517,8 @@
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
+					onlockdown={(on) => sim.send({ type: 'lockdown', region: i, on })}
+					history={histories[i]}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 					discs={discsInWindow}
 				/>
@@ -557,6 +559,8 @@
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
+					onlockdown={(on) => sim.send({ type: 'lockdown', region: i, on })}
+					history={histories[i]}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 					discs={discsInWindow}
 				/>

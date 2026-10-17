@@ -134,8 +134,9 @@ export class Transit {
 	}
 
 	/**
-	 * A random dot in the region who can travel: not mostly dead or ill, not isolated, and with nobody
-	 * ill left in it. -1 if none found.
+	 * A random dot in the region who can travel: not mostly dead or ill, not isolated, not kept home by
+	 * a lockdown (6.4: the same rule decides who moves and who may leave), and with nobody ill left in
+	 * it. -1 if none found.
 	 */
 	private pickTraveller(agents: Agents, region: number, rng: Rng): number {
 		const start = this.regionStart[region];
@@ -145,7 +146,7 @@ export class Transit {
 			const k = start + rng.int(count);
 			const i = this.regionItems[k];
 			if (agents.region[i] !== region) continue; // already left this tick
-			if (agents.dead[i] === 1 || agents.isolated[i] === 1) continue;
+			if (agents.dead[i] === 1 || agents.isolated[i] === 1 || agents.held[i] === 1) continue;
 			if (this.illStops && (agents.ill[i] === 1 || !this.readyToBoard(i))) continue;
 			return i;
 		}

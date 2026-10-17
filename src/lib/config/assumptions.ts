@@ -7,6 +7,7 @@ import {
 	EU_CURATIVE_OCCUPANCY_2023,
 	EU_OCCUPANCY_MISSING,
 	fmt,
+	LOCKDOWN_CONTACT_CUT,
 	PLAGUE_ALL,
 	PLAGUE_BUBONIC_TREATED_CFR,
 	PLAGUE_EUROPE_SECOND_PANDEMIC_CFR,
@@ -132,7 +133,10 @@ export const ASSUMPTIONS = {
 	harmLongCovid: `Long COVID a year on comes from a pooled estimate (GBD 2022): ${fmt(GBD_LONG_COVID_12M.all, 1)}% of survivors. Pooled studies with no comparison group find far more, ${HARM_CONTEXT.houOneToTwoYears.value}% at ${HARM_CONTEXT.houWindowYears.value[0]} to ${HARM_CONTEXT.houWindowYears.value[1]} years (Hou 2025). The first is used because it covers everyone who had symptoms and leaves out symptoms people already had before.`,
 	harmPregnancy:
 		'The share of people pregnant counts only pregnancies that end in a birth, so it is slightly low, and harm to babies is undercounted.',
-	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`
+	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`,
+	lockdownContact: `People staying home in a lockdown meet ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% fewer people outside their home. That is the fall measured across UK adults in the first lockdown week of March 2020 (Jarvis 2020): an average that includes people still going to work, so it probably understates the cut for people who truly stayed in. The model has no homes, so it can’t show people who stay in catching it from someone they live with, which was a large share of real lockdown infections.`,
+	keyWorkerDots:
+		'A dot is one group of people, so a whole dot is key workers or not. Key workers catch it more often here only because they keep going out; the model adds no extra risk for their jobs.'
 } as const;
 
 /** Vaccines whose full course has no severe figure and borrows the unfinished course's (6.2). */
