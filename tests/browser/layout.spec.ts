@@ -992,7 +992,7 @@ test.describe('with classic scrollbars', () => {
 			expect(sideways).toEqual([]);
 			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
 			await expect(
-				card.getByText(/so far \d+% of key workers and \d+% of those who stayed home at first/)
+				card.getByText(/since it began, \d+% of key workers and \d+% of those who stayed home at first/)
 			).toBeVisible();
 			await browser.close();
 		});

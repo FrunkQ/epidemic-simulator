@@ -456,8 +456,7 @@
 		{/if}
 		<h3>Lockdown</h3>
 		<p class="note">
-			People staying home still meet some others: about {Math.round(LOCKDOWN_CONTACT_CUT * 100)}% fewer
-			contacts outside the home, not none, so it can still spread in a locked city.
+			{`In the model, people staying home still meet some others: about ${Math.round(LOCKDOWN_CONTACT_CUT * 100)}% fewer contacts outside the home, from a survey of all UK adults in the first week of the March 2020 lockdown, so it can still spread here.`}
 		</p>
 		{#if t?.lockedDown}
 			<p class="note">
@@ -527,7 +526,7 @@
 				<!-- Shown as text, not only in the chart's title and readout, so keyboard, touch and screen readers reach the meaning and the numbers. -->
 				{#if Number.isFinite(t.keyWorkersCaught)}
 					<p class="note">
-						{`Counts the people here when the lockdown began, wherever they go: so far ${pctOf(t.keyWorkersCaught)} of key workers and ${pctOf(t.stayHomeCaught)} of those who stayed home at first have caught it.`}
+						{`Counts the working-age people here when the lockdown began, wherever they go: since it began, ${pctOf(t.keyWorkersCaught)} of key workers and ${pctOf(t.stayHomeCaught)} of those who stayed home at first have caught it.`}
 					</p>
 				{/if}
 				<LineChart
