@@ -205,7 +205,12 @@ async function covers(page: Page) {
 				const box = card.getBoundingClientRect();
 				if (cy < box.top || cy > box.bottom || cy < 0 || cy > innerHeight) return [];
 				const top = document.elementFromPoint(cx, cy);
-				return top && button.contains(top) ? [] : [`card ${i}: "${button.textContent?.trim()}" is covered`];
+				// A button half scrolled out of its own open panel sits under that card's padding: the
+				// panel scrolls to it, and no other card is in the way.
+				const ownEdge = top === card && card.scrollHeight > card.clientHeight;
+				return top && (button.contains(top) || ownEdge)
+					? []
+					: [`card ${i}: "${button.textContent?.trim()}" is covered`];
 			})
 		)
 	);
@@ -213,23 +218,29 @@ async function covers(page: Page) {
 }
 
 for (const [w, h] of TARGETS) {
-	test(`${w}x${h}: cards float, and no card, open or closed, covers a city or another card's buttons`, async ({
-		page
-	}) => {
-		await open(page, w, h);
-		expect(await docked(page)).toBe(0);
-		expect(await covers(page)).toEqual([]);
-		const cards = page.locator('section.card');
-		for (let i = 0; i < (await cards.count()); i++) {
-			for (const name of ['Vaccination', 'Health policy']) {
-				await cards.nth(i).getByRole('button', { name }).click();
-				await settle(page);
-				expect(await covers(page), `card ${i} ${name}`).toEqual([]);
-				await cards.nth(i).getByRole('button', { name }).click();
-				await settle(page);
+	for (const font of [undefined, 'DejaVu Sans']) {
+		test(`${w}x${h}${font ? ` in ${font}` : ''}: cards float, and no card, open or closed, covers a city or another card's buttons`, async ({
+			page
+		}) => {
+			if (font) {
+				await requireFont(page, font);
+				await forceFont(page, font);
 			}
-		}
-	});
+			await open(page, w, h);
+			expect(await docked(page)).toBe(0);
+			expect(await covers(page)).toEqual([]);
+			const cards = page.locator('section.card');
+			for (let i = 0; i < (await cards.count()); i++) {
+				for (const name of ['Vaccination', 'Health policy']) {
+					await cards.nth(i).getByRole('button', { name }).click();
+					await settle(page);
+					expect(await covers(page), `card ${i} ${name}`).toEqual([]);
+					await cards.nth(i).getByRole('button', { name }).click();
+					await settle(page);
+				}
+			}
+		});
+	}
 }
 
 /**

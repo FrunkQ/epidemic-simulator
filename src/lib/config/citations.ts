@@ -108,7 +108,17 @@ import {
 	SMALLPOX_POCKMARKS_RANGE,
 	SMALLPOX_PREGNANCY,
 	SMITH_2020_SHOPPING,
+	SMITH_2020_RESPONDENTS,
 	JARVIS_2020_CONTACTS,
+	JARVIS_2020_PARTICIPANTS,
+	JARVIS_ALL_CONTACTS_FALL,
+	JOSHI_2021_WORKPLACE_DROP_PP,
+	JOSHI_2021_WORKPLACE_COUNTRIES,
+	COLETTI_2020_LOCKDOWN_HOME_PCT,
+	JOSHI_CROSS_CHECK,
+	LIU_2021,
+	ONS_KEY_WORKERS_AGED_70_PLUS_PCT,
+	ONS_KEY_WORKER_WORKFORCE_SHARE,
 	LOCKDOWN_CONTACT_CUT,
 	LOCKDOWN_COMPLIANCE,
 	KEY_WORKER_SHARE,
@@ -202,6 +212,39 @@ export const COVID_ERA_EXEMPTIONS: { id: string; key: string; reason: string }[]
 		key: 'covid19omicron.lastingHarm.context.longCovidMonths',
 		reason:
 			'The Omicron hover names the 12-month window of the COVID-19 figure only to say it comes from 2020-21 infections, before Omicron; no Omicron number is taken from it.'
+	}
+];
+
+/**
+ * The general default (4.2) uses EU figures. These named uses are the exceptions, where a UK figure
+ * stands in as the general default, each with its reason; the citation test checks each is still
+ * in use.
+ */
+export const COUNTRY_EXEMPTIONS: { id: string; key: string; reason: string }[] = [
+	{
+		id: 'ons2020-key-workers',
+		key: 'behaviour.keyWorkerShare',
+		reason: 'UK count used as the general default until an EU official figure is read.'
+	},
+	{
+		id: 'worldbank-pop-total-2019',
+		key: 'behaviour.keyWorkerShare',
+		reason: 'UK population, the denominator for the ONS UK count.'
+	},
+	{
+		id: 'worldbank-pop-1564-2019',
+		key: 'behaviour.keyWorkerShare',
+		reason: 'UK share aged 15-64, the denominator for the ONS UK count.'
+	},
+	{
+		id: 'smith2020-lockdown-adherence',
+		key: 'behaviour.lockdownCompliance',
+		reason: 'UK survey used as the general default until a European figure is read.'
+	},
+	{
+		id: 'jarvis2020-comix-uk',
+		key: 'behaviour.lockdownContactCut',
+		reason: 'UK survey used as the general default; Liu 2021 gives the European ranges it sits in.'
 	}
 ];
 
@@ -1420,15 +1463,17 @@ export const CITATIONS: Citation[] = [
 		noReviewReason:
 			'No meta-analysis or systematic review of how long people keep to a lockdown exists (search, 7 Oct 2026).',
 		doi: '10.1038/s41598-021-02133-1',
-		usedFor: ['behaviour.lockdownFatigueMeanDays'],
-		quote: 'lockdowns lose all their impact on mobility in 112.1 days',
-		location: 'abstract',
-		why: 'Peer-reviewed, 93 countries, 2020. Lockdown effect on mobility fades fully by about 112 days; a 60-day average point where people start drifting sits inside that.',
+		usedFor: ['behaviour.lockdownFatigueMeanDays', 'behaviour.lockdownCompliance'],
+		quote:
+			'lockdowns lose all their impact on mobility in 112.1 days … Comparing this minimum mobility to the average mobility 2 weeks before the lockdown, we observe a median reduction of 50 percentage points.',
+		location: 'abstract; Results (countries with lockdowns of 4 weeks or more)',
+		why: 'Peer-reviewed, 93 countries, 2020. Lockdown effect on mobility fades fully by about 112 days; a 60-day average point where people start drifting sits inside that. Its fall in workplace mobility is only a rough cross-check on the share who keep to a lockdown (Smith 2020), not its source.',
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
-			ok: true
+			ok: true,
+			note: 'Second sentence (median reduction of 50 percentage points) read in the full text, PMC8608930, by the lockdown citation check (research/lockdown-code-verify.md, 17 Oct 2026).'
 		}
 	},
 	{
@@ -1440,13 +1485,13 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'study',
 		noReviewReason:
-			'The only pooled estimate of lockdown adherence found is for Ethiopia (Gebreheat 2022, 41%), which does not transfer to European cities; no European meta-analysis or systematic review of stay-at-home adherence was found (search, 8 Oct 2026).',
+			'The pooled adherence estimate found (Gebreheat 2022, PLoS ONE, doi 10.1371/journal.pone.0275320) covers COVID-19 preventive measures in general (hand washing, masks, distancing) in Ethiopia, not staying at home, so it does not transfer.',
 		doi: '10.1016/j.puhe.2020.07.024',
 		usedFor: ['behaviour.lockdownCompliance'],
 		quote:
 			'Of people reporting no symptoms in the household, 24.5% had gone out shopping for non-essentials in the last week (defined as non-adherent).',
-		location: 'abstract (Results); Table 6 for the counts (1469 had not, 476 had)',
-		why: `A national UK survey (YouGov, 2,240 adults, 6-7 May 2020, six weeks into the first lockdown). People who had not been out shopping for non-essentials are taken as keeping to it: ${SMITH_2020_SHOPPING.stayedIn} of ${fmt(SMITH_2020_SHOPPING.stayedIn + SMITH_2020_SHOPPING.wentOut)}, ${fmt(LOCKDOWN_COMPLIANCE * 100, 1)}%. Self-reported, so if anything it overstates keeping to the rules; and a dot that ignores the lockdown wanders all the time, while the survey counts anyone who went shopping once in a week. Cross-check: Joshi 2021 found workplace mobility fell by a median of 50 percentage points, which with a third of workers being key workers leaves about a quarter of the rest still going out.`,
+		location: `abstract (Results); Table 6 for the counts (${SMITH_2020_SHOPPING.stayedIn} had not, ${SMITH_2020_SHOPPING.wentOut} had)`,
+		why: `An online UK survey (YouGov panel, quota-sampled to be broadly representative; ${fmt(SMITH_2020_RESPONDENTS)} adults, 6-7 May 2020, six weeks into the first lockdown). People who had not been out shopping for non-essentials are taken as keeping to it: ${fmt(SMITH_2020_SHOPPING.stayedIn)} of ${fmt(SMITH_2020_SHOPPING.stayedIn + SMITH_2020_SHOPPING.wentOut)}, ${fmt(LOCKDOWN_COMPLIANCE * 100, 1)}%. The survey's share is of all adults with no symptoms at home, key workers included (people who were working kept to it less); the model applies it to everyone who isn't a key worker. Self-reported, and the authors note social desirability bias may have made keeping to the rules look more common; and a dot that ignores the lockdown wanders all the time, while the survey counts anyone who went shopping once in a week. Rough cross-check: Joshi 2021 found workplace mobility (Google data, median of ${JOSHI_2021_WORKPLACE_COUNTRIES} countries) at its lowest ${JOSHI_2021_WORKPLACE_DROP_PP} percentage points below the two weeks before lockdown. If the ${fmt(ONS_KEY_WORKER_WORKFORCE_SHARE * 100)}% of UK workers who were key workers (ONS) all kept going in, about ${fmt(JOSHI_CROSS_CHECK * 100)}% of the others still went to work. Different measures and countries, so this is only a rough check. The UK figure is the general default until a European one is read.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'build thread (published full text read)',
@@ -1462,14 +1507,13 @@ export const CITATIONS: Citation[] = [
 		journal: 'BMC Medicine',
 		year: 2020,
 		evidence: 'study',
-		noReviewReason:
-			'Only CoMix UK published both the pre-lockdown baseline comparison and the home share for the same lockdown week. Liu 2021 (rapid review) reports a 65-87% total cut, a 75-90% work cut in the UK and its neighbours, and a 50-80% community cut, so the derived figure sits inside the reviewed range.',
+		noReviewReason: `The review read (Liu 2021) compares studies descriptively and pools no figure for the fall in contacts away from home. Jarvis 2020 is the only survey read that states in its text the share of contacts at home both before the pandemic (POLYMOD) and in lockdown, which the cut away from home needs; Coletti 2020 (Belgium) states the lockdown share at home (about ${COLETTI_2020_LOCKDOWN_HOME_PCT}%) but gives the pre-pandemic split only in a figure. Liu 2021, a rapid review that includes Jarvis 2020, reports a ${LIU_2021.allContacts.low}-${LIU_2021.allContacts.high}% fall in all contacts in most study settings, a ${LIU_2021.workContacts.low}-${LIU_2021.workContacts.high}% fall in work contacts in Italy, the UK, Belgium, Luxembourg and France (${LIU_2021.workContacts.germany}% and ${LIU_2021.workContacts.netherlands}% in Germany and the Netherlands), and a ${LIU_2021.communityContacts.low}-${LIU_2021.communityContacts.high}% fall in community contacts outside Italy and China. Jarvis's own fall in all contacts (${fmt(JARVIS_ALL_CONTACTS_FALL * 100)}%) sits inside the first range; the derived cut away from home (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%) sits inside the work range and above the community range.`,
 		doi: '10.1186/s12916-020-01597-8',
 		usedFor: ['behaviour.lockdownContactCut'],
 		quote:
 			'We found a 74% reduction in the average daily number of contacts observed per participant (from 10.8 to 2.8). … The majority of contacts (57.6%) occurred at home, contrasting with 33.7% reported in the POLYMOD survey.',
-		location: 'Results',
-		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${JARVIS_2020_CONTACTS.before} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% before against ${JARVIS_2020_CONTACTS.lockdown} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK population average (1,356 adults surveyed 24-27 March 2020, against POLYMOD 2005-06), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed.`,
+		location: `Abstract (Results) for the first sentence; Results, "Contact patterns", second paragraph, for the second; Table 2 (Overall row) for ${fmt(JARVIS_2020_CONTACTS.before, 1)} and ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)}`,
+		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${fmt(JARVIS_2020_CONTACTS.before, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% in POLYMOD, a UK survey from before the pandemic, against ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK adult average (${fmt(JARVIS_2020_PARTICIPANTS)} surveyed 24-27 March 2020, against POLYMOD), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed. Jarvis does not say whether POLYMOD's ${fmt(JARVIS_2020_CONTACTS.homeShareBefore * 100, 1)}% at home is over the same adults as its ${fmt(JARVIS_2020_CONTACTS.before, 1)}; the cut assumes it is. Liu 2021 describes the UK's fall in contacts at home as marginal; if home contacts fell less than this split implies, the cut away from home is larger, so ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% is the cautious reading. The UK figure is the general default; Liu 2021 gives the European ranges.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'research thread (full text), research/lockdown-contacts.md',
@@ -1485,14 +1529,13 @@ export const CITATIONS: Citation[] = [
 		journal: 'Epidemiology',
 		year: 2021,
 		evidence: 'review',
-		noReviewReason:
-			'A rapid review of 12 studies that gives ranges, not a pooled figure; it backs the range the derived Jarvis figure sits in.',
+		noReviewReason: `A rapid review of ${LIU_2021.studies} studies that compares them descriptively and gives ranges, not a pooled figure; it is a cross-check on the Jarvis figure, not its source.`,
 		doi: '10.1097/EDE.0000000000001412',
 		usedFor: ['behaviour.lockdownContactCut'],
 		quote:
-			'65%–87% reduction in mean contact rate compared to pre-COVID contact rates of seven to 26 per person per day',
-		location: 'abstract (Results)',
-		why: `The reviewed range for how far contacts fell under COVID-19 lockdowns. The cut used (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%, from Jarvis 2020) sits inside it; the review gives ranges only, so it is a cross-check, not the figure.`,
+			'65%−87% reduction in mean contact rate compared to pre-COVID contact rates of seven to 26 per person per day',
+		location: `Results, "Overall mean contacts during initial mitigation" (eTable 6); for most (${LIU_2021.allContacts.settings} of ${LIU_2021.allContacts.ofSettings}) study settings`,
+		why: `The reviewed range for how far all contacts fell in most study settings (${LIU_2021.allContacts.settings} of ${LIU_2021.allContacts.ofSettings}) during the first COVID-19 lockdowns. Jarvis 2020's own fall in all contacts (${fmt(JARVIS_ALL_CONTACTS_FALL * 100)}%) sits inside it. The cut used here (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%) is for contacts away from home only, and sits inside the review's ${LIU_2021.workContacts.low}-${LIU_2021.workContacts.high}% fall in work contacts for Italy, the UK, Belgium, Luxembourg and France. The review includes Jarvis 2020 and gives ranges only, so it is a cross-check, not the figure.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'research thread (full text), research/lockdown-contacts.md',
@@ -1508,18 +1551,19 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'official',
 		publisher: 'ONS',
-		url: 'https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/articles/coronavirusandkeyworkersintheuk/latest',
+		url: 'https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/articles/coronavirusandkeyworkersintheuk/2020-05-15',
 		usedFor: ['behaviour.keyWorkerShare'],
 		quote:
-			'In 2019, 10.6 million of those employed (33% of the total workforce) were in key worker occupations and industries.',
-		location: 'Main points (released 15 May 2020)',
-		why: `Key workers keep going out in a lockdown (6.4). Only people aged 15-64 can be key workers in the model, so the share is the ${fmt(ONS_KEY_WORKERS_2019 / 1e6, 1)} million over the UK's people aged 15-64 in 2019 (World Bank): ${fmt(KEY_WORKER_SHARE * 100, 1)}%. ONS counts workers aged 16 and over, so the few older key workers are folded in and the share is slightly high. The UK figure is the general default until an EU official figure is read.`,
+			'In 2019, 10.6 million of those employed (33% of the total workforce) were in key worker occupations and industries. … Of all key workers, 1% (130,000) were aged 70 years and over.',
+		location:
+			'Main points (released 15 May 2020; corrections of 19 May and 7 September 2020 changed only section 4 ethnicity figures)',
+		why: `Key workers keep going out in a lockdown (6.4). Only people aged 15-64 can be key workers in the model, so the share is the ${fmt(ONS_KEY_WORKERS_2019 / 1e6, 1)} million over the UK's people aged 15-64 in 2019 (World Bank): ${fmt(KEY_WORKER_SHARE * 100, 1)}%. ONS counts key workers of every age (${fmt(ONS_KEY_WORKERS_AGED_70_PLUS_PCT)}% were aged 70 and over), so a few older key workers are folded in and the share is slightly high. The UK figure is the general default until an EU official figure is read.`,
 		context: 'UK, 2019',
 		verified: {
 			by: 'build thread',
 			on: '2026-10-16',
 			ok: true,
-			note: 'Page read 16 Oct 2026 (the quote, and the release date 15 May 2020); first read for research/lockdown-movers.md on 8 Oct 2026.'
+			note: 'Page read 16 Oct 2026 (the quote, and the release date 15 May 2020); first read for research/lockdown-movers.md on 8 Oct 2026. The aged-70-and-over sentence, the dated edition and its 19 May and 7 September 2020 corrections were read by the lockdown citation check (research/lockdown-code-verify.md, 17 Oct 2026, through WebFetch).'
 		}
 	},
 	{
@@ -1527,7 +1571,8 @@ export const CITATIONS: Citation[] = [
 		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
 		title: 'Population, Total for United Kingdom (series POPTOTGBA647NWDB)',
 		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.TOTL)',
-		year: 2019,
+		year: 'n.d.',
+		accessed: '2026-10-16',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.TOTL',
@@ -1549,7 +1594,8 @@ export const CITATIONS: Citation[] = [
 		authors: 'World Bank (World Development Indicators), via FRED, Federal Reserve Bank of St. Louis',
 		title: 'Population Ages 15 to 64 for the United Kingdom (% of total population; series SPPOP1564TOZSGBR)',
 		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.1564.TO.ZS)',
-		year: 2019,
+		year: 'n.d.',
+		accessed: '2026-10-16',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.1564.TO.ZS',
@@ -2965,7 +3011,8 @@ export const CITATIONS: Citation[] = [
 		title:
 			'Population ages 0-14 (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP0014TOZSWLD, SPPOP0014TOZSEUU, SPPOP0014TOZSGBR, SPPOP0014TOZSNGA, SPPOP0014TOZSJPN)',
 		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.0014.TO.ZS)',
-		year: 2025,
+		year: 'n.d.',
+		accessed: '2026-10-07',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.0014.TO.ZS',
@@ -2996,7 +3043,8 @@ export const CITATIONS: Citation[] = [
 		title:
 			'Population ages 65 and above (% of total population) for World, European Union, United Kingdom, Nigeria and Japan (series SPPOP65UPTOZSWLD, SPPOP65UPTOZSEUU, SPPOP65UPTOZSGBR, SPPOP65UPTOZSNGA, SPPOP65UPTOZSJPN)',
 		journal: 'FRED economic data (mirror of World Bank indicator SP.POP.65UP.TO.ZS)',
-		year: 2025,
+		year: 'n.d.',
+		accessed: '2026-10-07',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.TO.ZS',

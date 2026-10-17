@@ -2,6 +2,8 @@ import type { Sourced } from '../sim/types';
 import {
 	EU_CURATIVE_BEDS_PER_1000,
 	EU_CURATIVE_OCCUPANCY,
+	fmt,
+	JOSHI_2021_DAYS_TO_NO_IMPACT,
 	KEY_WORKER_SHARE,
 	LOCKDOWN_COMPLIANCE,
 	LOCKDOWN_CONTACT_CUT,
@@ -54,16 +56,24 @@ export const BEHAVIOUR: BehaviourConfig = {
 		value: KEY_WORKER_SHARE,
 		sources: ['ons2020-key-workers', 'worldbank-pop-total-2019', 'worldbank-pop-1564-2019']
 	},
-	lockdownCompliance: { value: LOCKDOWN_COMPLIANCE, sources: ['smith2020-lockdown-adherence'] },
+	lockdownCompliance: {
+		value: LOCKDOWN_COMPLIANCE,
+		sources: ['smith2020-lockdown-adherence', 'joshi2021-lockdown-mobility']
+	},
 	lockdownContactCut: {
 		value: LOCKDOWN_CONTACT_CUT,
 		sources: ['jarvis2020-comix-uk', 'liu2021-contact-review']
 	},
 	lockdownFatigueMeanDays: {
 		value: 60,
-		sources: ['joshi2021-lockdown-mobility']
+		sources: ['joshi2021-lockdown-mobility'],
+		provisional: `A pick inside Joshi 2021's ${fmt(JOSHI_2021_DAYS_TO_NO_IMPACT, 1)} days for the median country, not a sourced figure.`
 	},
-	lockdownFatigueSdDays: { value: 20, sources: ['petherick2021-pandemic-fatigue'] },
+	lockdownFatigueSdDays: {
+		value: 20,
+		sources: ['petherick2021-pandemic-fatigue'],
+		provisional: 'An assumption shown against Petherick 2021.'
+	},
 	hospitalBedsPerThousand: { value: EU_CURATIVE_BEDS_PER_1000, sources: ['eurostat-curative-beds-2023'] },
 	spareBedShare: { value: 1 - EU_CURATIVE_OCCUPANCY, sources: ['eurostat-curative-occupancy-2023'] },
 	roadTripsPerDay: { value: 2, sources: [], provisional: TRAVEL_PLACEHOLDER },

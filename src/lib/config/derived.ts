@@ -53,9 +53,13 @@ export const ONS_KEY_WORKERS_2019 = 10_600_000;
 /** World Bank via FRED: the UK's population in 2019 (POPTOTGBA647NWDB) and its share aged 15-64, % (SPPOP1564TOZSGBR). */
 export const UK_POPULATION_2019 = 66_628_000;
 export const UK_AGED_15_64_2019 = 63.5198822523142;
+/** ONS, same page: "Of all key workers, 1% (130,000) were aged 70 years and over." */
+export const ONS_KEY_WORKERS_AGED_70_PLUS_PCT = 1;
+/** ONS, same page: key workers were "33% of the total workforce" in 2019. */
+export const ONS_KEY_WORKER_WORKFORCE_SHARE = 0.33;
 /**
  * Key workers as a share of people aged 15-64, since only 15-64 dots can be key workers (6.4). ONS
- * counts workers aged 16 and over, so a few older key workers are folded in: slightly high.
+ * counts key workers of every age, so a few older key workers are folded in: slightly high.
  */
 export const KEY_WORKER_SHARE = ONS_KEY_WORKERS_2019 / (UK_POPULATION_2019 * (UK_AGED_15_64_2019 / 100));
 /**
@@ -63,13 +67,33 @@ export const KEY_WORKER_SHARE = ONS_KEY_WORKERS_2019 / (UK_POPULATION_2019 * (UK
  * shopping for things other than groceries, toiletries or medicines in the past week (6-7 May 2020).
  */
 export const SMITH_2020_SHOPPING = { stayedIn: 1469, wentOut: 476 };
+/** Smith 2020, Methods: "A total of 2240 participants living in the UK aged 18 years or older". */
+export const SMITH_2020_RESPONDENTS = 2240;
 /** The share who kept to the lockdown: those who had not been out shopping for non-essentials. */
 export const LOCKDOWN_COMPLIANCE =
 	SMITH_2020_SHOPPING.stayedIn / (SMITH_2020_SHOPPING.stayedIn + SMITH_2020_SHOPPING.wentOut);
+/**
+ * Joshi 2021, Results: "we observe a median reduction of 50 percentage points" in Google workplace
+ * mobility, at its lowest against the 2 weeks before lockdown (70 countries with lockdowns of 4
+ * weeks or more).
+ */
+export const JOSHI_2021_WORKPLACE_DROP_PP = 50;
+export const JOSHI_2021_WORKPLACE_COUNTRIES = 70;
+/** Joshi 2021, abstract: "lockdowns lose all their impact on mobility in 112.1 days". */
+export const JOSHI_2021_DAYS_TO_NO_IMPACT = 112.1;
+/**
+ * A rough cross-check on the compliance share, not a source for it: if workplace mobility kept
+ * (1 - the Joshi drop) and every key worker (ONS share of the workforce) still went in, the share
+ * of the other workers who also still went in.
+ */
+export const JOSHI_CROSS_CHECK =
+	(1 - JOSHI_2021_WORKPLACE_DROP_PP / 100 - ONS_KEY_WORKER_WORKFORCE_SHARE) /
+	(1 - ONS_KEY_WORKER_WORKFORCE_SHARE);
 
 /**
- * Jarvis 2020 (CoMix UK, 24-27 March 2020, against POLYMOD 2005-06): contacts per person per day,
- * and the share of them at home, before and in the first week of the UK lockdown.
+ * Jarvis 2020 (CoMix UK, 24-27 March 2020, against POLYMOD, a pre-pandemic UK survey): contacts
+ * per person per day, and the share of them at home, in POLYMOD and in the first week of the UK
+ * lockdown.
  */
 export const JARVIS_2020_CONTACTS = {
 	before: 10.8,
@@ -77,14 +101,36 @@ export const JARVIS_2020_CONTACTS = {
 	homeShareBefore: 0.337,
 	homeShareLockdown: 0.576
 };
+/** Jarvis 2020, Methods: "We surveyed 1356 UK participants". */
+export const JARVIS_2020_PARTICIPANTS = 1356;
+/** Contacts away from home per person per day, in POLYMOD and in the first lockdown week. */
+export const JARVIS_AWAY_BEFORE = JARVIS_2020_CONTACTS.before * (1 - JARVIS_2020_CONTACTS.homeShareBefore);
+export const JARVIS_AWAY_LOCKDOWN =
+	JARVIS_2020_CONTACTS.lockdown * (1 - JARVIS_2020_CONTACTS.homeShareLockdown);
+/** Jarvis 2020's own fall in all contacts (its "74% reduction"), worked out from the two means. */
+export const JARVIS_ALL_CONTACTS_FALL = 1 - JARVIS_2020_CONTACTS.lockdown / JARVIS_2020_CONTACTS.before;
 /**
  * How much contact outside the home fell in that lockdown week (6.4). The model has no homes, so
  * only contact outside the home applies between dots.
  */
-export const LOCKDOWN_CONTACT_CUT =
-	1 -
-	(JARVIS_2020_CONTACTS.lockdown * (1 - JARVIS_2020_CONTACTS.homeShareLockdown)) /
-		(JARVIS_2020_CONTACTS.before * (1 - JARVIS_2020_CONTACTS.homeShareBefore));
+export const LOCKDOWN_CONTACT_CUT = 1 - JARVIS_AWAY_LOCKDOWN / JARVIS_AWAY_BEFORE;
+/**
+ * Liu 2021 (rapid review), Results: the falls in contacts it reports, in percent. All contacts in
+ * most study settings; work contacts in Italy, the UK, Belgium, Luxembourg and France (Germany and
+ * the Netherlands lowest); community contacts outside Italy and China.
+ */
+/**
+ * Coletti 2020 (CoMix Belgium), Discussion: "In the lockdown scenario (wave 1), contacts at home
+ * account for ∼ 70% of the total number of contacts". Not cited for a number; named only in why
+ * Jarvis 2020 is the survey used.
+ */
+export const COLETTI_2020_LOCKDOWN_HOME_PCT = 70;
+export const LIU_2021 = {
+	studies: 12,
+	allContacts: { low: 65, high: 87, settings: 16, ofSettings: 18 },
+	workContacts: { low: 75, high: 90, germany: 24, netherlands: 27 },
+	communityContacts: { low: 50, high: 80 }
+};
 
 // --- Hospitals (6.6, 4.2) ---
 

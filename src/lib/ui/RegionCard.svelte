@@ -476,7 +476,7 @@
 					{/each}
 				</ul>
 				<LineChart
-					title="{region.name}: of the people here when the lockdown began, the share who have caught it since, key workers against working-age people who stay home, followed wherever they go"
+					title="{region.name}: of the people here when the lockdown began, the share who have caught it since, key workers against working-age people asked to stay home, followed wherever they go"
 					caption="Caught it since lockdown began"
 					brief="Caught it since lockdown"
 					days={lockdownDays}
@@ -489,7 +489,7 @@
 						},
 						{
 							key: 'home',
-							label: 'Stay home',
+							label: 'Asked to stay home',
 							colour: '#cfd6de',
 							dash: '4 3',
 							values: Array.from(history.series.stayHomeCaught, (v) => v * 100)
@@ -499,6 +499,11 @@
 					yLabel="% caught it"
 					width={190}
 				/>
+				<!-- Shown, not only in the chart's title, so keyboard, touch and screen readers reach it. -->
+				<p class="note">
+					Of the people here when the lockdown began, followed wherever they go. Asked to stay home includes
+					people who later tire of it.
+				</p>
 				<LineChart
 					title="{region.name}: person-days under lockdown so far"
 					caption="Person-days in lockdown"

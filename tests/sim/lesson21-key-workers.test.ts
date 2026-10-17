@@ -85,3 +85,37 @@ it('a city that locks down again counts its key-worker chart from the new start'
 	expect(again.keyWorkersCaught).toBeLessThan(first.keyWorkersCaught / 10);
 	expect(again.stayHomeCaught).toBeLessThan(first.stayHomeCaught / 10 + 1e-9);
 });
+
+it("another city's lockdown never changes a city's key-worker chart", () => {
+	const run = (lockOther: boolean) => {
+		const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+		sim.seedNow(0, 10);
+		sim.step(5 * TICKS_PER_DAY);
+		sim.send({ type: 'lockdown', region: 0, on: true });
+		sim.step(25 * TICKS_PER_DAY);
+		if (lockOther) sim.send({ type: 'lockdown', region: 1, on: true });
+		sim.step(1);
+		return sim.snapshot().regions[0];
+	};
+	const alone = run(false);
+	const both = run(true);
+	expect(alone.keyWorkersCaught).toBeGreaterThan(0);
+	expect(both.keyWorkersCaught).toBe(alone.keyWorkersCaught);
+	expect(both.stayHomeCaught).toBe(alone.stayHomeCaught);
+});
+
+it.each(['covid19omicron', 'flu'] as const)(
+	'the key-worker chart never shows more than everyone caught it, for %s through a year-long lockdown',
+	(diseaseId) => {
+		const sim = createSimulation(microcosm(0), { seed: 2, diseaseId });
+		sim.seedNow(0, 10);
+		sim.send({ type: 'lockdown', region: 0, on: true });
+		for (let d = 0; d < 365; d += 5) {
+			sim.step(5 * TICKS_PER_DAY);
+			const r = sim.snapshot().regions[0];
+			expect(r.keyWorkersCaught).toBeLessThanOrEqual(1);
+			expect(r.stayHomeCaught).toBeLessThanOrEqual(1);
+		}
+	},
+	LESSON_TIMEOUT
+);

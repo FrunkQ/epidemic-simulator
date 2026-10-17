@@ -105,7 +105,7 @@ export const LOCKDOWN_POLICY_FIELDS = [
 		max: 1,
 		step: 0.01,
 		format: (v: number) => `${Math.round(v * 100)}%`,
-		explain: `Of everyone who isn't a key worker. In May 2020 about ${Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 people in the UK kept to the rules; about ${4 - Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 had been out shopping for things they didn't need.`
+		explain: `Of everyone who isn't a key worker. In a May 2020 UK survey, about ${Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 adults had not been out shopping for anything but food, toiletries or medicine in the past week; about ${4 - Math.round(LOCKDOWN_COMPLIANCE * 4)} in 4 had.`
 	},
 	{
 		key: 'lockdownFatigueMeanDays',

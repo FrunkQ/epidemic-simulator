@@ -7,6 +7,9 @@ import {
 	EU_CURATIVE_OCCUPANCY_2023,
 	EU_OCCUPANCY_MISSING,
 	fmt,
+	JARVIS_2020_CONTACTS,
+	JARVIS_AWAY_BEFORE,
+	JARVIS_AWAY_LOCKDOWN,
 	LOCKDOWN_CONTACT_CUT,
 	PLAGUE_ALL,
 	PLAGUE_BUBONIC_TREATED_CFR,
@@ -134,7 +137,7 @@ export const ASSUMPTIONS = {
 	harmPregnancy:
 		'The share of people pregnant counts only pregnancies that end in a birth, so it is slightly low, and harm to babies is undercounted.',
 	euOccupancy: `The EU figure for how full hospitals normally are is an average of the ${occupancyCountries} EU countries that report it, weighted by population. ${missingCountries} have no figure for 2023.`,
-	lockdownContact: `People staying home in a lockdown meet ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% fewer people outside their home. That is the fall measured across UK adults in the first lockdown week of March 2020 (Jarvis 2020): an average that includes people still going to work, so it probably understates the cut for people who truly stayed in. The model has no homes, so it can’t show people who stay in catching it from someone they live with, which was a large share of real lockdown infections.`,
+	lockdownContact: `People staying home in a lockdown meet ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% fewer people outside their home. That is worked out from Jarvis 2020, which compared UK adults’ contacts in the first week of the March 2020 lockdown with a survey from before the pandemic: contacts away from home fell from about ${fmt(JARVIS_AWAY_BEFORE, 1)} to ${fmt(JARVIS_AWAY_LOCKDOWN, 1)} a day. It is an average that includes people still going to work, so it probably understates the cut for people who truly stayed in. The model has no homes, so it can’t show people who stay in catching it from someone they live with; in that lockdown week ${fmt(JARVIS_2020_CONTACTS.homeShareLockdown * 100, 1)}% of people’s contacts were at home.`,
 	keyWorkerDots:
 		'A dot is one group of people, so a whole dot is key workers or not. Key workers catch it more often here only because they keep going out; the model adds no extra risk for their jobs.'
 } as const;

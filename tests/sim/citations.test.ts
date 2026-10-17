@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	CITATIONS,
+	COUNTRY_EXEMPTIONS,
 	COVID_ERA_EXEMPTIONS,
 	EVIDENCE_RANK,
 	OFFICIAL_PUBLISHERS
@@ -137,6 +138,19 @@ describe('citations', () => {
 		for (const e of COVID_ERA_EXEMPTIONS) {
 			const c = CITATIONS.find((c) => c.id === e.id);
 			expect(c?.context, e.id).toBe('COVID-19 era');
+			expect(c?.usedFor, e.id).toContain(e.key);
+			expect(e.reason.length, e.id).toBeGreaterThan(20);
+		}
+	});
+
+	it('names each UK figure that stands in for the general (EU) default, with its reason', () => {
+		expect(COUNTRY_EXEMPTIONS.length).toBeGreaterThan(0);
+		// Each named exemption is still a use of that source, by an exact key, with its reason.
+		for (const e of COUNTRY_EXEMPTIONS) {
+			const c = CITATIONS.find((c) => c.id === e.id);
+			expect(c, e.id).toBeDefined();
+			expect(e.key, e.id).not.toMatch(/[*?]/);
+			expect(e.id, e.key).not.toMatch(/[*?]/);
 			expect(c?.usedFor, e.id).toContain(e.key);
 			expect(e.reason.length, e.id).toBeGreaterThan(20);
 		}
