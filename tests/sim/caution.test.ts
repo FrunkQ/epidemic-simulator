@@ -321,3 +321,20 @@ it('a restart empties the deaths window', () => {
 	expect(sim.snapshot().regions[0].recentDeaths).toBe(0);
 	expect(inside(sim).lockdown.signal[0]).toBe(0);
 });
+
+describe('the papers the caution note names', () => {
+	it('links each one where it is named, with the sentence the wording rests on', async () => {
+		const { CAUTION_READING } = await import('../../src/lib/ui/cautionReading');
+		const { readFileSync } = await import('node:fs');
+		const card = readFileSync('src/lib/ui/RegionCard.svelte', 'utf8');
+		for (const [key, r] of Object.entries(CAUTION_READING)) {
+			expect(r.url, key).toMatch(/^https:\/\//);
+			expect(r.name, key).toMatch(/^[A-Z][a-z]+ \d{4}$/);
+			expect(r.quote.length, key).toBeGreaterThan(20);
+			// Named only through its link, so the name never shows without one.
+			expect(card, key).toContain(`href={CAUTION_READING.${key}.url}`);
+			expect(card, key).toContain(`{CAUTION_READING.${key}.name}`);
+			expect(card, key).not.toContain(r.name);
+		}
+	});
+});

@@ -973,7 +973,7 @@ for (const [from, key] of [
 }
 
 /*
- * The lockdown charts in an open card, with scrollbars drawn as on a desktop without overlay
+ * The lockdown and caution charts in an open card, with scrollbars drawn as on a desktop without overlay
  * scrollbars (headless Chromium hides them, which would hide a card that scrolls sideways): the
  * card never scrolls sideways, and its charts' captions and labels fit, floating and docked, in the
  * default font and in DejaVu Sans (CI's fallback, whose wider text first showed a caption's hidden
@@ -1020,15 +1020,18 @@ test.describe('with classic scrollbars', () => {
 			await page.getByRole('button', { name: 'Paused' }).click();
 			await card.getByRole('button', { name: 'Health policy' }).click();
 			await settle(page);
-			await card.locator('.lockcharts').scrollIntoViewIfNeeded();
-			const sideways = await card.evaluate((el) => {
-				const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
-					const o = getComputedStyle(e).overflowX;
-					return o === 'auto' || o === 'scroll';
+			// The lockdown charts, and caution's chart too once deaths have kept anyone in.
+			for (const charts of await card.locator('.lockcharts').all()) {
+				await charts.scrollIntoViewIfNeeded();
+				const sideways = await card.evaluate((el) => {
+					const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
+						const o = getComputedStyle(e).overflowX;
+						return o === 'auto' || o === 'scroll';
+					});
+					return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
 				});
-				return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
-			});
-			expect(sideways).toEqual([]);
+				expect(sideways).toEqual([]);
+			}
 			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
 			await expect(
 				card.getByText(

@@ -34,6 +34,7 @@
 	import LineChart from './charts/LineChart.svelte';
 	import StackedAreaChart from './charts/StackedAreaChart.svelte';
 	import { percentReading } from './charts/scale';
+	import { CAUTION_READING } from './cautionReading';
 	import { harmText } from './harmText';
 
 	interface Props {
@@ -587,7 +588,22 @@
 		{/if}
 		<h3>Caution</h3>
 		<p class="note">
-			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: the share worked out for people in a lockdown, since nobody has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported, and went out more again before deaths peaked.`}
+			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: the share worked out for people in a lockdown, since nobody has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported.`}
+		</p>
+		<p class="note">
+			In US data from spring 2020, people went out more again before deaths peaked (<a
+				href={CAUTION_READING.weitz.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.weitz.name}</a
+			>) and mostly before official reopenings (<a
+				href={CAUTION_READING.gupta.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.gupta.name}</a
+			>), and visits to businesses fell more in counties with more reported deaths (<a
+				href={CAUTION_READING.goolsbee.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.goolsbee.name}</a
+			>).
 		</p>
 		{#each CAUTION_POLICY_FIELDS as f (f.key)}
 			{@const value = region.policy[f.key].value}
@@ -923,6 +939,9 @@
 	.note {
 		margin: 2px 0 4px;
 		color: #9fb3c8;
+	}
+	.note a {
+		color: #9cc3ea;
 	}
 	.counts {
 		display: flex;
