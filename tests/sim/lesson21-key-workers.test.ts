@@ -38,7 +38,11 @@ it(
  * day 5, and of the people there when it began, followed wherever they go, key workers have caught
  * it more often since than working-age people who stayed home at first, judged on every seed. A
  * day-5 lockdown stops most outbreaks seeded with 10 cases here, so this seeds 200; every seed then
- * has cases after the lockdown.
+ * has cases after the lockdown. In the model the gap here (a ratio of about 9) comes mainly from
+ * travel: the locked city stays contained while the unlocked ones take off, so almost all key
+ * workers' infections since it began happen in other cities they keep travelling to, and counted
+ * only inside city 0 the two groups are about level. The single-city lesson above, where the locked
+ * city has its own outbreak, is what pins the gap from mixing inside a locked city.
  */
 const INDEX_CASES = 200;
 
@@ -74,11 +78,13 @@ it('a city that locks down again counts its key-worker chart from the new start'
 	sim.step(40 * TICKS_PER_DAY);
 	const first = sim.snapshot().regions[0];
 	expect(first.keyWorkersCaught).toBeGreaterThan(0);
+	expect(first.lockedSince).toBe(5);
 	sim.send({ type: 'lockdown', region: 0, on: false });
 	sim.step(10 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
 	sim.step(1);
 	const again = sim.snapshot().regions[0];
+	expect(again.lockedSince).toBe(55);
 	expect(again.keyWorkersCaught).toBeLessThan(first.keyWorkersCaught / 10);
 	expect(again.stayHomeCaught).toBeLessThan(first.stayHomeCaught / 10 + 1e-9);
 });

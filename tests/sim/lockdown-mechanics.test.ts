@@ -21,8 +21,37 @@ interface Internals {
 	grid: SpatialGrid;
 	hooks: PeopleHooks;
 	cohort: Uint8Array;
+	caughtAtLock: Int32Array;
+	readyToBoard: (i: number) => boolean;
 }
 const inside = (sim: Simulation) => sim as unknown as Internals;
+
+/**
+ * City `c`'s key-worker chart worked out again from its parts, before the clamp at 0: each group's
+ * rise in people who have caught it since the stamp, and its people.
+ */
+function cohortRises(sim: Simulation, c: number) {
+	const a = sim.agents;
+	const p = sim.people;
+	const policy = microcosm(0).regions[c].policy;
+	const { cohort, caughtAtLock } = inside(sim);
+	const key = { rise: 0, people: 0 };
+	const home = { rise: 0, people: 0 };
+	for (let i = 0; i < a.activeCount; i++) {
+		if (cohort[c * a.capacity + i] === 0 || a.ageBand[i] !== 1) continue;
+		const rise = p.everCaught(i) - caughtAtLock[c * a.capacity + i];
+		const group =
+			a.keyRank[i] < policy.keyWorkerShare.value
+				? key
+				: a.complyRank[i] < policy.lockdownCompliance.value
+					? home
+					: null;
+		if (!group) continue;
+		group.rise += rise;
+		group.people += p.perDot;
+	}
+	return { key, home };
+}
 
 /** The 3-city map with every city's travel scaled by `travel`. */
 function travelling(travel: number): Scenario {
@@ -259,7 +288,9 @@ describe('who stays home', () => {
 it.each(['covid19omicron', 'flu'] as const)(
 	'people who have caught it never fall in a dot as immunity wanes, and add up to everyone ever infected (%s)',
 	(diseaseId) => {
-		const sim = createSimulation(singleCity({ population: 200_000 }), { seed: 2, diseaseId });
+		// With vaccinated people, so a count that left out vaccine immunity would show.
+		const scenario = singleCity({ population: 200_000, vaccinatedFull: 0.4, vaccinatedPartial: 0.1 });
+		const sim = createSimulation(scenario, { seed: 2, diseaseId });
 		sim.seedNow(0, INDEX_CASES);
 		const a = sim.agents;
 		const p = sim.people;
@@ -310,6 +341,32 @@ it('walkers on their way home and held dots have the held contact; everyone kept
 	expect(walkers).toBeGreaterThan(0);
 });
 
+it('walkers head for spots spread evenly over the city disc, not bunched at its centre', () => {
+	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(3 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	const a = sim.agents;
+	const { cx, cy } = (sim as unknown as { scenario: Scenario }).scenario.regions[0];
+	const R2 = sim.radiusOf(0) ** 2;
+	const lastGoal = new Float32Array(a.capacity).fill(NaN);
+	const shares: number[] = [];
+	for (let t = 0; t < 30 * TICKS_PER_DAY; t++) {
+		sim.step(1);
+		for (let i = 0; i < a.activeCount; i++) {
+			if (a.walking[i] === 0 || a.goalX[i] === lastGoal[i]) continue;
+			lastGoal[i] = a.goalX[i];
+			shares.push(((a.goalX[i] - cx) ** 2 + (a.goalY[i] - cy) ** 2) / R2);
+		}
+	}
+	// Even over the disc, the mean squared distance from the centre is half the radius squared.
+	expect(shares.length).toBeGreaterThan(200);
+	const mean = shares.reduce((s, n) => s + n, 0) / shares.length;
+	expect(mean).toBeGreaterThan(0.45);
+	expect(mean).toBeLessThan(0.55);
+	expect(Math.max(...shares)).toBeLessThanOrEqual(1 + 1e-5);
+});
+
 it("a locked city's boarding swap takes a partner from the same group and the same side of the cohort", () => {
 	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
@@ -332,4 +389,88 @@ it("a locked city's boarding swap takes a partner from the same group and the sa
 		swaps++;
 	}
 	expect(swaps).toBeGreaterThan(5);
+});
+
+it("a city's key-worker chart is exactly its cohort's rise in people who have caught it, group by group", () => {
+	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(5 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	for (let d = 0; d < 60; d += 5) {
+		sim.step(5 * TICKS_PER_DAY);
+		const { key, home } = cohortRises(sim, 0);
+		const shown = sim.snapshot().regions[0];
+		expect(key.people).toBeGreaterThan(0);
+		expect(home.people).toBeGreaterThan(0);
+		expect(shown.keyWorkersCaught).toBe(Math.max(0, key.rise) / key.people);
+		expect(shown.stayHomeCaught).toBe(Math.max(0, home.rise) / home.people);
+	}
+	expect(sim.snapshot().regions[0].keyWorkersCaught).toBeGreaterThan(0);
+});
+
+/*
+ * The clamp at 0 (engine.ts, keyWorkerChart): after a lockdown is lifted, a swap takes the nearest
+ * partner, which can trade someone in the cohort who caught it for someone outside it who hasn't, so
+ * a group's rise can fall below 0. Here ill key workers board straight after a 1-tick lockdown.
+ */
+it.each([1, 2, 3])('a group whose rise falls below 0 shows as 0, not less (seed %i)', (seed) => {
+	const sim = createSimulation(microcosm(0), { seed, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(10 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(1);
+	sim.send({ type: 'lockdown', region: 0, on: false });
+	sim.step(1);
+	const a = sim.agents;
+	const p = sim.people;
+	const policy = microcosm(0).regions[0].policy;
+	const { cohort, readyToBoard } = inside(sim);
+	for (let i = 0; i < a.activeCount; i++) {
+		if (a.region[i] !== 0 || a.route[i] >= 0 || cohort[i] === 0 || p.ill[i] === 0) continue;
+		if (isKeyWorker(a, i, policy)) readyToBoard(i);
+	}
+	const { key } = cohortRises(sim, 0);
+	expect(key.rise).toBeLessThan(0);
+	expect(sim.snapshot().regions[0].keyWorkersCaught).toBe(0);
+});
+
+it("an unlocked city's boarding swap always takes the nearest partner, whatever its group", () => {
+	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	sim.seedNow(0, INDEX_CASES);
+	sim.step(3 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(15 * TICKS_PER_DAY);
+	sim.send({ type: 'lockdown', region: 0, on: false });
+	sim.step(1);
+	const a = sim.agents;
+	const p = sim.people;
+	const policy = microcosm(0).regions[0].policy;
+	const { readyToBoard } = inside(sim);
+	let swaps = 0;
+	let otherGroup = 0;
+	for (let i = 0; i < a.activeCount && swaps < 40; i++) {
+		if (a.region[i] !== 0 || a.route[i] >= 0 || p.ill[i] === 0) continue;
+		const k = p.ill[i];
+		let nearest = -1;
+		let nearestD = Infinity;
+		for (let j = 0; j < a.activeCount; j++) {
+			if (j === i || a.region[j] !== 0 || a.route[j] >= 0) continue;
+			if (a.ageBand[j] !== a.ageBand[i] || a.protection[j] !== a.protection[i]) continue;
+			if (p.notIll(j) < k) continue;
+			const d = (a.x[j] - a.x[i]) ** 2 + (a.y[j] - a.y[i]) ** 2;
+			if (d < nearestD) {
+				nearestD = d;
+				nearest = j;
+			}
+		}
+		if (nearest < 0) continue;
+		const before = p.ill[nearest];
+		expect(readyToBoard(i)).toBe(true);
+		expect(p.ill[nearest]).toBe(before + k);
+		if (lockdownGroup(a, nearest, policy) !== lockdownGroup(a, i, policy)) otherGroup++;
+		swaps++;
+	}
+	expect(swaps).toBeGreaterThan(5);
+	// Some of those partners were in another group, which a locked city would have passed over.
+	expect(otherGroup).toBeGreaterThan(0);
 });

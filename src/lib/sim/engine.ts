@@ -508,9 +508,12 @@ export class Simulation {
 		// The key-worker chart: each lockdown city's cohort, wherever its dots are now (on a trip too).
 		// People who have ever caught it move with their people in the boarding swap, so each person
 		// counts once and a group's rise never passes its people. In a locked city the swap keeps to
-		// the same group and side of the cohort when it can; only a fallback swap can trade someone who
-		// caught it for someone who hasn't, so a group's rise is shown as at least 0. No test reaches
-		// that: re-locks of smallpox, measles and COVID-19 at three times the travel never went below 0.
+		// the same group and side of the cohort when it can. Three kinds of swap can still trade someone
+		// in a group who caught it for someone who hasn't: a cohort dot boarding in an unlocked city, or
+		// in another locked city (whose groups and cohort are its own), and a fallback swap when no
+		// partner of the same group is near. So a group's rise is shown as at least 0. No natural run
+		// went below 0 (re-locks of smallpox, measles and COVID-19 at three times the travel); the
+		// lockdown mechanics tests reach it by boarding ill key workers straight after a lift.
 		for (let c = 0; c < regions.length; c++) {
 			if (this.everLocked[c] === 0) continue;
 			const policy = regions[c].policy;
