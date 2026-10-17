@@ -476,8 +476,9 @@
 					{/each}
 				</ul>
 				<LineChart
-					title="{region.name}: share who have caught it, key workers and working-age people who stay home"
-					caption="Caught it: key workers vs home"
+					title="{region.name}: of the people here when the lockdown began, the share who have caught it since, key workers against working-age people who stay home, followed wherever they go"
+					caption="Caught it since lockdown began"
+					brief="Caught it since lockdown"
 					days={lockdownDays}
 					lines={[
 						{

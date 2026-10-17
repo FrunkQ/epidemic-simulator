@@ -500,7 +500,10 @@ export interface RegionTelemetry {
 	personDays: number;
 	/** People out during this city's lockdown, by reason (0 when it isn't locked down). */
 	out: { key: number; ignoring: number; tired: number };
-	/** Share of key workers here who have caught it, counted in the dot where they caught it (6.4). */
+	/**
+	 * Of the key workers here when this city's lockdown last began, the share who have caught it
+	 * since, followed wherever they go and counted in the dot where they caught it (6.4).
+	 */
 	keyWorkersCaught: number;
 	/** The same for working-age people who aren't key workers and keep to a lockdown. */
 	stayHomeCaught: number;
