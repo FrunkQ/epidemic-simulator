@@ -32,6 +32,11 @@ export class Agents {
 	readonly keyRank: Float32Array;
 	readonly complyRank: Float32Array;
 	/**
+	 * Drawn once at spawn from its own stream, uniform 0-1 (6.18): a dot that isn't a key worker
+	 * stays in out of caution while cautionRank < its city's caution level.
+	 */
+	readonly cautionRank: Float32Array;
+	/**
 	 * Where this dot's fatigue point sits in the spread, as a standard normal draw (6.4): it tires
 	 * of a lockdown after mean + fatigueZ x spread days, so the fatigue sliders apply live too.
 	 */
@@ -92,6 +97,7 @@ export class Agents {
 		this.isolated = new Uint8Array(capacity);
 		this.keyRank = new Float32Array(capacity);
 		this.complyRank = new Float32Array(capacity);
+		this.cautionRank = new Float32Array(capacity);
 		this.fatigueZ = new Float32Array(capacity);
 		this.held = new Uint8Array(capacity);
 		this.contact = new Float32Array(capacity).fill(1);
@@ -124,6 +130,7 @@ export class Agents {
 		this.isolated.fill(0);
 		this.keyRank.fill(0);
 		this.complyRank.fill(0);
+		this.cautionRank.fill(0);
 		this.fatigueZ.fill(0);
 		this.held.fill(0);
 		this.contact.fill(1);

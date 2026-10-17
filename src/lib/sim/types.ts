@@ -509,6 +509,17 @@ export interface RegionTelemetry {
 	stayHomeCaught: number;
 	/** The day this city's latest lockdown began, or −1 before its first. */
 	lockedSince: number;
+	/**
+	 * Living people here kept in by caution alone (6.18): in a locked city, not those the lockdown
+	 * already keeps home. Dead, isolated and ill-stopped dots aren't counted.
+	 */
+	keptInByCaution: number;
+	/** keptInByCaution as a share (0 to 1) of the living people here who aren't key workers. */
+	cautionShare: number;
+	/** Deaths here in the caution window, per 100,000 of this city's simulated people (6.18). */
+	recentDeaths: number;
+	/** This city's caution level now: the most it can reach (cautionShare) x the deaths signal. */
+	cautionLevel: number;
 	testCooldown: number;
 }
 
@@ -554,7 +565,9 @@ export interface RegionHistory {
  * (1000 = 100%). lastingHarm is the headline: the largest counted harm (6.17). The lockdown
  * channels (6.4) are people under lockdown that day, person-days so far, people out as key workers,
  * ignoring it or tired of it, and the share (0 to 1) of key workers and of working-age people told
- * to stay home who have caught it.
+ * to stay home who have caught it. The caution channels (6.18) are people kept in by caution alone,
+ * their share (0 to 1) of the living people here who aren't key workers, and deaths here in the
+ * caution window per 100,000 people.
  */
 export const HISTORY_CHANNELS = [
 	'silent',
@@ -573,7 +586,10 @@ export const HISTORY_CHANNELS = [
 	'outTired',
 	'keyWorkersCaught',
 	'stayHomeCaught',
-	'lockedSince'
+	'lockedSince',
+	'keptInByCaution',
+	'cautionShare',
+	'recentDeaths'
 ] as const;
 export type HistoryChannel = (typeof HISTORY_CHANNELS)[number];
 

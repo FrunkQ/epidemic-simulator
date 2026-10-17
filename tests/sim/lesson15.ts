@@ -1,4 +1,5 @@
 import { expect } from 'vitest';
+import { reportShare } from './helpers';
 import { outbreak } from './lessonRuns';
 
 /**
@@ -25,5 +26,5 @@ export function lesson15(firstSeed: number, lastSeed: number): void {
 			).snapshot().regions[0].deaths;
 		if (run('covid-updated') < run('covid-original')) fewer++;
 	}
-	expect(fewer / (lastSeed - firstSeed + 1)).toBeGreaterThanOrEqual(0.8);
+	expect(reportShare(fewer / (lastSeed - firstSeed + 1))).toBeGreaterThanOrEqual(0.8);
 }

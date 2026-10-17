@@ -1,10 +1,14 @@
 import { expect, it } from 'vitest';
-import { shareOf } from './helpers';
+import { shareOf, withCaution } from './helpers';
 import { LESSON_TIMEOUT, SEEDS } from './lessonRuns';
 import { lockdownRun } from './lockdownRuns';
 import { microcosm } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { createSimulation } from '../../src/lib/sim/engine';
+import type { Scenario } from '../../src/lib/sim/types';
+
+/** Caution (6.18) at 0 for the mechanics tests below, so they check the lockdown alone; the lessons run at the shipped defaults. */
+const noCaution = <S extends Scenario>(scenario: S): S => withCaution(scenario, 0);
 
 /*
  * Lesson 21 (10, research/lockdown-movers.md §5.6): COVID-19, lockdown from day 5. By day 60 the
@@ -71,7 +75,7 @@ it(
 );
 
 it('a city that locks down again counts its key-worker chart from the new start', () => {
-	const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(microcosm(0)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(5 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -94,7 +98,7 @@ it('a city that locks down again counts its key-worker chart from the new start'
  * (Its numbers still move with the epidemic, which that lockdown changes.)
  */
 it("another city's lockdown never re-stamps a city's key-worker cohort", () => {
-	const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(microcosm(0)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(5 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -125,7 +129,7 @@ it(
 			region.policy = { ...p, travelFrequency: { ...p.travelFrequency, value: 3 } };
 		}
 		const river = scenario.regions.findIndex((r) => r.name === 'River City');
-		const sim = createSimulation(scenario, { seed: 2, diseaseId: 'covid19omicron' });
+		const sim = createSimulation(noCaution(scenario), { seed: 2, diseaseId: 'covid19omicron' });
 		sim.seedNow(river, INDEX_CASES);
 		sim.step(5 * TICKS_PER_DAY);
 		for (let r = 0; r < scenario.regions.length; r++) sim.send({ type: 'lockdown', region: r, on: true });
@@ -149,7 +153,7 @@ it(
 
 it('a lockdown sent while paused runs exactly as one sent while running, at the same tick', () => {
 	const state = (paused: boolean) => {
-		const sim = createSimulation(microcosm(0), { seed: 3, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(microcosm(0)), { seed: 3, diseaseId: 'covid19' });
 		sim.seedNow(0, 10);
 		// Another city already locked down, so a paused read that counted anything would show.
 		sim.send({ type: 'lockdown', region: 1, on: true });
@@ -172,7 +176,7 @@ it('a lockdown sent while paused runs exactly as one sent while running, at the 
 
 it('a lockdown turned on and off again while paused never ran: no mark, no stamp, the same run', () => {
 	const run = (press: boolean) => {
-		const sim = createSimulation(microcosm(0), { seed: 3, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(microcosm(0)), { seed: 3, diseaseId: 'covid19' });
 		sim.seedNow(0, INDEX_CASES);
 		sim.step(7 * TICKS_PER_DAY + 5);
 		if (press) {
@@ -195,7 +199,7 @@ it('a lockdown turned on and off again while paused never ran: no mark, no stamp
 
 it('a restart lifts every lockdown, and its key-worker chart starts again empty', () => {
 	const scenario = microcosm(0);
-	const sim = createSimulation(scenario, { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(scenario), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, 10);
 	sim.send({ type: 'lockdown', region: 0, on: true });
 	sim.step(10 * TICKS_PER_DAY);
@@ -224,7 +228,7 @@ it(
 				travelFrequency: { ...p.travelFrequency, value: 3 }
 			};
 		}
-		const sim = createSimulation(scenario, { seed: 2, diseaseId: 'polio' });
+		const sim = createSimulation(noCaution(scenario), { seed: 2, diseaseId: 'polio' });
 		for (let r = 0; r < scenario.regions.length; r++) sim.seedNow(r, INDEX_CASES);
 		for (let r = 0; r < scenario.regions.length; r++) sim.send({ type: 'lockdown', region: r, on: true });
 		let most = 0;

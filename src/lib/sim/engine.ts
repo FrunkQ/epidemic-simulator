@@ -25,7 +25,7 @@ import { People, type PeopleHooks } from './people';
 import { setLook } from './look';
 import { SpatialGrid } from './grid';
 import { moveInRegions, regionRadius } from './movement';
-import { isKeyWorker, Lockdown, lockdownGroup, Out, outReason } from './lockdown';
+import { cautious, isKeyWorker, Lockdown, lockdownGroup, Out, outReason } from './lockdown';
 import { generateWorld, type World } from './geography';
 import { Renderer } from './render';
 import { generateRoutes } from './routes';
@@ -78,6 +78,8 @@ export function pressureBand(pressure: number): PressureBand {
 
 /** Events kept for the UI. */
 const MAX_EVENTS = 100;
+/** Mixed with the seed for caution's own stream of ranks (6.18): a fixed constant, never seed + 1. */
+const CAUTION_STREAM = 0x5ca1ab1e;
 
 export interface SimulationOptions {
 	seed: number;
@@ -173,6 +175,15 @@ export class Simulation {
 	private lockStart!: Int32Array;
 	/** Person-days under lockdown so far, per region (6.4). */
 	private personDays!: Float64Array;
+	/**
+	 * Caution's deaths signal (6.18): each city's deaths per day over the last CAUTION_WINDOW_DAYS
+	 * days (a ring, city-major), its death tally at the last day boundary, and the deaths in the
+	 * window per 100,000 of its simulated people.
+	 */
+	private deathRing!: Float64Array;
+	private deathsAtBoundary!: Float64Array;
+	private recentDeaths!: Float64Array;
+	private ringHead = 0;
 	/** A dot stops for illness once this share of its people are ill (Scenario.illStopShare). */
 	private illStopShare = 0.5;
 	private routeList: Route[] = [];
@@ -317,6 +328,10 @@ export class Simulation {
 		this.caughtAtLock = new Int32Array(regions.length * this.agents.capacity);
 		this.everLocked = new Uint8Array(regions.length);
 		this.lockStart = new Int32Array(regions.length).fill(-1);
+		this.deathRing = new Float64Array(regions.length * BEHAVIOUR.cautionWindowDays.value);
+		this.deathsAtBoundary = new Float64Array(regions.length);
+		this.recentDeaths = new Float64Array(regions.length);
+		this.ringHead = 0;
 		this.illStopShare = scenario.illStopShare ?? 0.5;
 
 		const { dots, peoplePerDot } = allocateDots(regions, this.agents.capacity);
@@ -368,6 +383,9 @@ export class Simulation {
 	private spawn(): void {
 		const a = this.agents;
 		const rng = this.rng;
+		// Caution's ranks come from their own stream, so the spawn stream and every run with caution
+		// at 0 are unchanged (6.18).
+		const cautionRng = new Rng((this.seed ^ CAUTION_STREAM) >>> 0);
 		a.reset();
 		this.people = new People(a, this.disease, this.peoplePerDot, this.secondaryOnly);
 		this.unprotectedAtStart = this.scenario.regions.map(() => 0);
@@ -406,6 +424,7 @@ export class Simulation {
 				a.keyRank[slot] = rng.next();
 				a.complyRank[slot] = rng.next();
 				a.fatigueZ[slot] = rng.normal();
+				a.cautionRank[slot] = cautionRng.next();
 				a.region[slot] = r;
 			}
 		});
@@ -461,7 +480,34 @@ export class Simulation {
 		this.counters.countPatients(this.tick);
 		this.updatePressure();
 		this.countsStale = true;
-		if (this.tick % TICKS_PER_DAY === 0) this.sample(this.day);
+		if (this.tick % TICKS_PER_DAY === 0) {
+			this.sample(this.day);
+			// 8b. At a day boundary: caution's deaths signal, regions in fixed order (6.18).
+			this.updateCaution();
+		}
+	}
+
+	/**
+	 * Today's deaths go in each city's ring, and the deaths in the window per 100,000 of its
+	 * simulated people (dots x peoplePerDot, as beds use) set its signal D / (D + D half) for the
+	 * next day. Deaths are counted as they happen, so no snapshot can change this.
+	 */
+	private updateCaution(): void {
+		const window = BEHAVIOUR.cautionWindowDays.value;
+		const half = BEHAVIOUR.cautionHalfDeathsPer100k.value;
+		const c = this.counters;
+		for (let r = 0; r < this.scenario.regions.length; r++) {
+			const tally = c.deaths(r);
+			this.deathRing[r * window + this.ringHead] = tally - this.deathsAtBoundary[r];
+			this.deathsAtBoundary[r] = tally;
+			let sum = 0;
+			for (let k = 0; k < window; k++) sum += this.deathRing[r * window + k];
+			const people = this.regionDots[r] * this.peoplePerDot;
+			const d = people > 0 ? (sum / people) * 100_000 : 0;
+			this.recentDeaths[r] = d;
+			this.lockdown.signal[r] = d > 0 ? d / (d + half) : 0;
+		}
+		this.ringHead = (this.ringHead + 1) % window;
 	}
 
 	/** The full recount is only needed for a daily sample or a snapshot, not every tick. */
@@ -496,14 +542,18 @@ export class Simulation {
 			if (r < 0) continue;
 			const policy = regions[r].policy;
 			const alive = p.perDot - p.dead[i];
+			const caution = this.lockdown.caution[r];
+			// A dot stopped by illness, isolation or deaths isn't out, whatever its reason would be.
+			const stopped =
+				a.dead[i] === 1 || a.isolated[i] === 1 || (this.rules.illStopsMovement && a.ill[i] === 1);
+			if (!isKeyWorker(a, i, policy)) out[r * LOCK_SLOTS + 9] += alive;
 			if (this.lockdown.on[r] === 1) {
 				out[r * LOCK_SLOTS] += alive;
-				// A dot stopped by illness, isolation or deaths isn't out, whatever its reason would be.
-				const stopped =
-					a.dead[i] === 1 || a.isolated[i] === 1 || (this.rules.illStopsMovement && a.ill[i] === 1);
-				const why = outReason(a, i, policy, this.lockdown.ticks[r]);
-				if (why !== Out.HOME && !stopped) out[r * LOCK_SLOTS + 2 + why] += alive;
-			}
+				const why = outReason(a, i, policy, this.lockdown.ticks[r], caution);
+				if (stopped || why === Out.HOME) continue;
+				if (why === Out.CAUTION) out[r * LOCK_SLOTS + 8] += alive;
+				else out[r * LOCK_SLOTS + 2 + why] += alive;
+			} else if (!stopped && cautious(a, i, policy, caution)) out[r * LOCK_SLOTS + 8] += alive;
 		}
 		// The key-worker chart: each lockdown city's cohort, wherever its dots are now (on a trip too).
 		// People who have ever caught it move with their people in the boarding swap, so each person
@@ -538,6 +588,9 @@ export class Simulation {
 			out[r * LOCK_SLOTS + 5] = !locked ? NaN : shareSince(key, r);
 			out[r * LOCK_SLOTS + 6] = !locked ? NaN : shareSince(home, r);
 			out[r * LOCK_SLOTS + 7] = this.lockStart[r];
+			const notKey = out[r * LOCK_SLOTS + 9];
+			out[r * LOCK_SLOTS + 9] = notKey > 0 ? out[r * LOCK_SLOTS + 8] / notKey : 0;
+			out[r * LOCK_SLOTS + 10] = this.recentDeaths[r];
 		}
 		return out;
 	}
@@ -875,6 +928,10 @@ export class Simulation {
 			keyWorkersCaught: lock[r * LOCK_SLOTS + 5],
 			stayHomeCaught: lock[r * LOCK_SLOTS + 6],
 			lockedSince: lock[r * LOCK_SLOTS + 7],
+			keptInByCaution: lock[r * LOCK_SLOTS + 8],
+			cautionShare: lock[r * LOCK_SLOTS + 9],
+			recentDeaths: lock[r * LOCK_SLOTS + 10],
+			cautionLevel: this.lockdown.caution[r],
 			testCooldown: 0
 		}));
 		const inTransit = c.regionCounts(this.scenario.regions.length);

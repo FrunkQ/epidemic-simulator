@@ -58,7 +58,11 @@ export function measureR0(
 	let sumSq = 0;
 	let n = 0;
 	for (let seed = 1; seed <= seeds; seed++) {
-		const sim = createSimulation(singleCity(), {
+		// R0 is measured in people who haven't changed how they behave, so caution (6.18) is off.
+		const scenario = singleCity();
+		const policy = scenario.regions[0].policy;
+		scenario.regions[0].policy = { ...policy, cautionShare: { ...policy.cautionShare, value: 0 } };
+		const sim = createSimulation(scenario, {
 			seed: seedBase + seed,
 			diseaseId: id,
 			disease,

@@ -10,9 +10,14 @@
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
-	import { LOCKDOWN_CONTACT_CUT } from '../config/derived';
+	import { CAUTION_CONTACT_CUT, CAUTION_WINDOW_DAYS, LOCKDOWN_CONTACT_CUT } from '../config/derived';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
-	import { LIVE_POLICY_FIELDS, LOCKDOWN_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
+	import {
+		CAUTION_POLICY_FIELDS,
+		LIVE_POLICY_FIELDS,
+		LOCKDOWN_POLICY_FIELDS,
+		type LivePolicyKey
+	} from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
 	import { waningWords } from '../config/waning';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
@@ -116,6 +121,13 @@
 	/** The charts fill the panel's measured width, whatever the scrollbar and docking leave. */
 	let lockChartsWidth = $state(0);
 	const lockChartW = $derived(Math.max(140, Math.floor(lockChartsWidth || 178)));
+	let cautionChartsWidth = $state(0);
+	const cautionChartW = $derived(Math.max(140, Math.floor(cautionChartsWidth || 178)));
+	/** Whether caution has kept anyone in here yet this run: its chart shows from then on. */
+	const hadCaution = $derived(history ? history.series.cautionShare.some((v) => v > 0) : false);
+	/** Deaths per 100,000: whole numbers from 10, one decimal below, and never 0 for a death. */
+	const perHundredThousand = (v: number) =>
+		v >= 10 ? Math.round(v).toLocaleString() : v > 0 && v < 0.05 ? 'under 0.1' : v.toFixed(1);
 	const lockStatus = $derived(lockOn ? `Locked down since day ${lockSince}` : 'No lockdown');
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
@@ -483,6 +495,7 @@
 			<p class="note">
 				Still going out: <b>{people(t.out.key)}</b> key workers, <b>{people(t.out.ignoring)}</b> not keeping
 				to it and <b>{people(t.out.tired)}</b> tired of it, out of the {people(t.underLockdown)} people here.
+				{#if t.keptInByCaution > 0}{`${people(t.keptInByCaution)} more stay in out of caution.`}{/if}
 			</p>
 		{/if}
 		{#each LOCKDOWN_POLICY_FIELDS as f (f.key)}
@@ -570,6 +583,54 @@
 				<p class="note">
 					A person-day is one person living in a locked-down city for one day: {people(t.personDays)} so far.
 				</p>
+			</div>
+		{/if}
+		<h3>Caution</h3>
+		<p class="note">
+			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: the share worked out for people in a lockdown, since nobody has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported, and went out more again before deaths peaked.`}
+		</p>
+		{#each CAUTION_POLICY_FIELDS as f (f.key)}
+			{@const value = region.policy[f.key].value}
+			<label>
+				<span>{f.label} <b>{f.format(value)}</b></span>
+				<input
+					type="range"
+					min={f.min}
+					max={f.max}
+					step={f.step}
+					{value}
+					aria-valuetext={f.format(value)}
+					onchange={(e) => onpolicy(f.key, Number(e.currentTarget.value))}
+				/>
+				<small>{f.explain}</small>
+			</label>
+		{/each}
+		{#if t}
+			<!-- Shown as text, so keyboard, touch and screen readers reach the numbers, not only the chart. -->
+			<p class="note">
+				{`Deaths here in the last ${CAUTION_WINDOW_DAYS} days: ${perHundredThousand(t.recentDeaths)} per 100,000; about ${pctOf(t.cautionShare)} of people who aren't key workers are staying in out of caution.`}
+			</p>
+		{/if}
+		{#if hadCaution && history}
+			<div class="lockcharts" bind:clientWidth={cautionChartsWidth}>
+				<LineChart
+					title="{region.name}: people kept in by caution, as a share of people who aren't key workers"
+					caption="Kept in by caution"
+					days={lockdownDays}
+					lines={[
+						{
+							key: 'caution',
+							label: "Of people who aren't key workers",
+							colour: '#cfd6de',
+							values: Array.from(history.series.cautionShare, (v) => v * 100)
+						}
+					]}
+					unit="%"
+					yLabel="% kept in"
+					width={cautionChartW}
+					tipBelow
+					keyless
+				/>
 			</div>
 		{/if}
 	{/if}

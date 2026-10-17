@@ -830,3 +830,32 @@ export const WORLD_BANK_BIRTHS_2024 = {
 export function pregnantShareOf(place: keyof typeof WORLD_BANK_BIRTHS_2024): number {
 	return (WORLD_BANK_BIRTHS_2024[place] / 1000 / ageMixOf(place)[1]) * PREGNANCY_YEARS;
 }
+
+// --- Voluntary caution (6.18, research/lockdown-movers.md §9) ---
+
+/**
+ * Woskie 2021, abstract: "Sweden saw the smallest decrease (~20%)" in time spent away from home
+ * (Google Location History, 27 European countries, to 12 April 2020). The most people who stay in
+ * by choice when deaths are high (behaviour.cautionShare): not a measured response to deaths.
+ */
+export const WOSKIE_2021_SWEDEN_AWAY_FALL = 0.2;
+/** Woskie 2021: the countries it compares. */
+export const WOSKIE_2021_COUNTRIES = 27;
+/** OxCGRT C6M, national, 1 March-12 April 2020: Woskie's countries with no mandatory stay-at-home. */
+export const WOSKIE_COUNTRIES_NO_STAY_HOME_MANDATE = 6;
+/** Sheridan 2020, abstract: "aggregate spending dropped by around 25%" in Sweden (Danske Bank customers). */
+export const SHERIDAN_2020_SWEDEN_SPENDING_FALL_PCT = 25;
+/** Mendolia 2021 (JEBO), abstract: information explains "about 15 percentage points" of the fall in mobility. */
+export const MENDOLIA_2021_INFORMATION_PP = 15;
+/**
+ * Deaths in the window, per 100,000 simulated people, at which caution is half its full level
+ * (behaviour.cautionHalfDeathsPer100k): provisional, since no study gives a per-person half-response.
+ */
+export const CAUTION_HALF_DEATHS_PER_100K = 1;
+/** How many days of deaths people react to (behaviour.cautionWindowDays): provisional. */
+export const CAUTION_WINDOW_DAYS = 14;
+/**
+ * The contact cut for people staying in by choice (behaviour.cautionContactCut): borrowed from the
+ * lockdown figure, since nobody has measured contacts for people staying in by choice.
+ */
+export const CAUTION_CONTACT_CUT = LOCKDOWN_CONTACT_CUT;
