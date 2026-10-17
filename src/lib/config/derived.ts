@@ -81,6 +81,13 @@ export const JOSHI_2021_WORKPLACE_DROP_PP = 50;
 export const JOSHI_2021_WORKPLACE_COUNTRIES = 70;
 /** Joshi 2021, abstract: "lockdowns lose all their impact on mobility in 112.1 days". */
 export const JOSHI_2021_DAYS_TO_NO_IMPACT = 112.1;
+/** Joshi 2021, abstract: "We analyze mobility data from 93 countries implementing lockdowns". */
+export const JOSHI_2021_COUNTRIES = 93;
+/**
+ * The average day a person starts drifting from a lockdown (behaviour.lockdownFatigueMeanDays): a
+ * provisional pick inside Joshi 2021's days to no impact, not a sourced figure.
+ */
+export const LOCKDOWN_FATIGUE_MEAN_DAYS = 60;
 /**
  * A rough cross-check on the compliance share, not a source for it: if workplace mobility kept
  * (1 - the Joshi drop) and every key worker (ONS share of the workforce) still went in, the share
@@ -115,16 +122,16 @@ export const JARVIS_ALL_CONTACTS_FALL = 1 - JARVIS_2020_CONTACTS.lockdown / JARV
  */
 export const LOCKDOWN_CONTACT_CUT = 1 - JARVIS_AWAY_LOCKDOWN / JARVIS_AWAY_BEFORE;
 /**
+ * Coletti 2020 (CoMix Belgium), Discussion: "In the lockdown scenario (wave 1), contacts at home
+ * account for ∼ 70% of the total number of contacts". Shown in the Jarvis 2020 noReviewReason
+ * with its DOI; not a source for any config value.
+ */
+export const COLETTI_2020_LOCKDOWN_HOME_PCT = 70;
+/**
  * Liu 2021 (rapid review), Results: the falls in contacts it reports, in percent. All contacts in
  * most study settings; work contacts in Italy, the UK, Belgium, Luxembourg and France (Germany and
  * the Netherlands lowest); community contacts outside Italy and China.
  */
-/**
- * Coletti 2020 (CoMix Belgium), Discussion: "In the lockdown scenario (wave 1), contacts at home
- * account for ∼ 70% of the total number of contacts". Not cited for a number; named only in why
- * Jarvis 2020 is the survey used.
- */
-export const COLETTI_2020_LOCKDOWN_HOME_PCT = 70;
 export const LIU_2021 = {
 	studies: 12,
 	allContacts: { low: 65, high: 87, settings: 16, ofSettings: 18 },

@@ -114,6 +114,9 @@ import {
 	JARVIS_ALL_CONTACTS_FALL,
 	JOSHI_2021_WORKPLACE_DROP_PP,
 	JOSHI_2021_WORKPLACE_COUNTRIES,
+	JOSHI_2021_COUNTRIES,
+	JOSHI_2021_DAYS_TO_NO_IMPACT,
+	LOCKDOWN_FATIGUE_MEAN_DAYS,
 	COLETTI_2020_LOCKDOWN_HOME_PCT,
 	JOSHI_CROSS_CHECK,
 	LIU_2021,
@@ -244,7 +247,8 @@ export const COUNTRY_EXEMPTIONS: { id: string; key: string; reason: string }[] =
 	{
 		id: 'jarvis2020-comix-uk',
 		key: 'behaviour.lockdownContactCut',
-		reason: 'UK survey used as the general default; Liu 2021 gives the European ranges it sits in.'
+		reason:
+			'UK survey used as the general default; Liu 2021 (8 of its 12 studies European) is the cross-check.'
 	}
 ];
 
@@ -1461,13 +1465,13 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'study',
 		noReviewReason:
-			'No meta-analysis or systematic review of how long people keep to a lockdown exists (search, 7 Oct 2026).',
+			'No meta-analysis or systematic review of how long people keep to a lockdown was found (search, 7 Oct 2026, research/stronger-evidence.md).',
 		doi: '10.1038/s41598-021-02133-1',
 		usedFor: ['behaviour.lockdownFatigueMeanDays', 'behaviour.lockdownCompliance'],
 		quote:
 			'lockdowns lose all their impact on mobility in 112.1 days … Comparing this minimum mobility to the average mobility 2 weeks before the lockdown, we observe a median reduction of 50 percentage points.',
 		location: 'abstract; Results (countries with lockdowns of 4 weeks or more)',
-		why: 'Peer-reviewed, 93 countries, 2020. Lockdown effect on mobility fades fully by about 112 days; a 60-day average point where people start drifting sits inside that. Its fall in workplace mobility is only a rough cross-check on the share who keep to a lockdown (Smith 2020), not its source.',
+		why: `Peer-reviewed, ${JOSHI_2021_COUNTRIES} countries, 2020. For the median country, lockdowns lose all their effect on workplace mobility in ${fmt(JOSHI_2021_DAYS_TO_NO_IMPACT, 1)} days; the ${LOCKDOWN_FATIGUE_MEAN_DAYS}-day average point where people start drifting is a provisional pick inside that. Its fall in workplace mobility is only a rough cross-check on the share who keep to a lockdown (Smith 2020), not its source.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'independent verification pass',
@@ -1507,13 +1511,13 @@ export const CITATIONS: Citation[] = [
 		journal: 'BMC Medicine',
 		year: 2020,
 		evidence: 'study',
-		noReviewReason: `The review read (Liu 2021) compares studies descriptively and pools no figure for the fall in contacts away from home. Jarvis 2020 is the only survey read that states in its text the share of contacts at home both before the pandemic (POLYMOD) and in lockdown, which the cut away from home needs; Coletti 2020 (Belgium) states the lockdown share at home (about ${COLETTI_2020_LOCKDOWN_HOME_PCT}%) but gives the pre-pandemic split only in a figure. Liu 2021, a rapid review that includes Jarvis 2020, reports a ${LIU_2021.allContacts.low}-${LIU_2021.allContacts.high}% fall in all contacts in most study settings, a ${LIU_2021.workContacts.low}-${LIU_2021.workContacts.high}% fall in work contacts in Italy, the UK, Belgium, Luxembourg and France (${LIU_2021.workContacts.germany}% and ${LIU_2021.workContacts.netherlands}% in Germany and the Netherlands), and a ${LIU_2021.communityContacts.low}-${LIU_2021.communityContacts.high}% fall in community contacts outside Italy and China. Jarvis's own fall in all contacts (${fmt(JARVIS_ALL_CONTACTS_FALL * 100)}%) sits inside the first range; the derived cut away from home (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%) sits inside the work range and above the community range.`,
+		noReviewReason: `The review read (Liu 2021) compares studies descriptively and pools no figure for the fall in contacts away from home. Jarvis 2020 is the only survey read that states in its text the share of contacts at home both before the pandemic (POLYMOD) and in lockdown, which the cut away from home needs; Coletti 2020 (Belgium; Sci Rep, doi 10.1038/s41598-020-78540-7) states the lockdown share at home (about ${COLETTI_2020_LOCKDOWN_HOME_PCT}%) but gives the pre-pandemic contacts by setting only in figures in its supplement. Liu 2021, a rapid review that includes Jarvis 2020, reports a ${LIU_2021.allContacts.low}-${LIU_2021.allContacts.high}% fall in all contacts in most study settings, a ${LIU_2021.workContacts.low}-${LIU_2021.workContacts.high}% fall in work contacts in Italy, the UK, Belgium, Luxembourg and France (${LIU_2021.workContacts.germany}% and ${LIU_2021.workContacts.netherlands}% in Germany and the Netherlands), and a ${LIU_2021.communityContacts.low}-${LIU_2021.communityContacts.high}% fall in community contacts outside Italy and China. Jarvis's own fall in all contacts (${fmt(JARVIS_ALL_CONTACTS_FALL * 100)}%) sits inside the first range; the derived cut away from home (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%) sits inside the work range and above the community range.`,
 		doi: '10.1186/s12916-020-01597-8',
 		usedFor: ['behaviour.lockdownContactCut'],
 		quote:
 			'We found a 74% reduction in the average daily number of contacts observed per participant (from 10.8 to 2.8). … The majority of contacts (57.6%) occurred at home, contrasting with 33.7% reported in the POLYMOD survey.',
 		location: `Abstract (Results) for the first sentence; Results, "Contact patterns", second paragraph, for the second; Table 2 (Overall row) for ${fmt(JARVIS_2020_CONTACTS.before, 1)} and ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)}`,
-		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${fmt(JARVIS_2020_CONTACTS.before, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% in POLYMOD, a UK survey from before the pandemic, against ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK adult average (${fmt(JARVIS_2020_PARTICIPANTS)} surveyed 24-27 March 2020, against POLYMOD), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed. Jarvis does not say whether POLYMOD's ${fmt(JARVIS_2020_CONTACTS.homeShareBefore * 100, 1)}% at home is over the same adults as its ${fmt(JARVIS_2020_CONTACTS.before, 1)}; the cut assumes it is. Liu 2021 describes the UK's fall in contacts at home as marginal; if home contacts fell less than this split implies, the cut away from home is larger, so ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% is the cautious reading. The UK figure is the general default; Liu 2021 gives the European ranges.`,
+		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${fmt(JARVIS_2020_CONTACTS.before, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% in POLYMOD, a UK survey from before the pandemic, against ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK adult average (${fmt(JARVIS_2020_PARTICIPANTS)} surveyed 24-27 March 2020, against POLYMOD), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed. Jarvis does not say whether POLYMOD's ${fmt(JARVIS_2020_CONTACTS.homeShareBefore * 100, 1)}% at home is over the same adults as its ${fmt(JARVIS_2020_CONTACTS.before, 1)}; the cut assumes it is. Liu 2021 describes the UK's fall in contacts at home as marginal; if home contacts fell less than this split implies, the cut away from home is larger, so ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% is the cautious reading. The UK figure is the general default; Liu 2021 (8 of its 12 studies European) is the cross-check.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'research thread (full text), research/lockdown-contacts.md',
@@ -1533,8 +1537,8 @@ export const CITATIONS: Citation[] = [
 		doi: '10.1097/EDE.0000000000001412',
 		usedFor: ['behaviour.lockdownContactCut'],
 		quote:
-			'65%−87% reduction in mean contact rate compared to pre-COVID contact rates of seven to 26 per person per day',
-		location: `Results, "Overall mean contacts during initial mitigation" (eTable 6); for most (${LIU_2021.allContacts.settings} of ${LIU_2021.allContacts.ofSettings}) study settings`,
+			'65%−87% reduction in mean contact rate compared to pre-COVID contact rates of seven to 26 per person per day … Italy, UK, Belgium, Luxembourg and France observed a 75% to 90% reduction. Germany and the Netherlands observed the lowest reductions, at 24% and 27% respectively. … while all other study settings reported a 50–80% reduction.',
+		location: `Results, "Overall mean contacts during initial mitigation" (eTable 6), for most (${LIU_2021.allContacts.settings} of ${LIU_2021.allContacts.ofSettings}) study settings; work and community figures from "Marked reductions in contacts outside of home during initial mitigation"`,
 		why: `The reviewed range for how far all contacts fell in most study settings (${LIU_2021.allContacts.settings} of ${LIU_2021.allContacts.ofSettings}) during the first COVID-19 lockdowns. Jarvis 2020's own fall in all contacts (${fmt(JARVIS_ALL_CONTACTS_FALL * 100)}%) sits inside it. The cut used here (${fmt(LOCKDOWN_CONTACT_CUT * 100)}%) is for contacts away from home only, and sits inside the review's ${LIU_2021.workContacts.low}-${LIU_2021.workContacts.high}% fall in work contacts for Italy, the UK, Belgium, Luxembourg and France. The review includes Jarvis 2020 and gives ranges only, so it is a cross-check, not the figure.`,
 		context: 'COVID-19 era',
 		verified: {
@@ -1621,7 +1625,7 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'study',
 		noReviewReason:
-			'No meta-analysis or systematic review of how long people keep to a lockdown exists (search, 7 Oct 2026).',
+			'No meta-analysis or systematic review of how long people keep to a lockdown was found (search, 7 Oct 2026, research/stronger-evidence.md).',
 		doi: '10.1038/s41562-021-01181-x',
 		usedFor: ['behaviour.lockdownFatigueSdDays'],
 		quote: 'less intense in countries with high interpersonal trust',
@@ -5116,7 +5120,8 @@ export const CITATIONS: Citation[] = [
 		title:
 			'Population ages 15-64, female and total, and population ages 65 and above, female and total (SP.POP.1564.FE.IN, SP.POP.1564.TO, SP.POP.65UP.FE.IN, SP.POP.65UP.TO), European Union',
 		journal: 'World Development Indicators',
-		year: 2025,
+		year: 'n.d.',
+		accessed: '2026-10-16',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.POP.65UP.FE.IN',
@@ -5298,7 +5303,8 @@ export const CITATIONS: Citation[] = [
 		authors: 'World Bank (World Development Indicators)',
 		title: 'Birth rate, crude (per 1,000 people) (SP.DYN.CBRT.IN)',
 		journal: 'World Development Indicators',
-		year: 2024,
+		year: 'n.d.',
+		accessed: '2026-10-16',
 		evidence: 'official',
 		publisher: 'World Bank',
 		url: 'https://data.worldbank.org/indicator/SP.DYN.CBRT.IN',

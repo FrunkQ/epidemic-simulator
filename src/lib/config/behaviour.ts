@@ -7,6 +7,7 @@ import {
 	KEY_WORKER_SHARE,
 	LOCKDOWN_COMPLIANCE,
 	LOCKDOWN_CONTACT_CUT,
+	LOCKDOWN_FATIGUE_MEAN_DAYS,
 	STRAIN
 } from './derived';
 
@@ -65,7 +66,7 @@ export const BEHAVIOUR: BehaviourConfig = {
 		sources: ['jarvis2020-comix-uk', 'liu2021-contact-review']
 	},
 	lockdownFatigueMeanDays: {
-		value: 60,
+		value: LOCKDOWN_FATIGUE_MEAN_DAYS,
 		sources: ['joshi2021-lockdown-mobility'],
 		provisional: `A pick inside Joshi 2021's ${fmt(JOSHI_2021_DAYS_TO_NO_IMPACT, 1)} days for the median country, not a sourced figure.`
 	},

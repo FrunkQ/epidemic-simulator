@@ -6,6 +6,8 @@ import {
 	EVIDENCE_RANK,
 	OFFICIAL_PUBLISHERS
 } from '../../src/lib/config/citations';
+import { BEHAVIOUR } from '../../src/lib/config/behaviour';
+import { LOCKDOWN_FATIGUE_MEAN_DAYS } from '../../src/lib/config/derived';
 import { DISEASES, perSymptomatic } from '../../src/lib/config/diseases';
 import { aboutKeys, derivedKeys } from '../../src/lib/config/herd';
 import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
@@ -154,6 +156,14 @@ describe('citations', () => {
 			expect(c?.usedFor, e.id).toContain(e.key);
 			expect(e.reason.length, e.id).toBeGreaterThan(20);
 		}
+		// The citation itself says the UK figure stands in; the World Bank denominators need not.
+		for (const id of new Set(COUNTRY_EXEMPTIONS.map((e) => e.id)))
+			if (!id.startsWith('worldbank-'))
+				expect(CITATIONS.find((c) => c.id === id)?.why, id).toMatch(/general default/);
+	});
+
+	it('states the fatigue mean in the Joshi why from the value the config uses', () => {
+		expect(BEHAVIOUR.lockdownFatigueMeanDays.value).toBe(LOCKDOWN_FATIGUE_MEAN_DAYS);
 	});
 
 	it('uses only peer-reviewed papers and named public bodies (Alex: no random websites)', () => {
