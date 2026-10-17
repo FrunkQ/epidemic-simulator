@@ -439,12 +439,12 @@ export class Simulation {
 		if (this.queue.length > 0) this.applyCommands();
 		const sub = this.subsystems;
 		// 1b. Who a lockdown keeps home (6.4); they neither move nor leave.
-		this.lockdown.advance(a, this.scenario.regions);
+		this.lockdown.advance(a, this.scenario.regions, this.radii, this.tick, this.rng);
 		// 2. Departures.
 		if (sub.travel) this.transit.depart(a, this.routeList, this.scenario.regions, this.tick, this.rng);
 		// 3. Movement, in a region and in transit.
 		moveInRegions(a, this.scenario.regions, this.radii, this.tick, this.rng, sub.illStopsMovement);
-		this.transit.move(a, this.routeList, this.scenario.regions, this.radii, this.rng);
+		this.transit.move(a, this.routeList, this.scenario.regions, this.radii, this.rng, this.tick);
 		// 4. Spatial grid.
 		this.grid.rebuild(a);
 		// 5. Transmission.

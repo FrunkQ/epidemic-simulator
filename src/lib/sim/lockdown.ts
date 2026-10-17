@@ -1,5 +1,6 @@
-import { Agents } from './agents';
+import { Agents, LONG_AGO } from './agents';
 import { TICKS_PER_DAY } from './constants';
+import { Rng } from './rng';
 import type { HealthPolicy, Region } from './types';
 
 /** Why a dot in a locked-down city is out, or that it stays home (6.4). */
@@ -36,7 +37,11 @@ export function outReason(a: Agents, i: number, policy: HealthPolicy, ticks: num
  * Lockdowns, per city (6.4). `ticks` rises while a city is locked down and falls at the same rate
  * once it lifts, so a second lockdown soon after the first tires people sooner. Each tick it sets
  * Agents.held for every dot told to stay home that is still keeping to it, and Agents.contact: a
- * held dot's share of its usual contact with other dots.
+ * held dot's share of its usual contact with other dots. A dot that has just arrived from a trip
+ * (still within the time it takes to cross the city at its speed) first walks to a spot of its own,
+ * drawn uniformly inside the disc, and is held once it gets there; every traveller lands at the same
+ * point, and holding them there would pile them up. With no lockdown nothing is drawn, so runs
+ * without one are unchanged.
  */
 export class Lockdown {
 	readonly on: Uint8Array;
@@ -55,7 +60,7 @@ export class Lockdown {
 		this.holding = false;
 	}
 
-	advance(a: Agents, regions: Region[]): void {
+	advance(a: Agents, regions: Region[], radii: Float32Array, tick: number, rng: Rng): void {
 		let any = false;
 		for (let r = 0; r < regions.length; r++) {
 			if (this.on[r] === 1) {
@@ -64,11 +69,26 @@ export class Lockdown {
 			} else if (this.ticks[r] > 0) this.ticks[r]--;
 		}
 		if (!any && !this.holding) return;
-		const { held, region, contact, restless } = a;
+		const { held, region, contact, restless, walking } = a;
 		for (let i = 0; i < a.activeCount; i++) {
 			const r = region[i];
 			const policy = r >= 0 ? regions[r].policy : null;
-			held[i] = policy && this.on[r] === 1 && outReason(a, i, policy, this.ticks[r]) === Out.HOME ? 1 : 0;
+			const stays =
+				policy !== null && this.on[r] === 1 && outReason(a, i, policy, this.ticks[r]) === Out.HOME;
+			if (stays && (walking[i] === 1 || tick - a.landedTick[i] < radii[r] / a.speed[i])) {
+				if (walking[i] === 0) {
+					walking[i] = 1;
+					const reg = regions[r];
+					const d = radii[r] * Math.sqrt(rng.next());
+					const t = rng.next() * Math.PI * 2;
+					a.goalX[i] = reg.cx + Math.cos(t) * d;
+					a.goalY[i] = reg.cy + Math.sin(t) * d;
+				}
+			} else {
+				walking[i] = 0;
+				if (stays) a.landedTick[i] = LONG_AGO;
+			}
+			held[i] = stays && walking[i] === 0 ? 1 : 0;
 			contact[i] = held[i] === 1 ? 1 - policy!.lockdownContactCut.value : 1;
 			restless[i] =
 				held[i] === 1 && this.ticks[r] > (fatigueDays(a, i, policy!) - RESTLESS_DAYS) * TICKS_PER_DAY ? 1 : 0;

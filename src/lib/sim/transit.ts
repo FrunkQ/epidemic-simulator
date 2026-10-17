@@ -135,7 +135,8 @@ export class Transit {
 
 	/**
 	 * A random dot in the region who can travel: not mostly dead or ill, not isolated, not kept home by
-	 * a lockdown (6.4: the same rule decides who moves and who may leave), and with nobody ill left in
+	 * a lockdown or walking to its spot to stay home (6.4: the same rule decides who moves and who may
+	 * leave), and with nobody ill left in
 	 * it. -1 if none found.
 	 */
 	private pickTraveller(agents: Agents, region: number, rng: Rng): number {
@@ -146,7 +147,8 @@ export class Transit {
 			const k = start + rng.int(count);
 			const i = this.regionItems[k];
 			if (agents.region[i] !== region) continue; // already left this tick
-			if (agents.dead[i] === 1 || agents.isolated[i] === 1 || agents.held[i] === 1) continue;
+			if (agents.dead[i] === 1 || agents.isolated[i] === 1 || agents.held[i] === 1 || agents.walking[i] === 1)
+				continue;
 			if (this.illStops && (agents.ill[i] === 1 || !this.readyToBoard(i))) continue;
 			return i;
 		}
@@ -170,7 +172,14 @@ export class Transit {
 	}
 
 	/** Move road and ferry travellers and planes; land anyone who has arrived. */
-	move(agents: Agents, routes: Route[], regions: Region[], radii: Float32Array, rng: Rng): void {
+	move(
+		agents: Agents,
+		routes: Route[],
+		regions: Region[],
+		radii: Float32Array,
+		rng: Rng,
+		tick: number
+	): void {
 		if (routes.length === 0) return;
 		const n = agents.activeCount;
 		for (let i = 0; i < n; i++) {
@@ -186,7 +195,7 @@ export class Transit {
 			const dir = agents.routeDir[i];
 			const next = agents.routeS[i] + dir * speed;
 			if ((dir > 0 && next >= route.length) || (dir < 0 && next <= 0)) {
-				this.arrive(agents, i, route, dir > 0 ? route.to : route.from, regions, radii, rng);
+				this.arrive(agents, i, route, dir > 0 ? route.to : route.from, regions, radii, rng, tick);
 				continue;
 			}
 			agents.routeS[i] = next;
@@ -207,7 +216,7 @@ export class Transit {
 				if (this.planeLoad[p] > 0) {
 					for (let i = 0; i < n; i++) {
 						if (agents.route[i] === r && agents.region[i] < 0 && agents.planeOf[i] === p) {
-							this.arrive(agents, i, route, dest, regions, radii, rng);
+							this.arrive(agents, i, route, dest, regions, radii, rng, tick);
 						}
 					}
 				}
@@ -230,7 +239,8 @@ export class Transit {
 		dest: number,
 		regions: Region[],
 		radii: Float32Array,
-		rng: Rng
+		rng: Rng,
+		tick: number
 	): void {
 		const reg = regions[dest];
 		const end = dest === route.to ? route.points.length - 2 : 0;
@@ -248,6 +258,7 @@ export class Transit {
 		agents.region[i] = dest;
 		agents.route[i] = -1;
 		agents.planeOf[i] = -1;
+		agents.landedTick[i] = tick;
 	}
 
 	/** Living travellers currently on the way (for telemetry). */

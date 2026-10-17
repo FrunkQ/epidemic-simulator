@@ -1,4 +1,4 @@
-import { Agents } from './agents';
+import { Agents, LONG_AGO } from './agents';
 import { WANDER_EVERY, WANDER_TURN } from './constants';
 import { Rng } from './rng';
 import type { Region } from './types';
@@ -10,7 +10,8 @@ export function regionRadius(dots: number, density: number): number {
 
 /**
  * Wandering inside each population's disc. Dots turn a little now and then and bounce off
- * the edge. Red (with any disease), isolated, dead and lockdown-held dots stay put.
+ * the edge. Red (with any disease), isolated, dead and lockdown-held dots stay put. A fresh arrival
+ * a lockdown would keep home walks straight to its spot (lockdown.ts), then stops there.
  */
 export function moveInRegions(
 	agents: Agents,
@@ -26,6 +27,22 @@ export function moveInRegions(
 		const r = region[i];
 		if (r < 0) continue;
 		if (dead[i] === 1 || isolated[i] === 1 || held[i] === 1 || (illStopsMovement && ill[i] === 1)) continue;
+		if (agents.walking[i] === 1) {
+			const gx = agents.goalX[i] - x[i];
+			const gy = agents.goalY[i] - y[i];
+			const left = Math.hypot(gx, gy);
+			const step = agents.speed[i];
+			if (left <= step) {
+				x[i] = agents.goalX[i];
+				y[i] = agents.goalY[i];
+				agents.walking[i] = 0;
+				agents.landedTick[i] = LONG_AGO;
+			} else {
+				x[i] += (gx / left) * step;
+				y[i] += (gy / left) * step;
+			}
+			continue;
+		}
 
 		let dx = vx[i];
 		let dy = vy[i];
