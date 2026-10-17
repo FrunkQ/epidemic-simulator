@@ -113,7 +113,7 @@ export const LOCKDOWN_POLICY_FIELDS = [
 		min: 7,
 		max: 180,
 		step: 1,
-		format: (v: number) => `${Math.round(v)}`,
+		format: (v: number) => `${Math.round(v)} days`,
 		explain:
 			'On average, how long people who stay home keep it up before they start going out again. Some give up sooner and some later.'
 	}

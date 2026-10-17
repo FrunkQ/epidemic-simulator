@@ -10,6 +10,7 @@
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
+	import { LOCKDOWN_CONTACT_CUT } from '../config/derived';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
 	import { LIVE_POLICY_FIELDS, LOCKDOWN_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
@@ -60,6 +61,13 @@
 		onpolicy: (key: LivePolicyKey, value: number) => void;
 		/** Start or end this population's lockdown (6.4). */
 		onlockdown?: (on: boolean) => void;
+		/**
+		 * Whether this population is locked down as the page shows it: the request the instant it is
+		 * made, even while paused, though the run applies it at the next tick (6.4).
+		 */
+		lockOn?: boolean;
+		/** The day that lockdown began, or begins at the next tick (6.4). */
+		lockSince?: number;
 		/** This population's daily history, for the lockdown charts. */
 		history?: RegionHistory;
 		onseed: () => void;
@@ -87,6 +95,8 @@
 		onvaccine,
 		onpolicy,
 		onlockdown,
+		lockOn = false,
+		lockSince = 0,
 		history,
 		onseed,
 		discs = () => []
@@ -98,6 +108,14 @@
 		{ key: 'outTired', label: 'Tired of it', colour: '#647181' }
 	] as const;
 	const lockdownDays = $derived(history ? Array.from(history.days) : []);
+	/** The day each lockdown here began, so the cohort chart starts a new line at each. */
+	const lockStarts = $derived(
+		history ? [...new Set(Array.from(history.series.lockedSince).filter((d) => d >= 0))] : []
+	);
+	/** The charts fill the panel's measured width, whatever the scrollbar and docking leave. */
+	let lockChartsWidth = $state(0);
+	const lockChartW = $derived(Math.max(140, Math.floor(lockChartsWidth || 178)));
+	const lockStatus = $derived(lockOn ? `Locked down since day ${lockSince}` : 'No lockdown');
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
 	/** Which settings panel is open, if any. */
@@ -408,6 +426,12 @@
 			vaccinated
 		{/if}
 	</p>
+	{#if onlockdown}
+		<p class="lockrow">
+			<button class="lockdown" aria-pressed={lockOn} onclick={() => onlockdown(!lockOn)}>Lockdown</button>
+			<span role="status">{lockStatus}</span>
+		</p>
+	{/if}
 	{#if panel === 'policy'}
 		<p class="note">Changes apply straight away, without restarting.</p>
 		{#each LIVE_POLICY_FIELDS as f (f.key)}
@@ -431,18 +455,14 @@
 			</p>
 		{/if}
 		<h3>Lockdown</h3>
-		{#if onlockdown}
-			<button
-				class="lockdown"
-				aria-pressed={t?.lockedDown ?? false}
-				onclick={() => onlockdown(!(t?.lockedDown ?? false))}
-				>{t?.lockedDown ? 'End lockdown' : 'Start lockdown'}</button
-			>
-		{/if}
+		<p class="note">
+			People staying home still meet some others: about {Math.round(LOCKDOWN_CONTACT_CUT * 100)}% fewer
+			contacts outside the home, not none, so it can still spread in a locked city.
+		</p>
 		{#if t?.lockedDown}
 			<p class="note">
 				Still going out: <b>{people(t.out.key)}</b> key workers, <b>{people(t.out.ignoring)}</b> not keeping
-				to it and <b>{people(t.out.tired)}</b> tired of it, of {people(t.underLockdown)}.
+				to it and <b>{people(t.out.tired)}</b> tired of it, out of the {people(t.underLockdown)} people here.
 			</p>
 		{/if}
 		{#each LOCKDOWN_POLICY_FIELDS as f (f.key)}
@@ -455,20 +475,22 @@
 					max={f.max}
 					step={f.step}
 					{value}
+					aria-valuetext={f.format(value)}
 					onchange={(e) => onpolicy(f.key, Number(e.currentTarget.value))}
 				/>
 				<small>{f.explain}</small>
 			</label>
 		{/each}
 		{#if hadLockdown && history && t}
-			<div class="lockcharts">
+			<div class="lockcharts" bind:clientWidth={lockChartsWidth}>
 				<StackedAreaChart
 					title="{region.name}: people out during the lockdown, by reason"
 					caption="Out in lockdown"
 					days={lockdownDays}
 					bands={OUT_BANDS.map((b) => ({ ...b, values: Array.from(history.series[b.key]) }))}
 					max={Math.max(1, ...history.series.underLockdown)}
-					width={190}
+					width={lockChartW}
+					tipBelow
 				/>
 				<ul class="key">
 					{#each OUT_BANDS as b (b.key)}
@@ -476,7 +498,7 @@
 					{/each}
 				</ul>
 				<LineChart
-					title="{region.name}: of the people here when the lockdown began, the share who have caught it since, key workers against working-age people asked to stay home, followed wherever they go"
+					title="{region.name}: of the people here when the lockdown began, the share who have caught it since, key workers against working-age people who stayed home at first, followed wherever they go"
 					caption="Caught it since lockdown began"
 					brief="Caught it since lockdown"
 					days={lockdownDays}
@@ -489,7 +511,7 @@
 						},
 						{
 							key: 'home',
-							label: 'Asked to stay home',
+							label: 'Stayed home at first',
 							colour: '#cfd6de',
 							dash: '4 3',
 							values: Array.from(history.series.stayHomeCaught, (v) => v * 100)
@@ -497,13 +519,17 @@
 					]}
 					unit="%"
 					yLabel="% caught it"
-					width={190}
+					width={lockChartW}
+					tipBelow
+					starts={lockStarts}
+					startLabel="Lockdown began"
 				/>
-				<!-- Shown, not only in the chart's title, so keyboard, touch and screen readers reach it. -->
-				<p class="note">
-					Of the people here when the lockdown began, followed wherever they go. Asked to stay home includes
-					people who later tire of it.
-				</p>
+				<!-- Shown as text, not only in the chart's title and readout, so keyboard, touch and screen readers reach the meaning and the numbers. -->
+				{#if Number.isFinite(t.keyWorkersCaught)}
+					<p class="note">
+						{`Counts the people here when the lockdown began, wherever they go: so far ${pctOf(t.keyWorkersCaught)} of key workers and ${pctOf(t.stayHomeCaught)} of those who stayed home at first have caught it.`}
+					</p>
+				{/if}
 				<LineChart
 					title="{region.name}: person-days under lockdown so far"
 					caption="Person-days in lockdown"
@@ -517,8 +543,13 @@
 						}
 					]}
 					yLabel="person-days"
-					width={190}
+					width={lockChartW}
+					tipBelow
+					keyless
 				/>
+				<p class="note">
+					A person-day is one person living in a locked-down city for one day: {people(t.personDays)} so far.
+				</p>
 			</div>
 		{/if}
 	{/if}
@@ -789,6 +820,13 @@
 		margin: 8px 0 4px;
 		font-size: 12px;
 		font-weight: 600;
+	}
+	.lockrow {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 4px 0 0;
+		color: #c7d4e2;
 	}
 	.lockdown[aria-pressed='true'] {
 		background: #3a2a2a;

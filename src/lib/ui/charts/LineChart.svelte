@@ -35,6 +35,16 @@
 		unit?: '%';
 		width?: number;
 		height?: number;
+		/**
+		 * Days something began (a lockdown): each is marked on the plot, and the lines start afresh
+		 * there rather than joining the day before. `startLabel` names the mark in the key.
+		 */
+		starts?: readonly number[];
+		startLabel?: string;
+		/** Show the hover readout under the chart rather than over the plot (charts in a card). */
+		tipBelow?: boolean;
+		/** No key under the chart, for a single line its caption already names. */
+		keyless?: boolean;
 	}
 	let {
 		title,
@@ -52,13 +62,24 @@
 		yLabel = 'People',
 		unit,
 		width = 240,
-		height = 110
+		height = 110,
+		starts = [],
+		startLabel,
+		tipBelow = false,
+		keyless = false
 	}: Props = $props();
 
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
 	const plotH = $derived(height - MARGIN.top - MARGIN.bottom);
 	const top = $derived(
-		niceMax(max ?? Math.max(1, ...lines.flatMap((l) => l.values), ...references.map((r) => r.value)))
+		niceMax(
+			max ??
+				Math.max(
+					1,
+					...lines.flatMap((l) => l.values.filter(Number.isFinite)),
+					...references.map((r) => r.value)
+				)
+		)
 	);
 	const value = (v: number) => (unit === '%' ? `${Math.round(v).toLocaleString()}%` : short(v));
 	/** A label needs this much height (px): references closer together, or to the day axis, are crowded. */
@@ -125,8 +146,25 @@
 	const span = $derived(Math.max(30, (days[days.length - 1] ?? 0) - first));
 	const xs = (d: number) => MARGIN.left + ((d - first) / span) * plotW;
 	const ys = (v: number) => MARGIN.top + plotH - (Math.min(v, top) / top) * plotH;
-	const points = (values: readonly number[]) =>
-		days.map((d, i) => `${xs(d).toFixed(1)},${ys(values[i] ?? 0).toFixed(1)}`).join(' ');
+	/**
+	 * A line's runs of points: a missing value (NaN, such as before a city's first lockdown) leaves a
+	 * gap, and so does each of `starts`, so a new lockdown's line never joins the last one's.
+	 */
+	const segments = (values: readonly number[]) => {
+		const runs: string[][] = [];
+		let run: string[] = [];
+		days.forEach((d, i) => {
+			const v = values[i] ?? 0;
+			if (!Number.isFinite(v) || (starts.includes(d) && run.length > 0)) {
+				if (run.length > 0) runs.push(run);
+				run = [];
+				if (!Number.isFinite(v)) return;
+			}
+			run.push(`${xs(d).toFixed(1)},${ys(v).toFixed(1)}`);
+		});
+		if (run.length > 0) runs.push(run);
+		return runs.map((r) => r.join(' '));
+	};
 
 	let hover: number | null = $state(null);
 	function onmove(e: PointerEvent) {
@@ -171,8 +209,13 @@
 		{#each references as r (r.label)}
 			<line class="reference" x1={MARGIN.left} y1={ys(r.value)} x2={MARGIN.left + plotW} y2={ys(r.value)} />
 		{/each}
+		{#each starts as d (d)}
+			<line class="start" x1={xs(d)} y1={MARGIN.top} x2={xs(d)} y2={MARGIN.top + plotH} />
+		{/each}
 		{#each lines as l (l.key)}
-			<polyline points={points(l.values)} stroke={l.colour} stroke-dasharray={l.dash} />
+			{#each segments(l.values) as pts, k (k)}
+				<polyline points={pts} stroke={l.colour} stroke-dasharray={l.dash} />
+			{/each}
 		{/each}
 		{#each candidates as t, k (t)}
 			<text class="reference-label measure" bind:this={measuring[k]} aria-hidden="true">{t}</text>
@@ -199,23 +242,32 @@
 		{/if}
 	</svg>
 	<!-- Room for two lines when there are several, so the key wrapping as other charts arrive doesn't resize the map. -->
-	<div class="key" class:several={lines.length > 2}>
-		{#each lines as l (l.key)}
-			<span
-				><svg width="18" height="6" aria-hidden="true"
-					><line x1="0" y1="3" x2="18" y2="3" stroke={l.colour} stroke-dasharray={l.dash} /></svg
-				>{l.label}</span
-			>
-		{/each}
-	</div>
+	{#if !keyless}<div class="key" class:several={lines.length > 2}>
+			{#each lines as l (l.key)}
+				<span
+					><svg width="18" height="6" aria-hidden="true"
+						><line x1="0" y1="3" x2="18" y2="3" stroke={l.colour} stroke-dasharray={l.dash} /></svg
+					>{l.label}</span
+				>
+			{/each}
+			{#if startLabel && starts.length > 0}
+				<span
+					><svg width="18" height="6" aria-hidden="true"
+						><line class="start" x1="9" y1="0" x2="9" y2="6" /></svg
+					>{startLabel}</span
+				>
+			{/if}
+		</div>{/if}
 	{#if hover !== null}
-		<div class="tip" role="status">
+		<div class="tip" class:below={tipBelow} role="status">
 			<b>Day {days[hover]}</b>
 			{#each lines as l (l.key)}
 				<span
-					>{l.label}: {unit === '%'
-						? `${Math.round(l.values[hover] ?? 0).toLocaleString()}%`
-						: about(l.values[hover] ?? 0)}</span
+					>{l.label}: {!Number.isFinite(l.values[hover] ?? 0)
+						? 'not yet'
+						: unit === '%'
+							? `${Math.round(l.values[hover] ?? 0).toLocaleString()}%`
+							: about(l.values[hover] ?? 0)}</span
 				>
 			{/each}
 		</div>
@@ -248,6 +300,11 @@
 	.reference {
 		stroke: #e6edf5;
 		stroke-dasharray: 2 3;
+	}
+	.start {
+		stroke: #e6edf5;
+		stroke-width: 1;
+		stroke-dasharray: 1 2;
 	}
 	.cross {
 		stroke: rgba(230, 237, 245, 0.6);
@@ -302,5 +359,12 @@
 		pointer-events: none;
 		z-index: 3;
 		color: #e6edf5;
+	}
+	/* Under the plot, over the key and what follows, so it never covers the lines it reads out. */
+	.tip.below {
+		top: 100%;
+		left: 0;
+		right: auto;
+		white-space: normal;
 	}
 </style>

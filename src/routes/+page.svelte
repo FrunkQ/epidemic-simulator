@@ -43,9 +43,27 @@
 	let histories: RegionHistory[] = $state.raw([]);
 	let historyVersion = -1;
 
+	/**
+	 * Lockdowns asked for but not yet applied (the run applies a command at its next tick, so while
+	 * paused it waits): the card shows the new state at once (6.4). Cleared once the run agrees.
+	 */
+	let lockAsked: ({ on: boolean; day: number } | undefined)[] = $state([]);
+	function askLockdown(region: number, on: boolean) {
+		sim.send({ type: 'lockdown', region, on });
+		lockAsked[region] = { on, day: telemetry?.day ?? 0 };
+	}
+	const lockShown = (region: number) => {
+		const asked = lockAsked[region];
+		const r = telemetry?.regions[region];
+		if (asked) return { on: asked.on, since: asked.day };
+		return { on: r?.lockedDown ?? false, since: r?.lockedSince ?? 0 };
+	};
+
 	/** Store a snapshot, and re-read the daily history only when a new day was sampled. */
 	function setTelemetry(t: Telemetry) {
 		telemetry = t;
+		const applied = (a: { on: boolean } | undefined, r: number) => !!a && t.regions[r]?.lockedDown === a.on;
+		if (lockAsked.some(applied)) lockAsked = lockAsked.map((a, r) => (applied(a, r) ? undefined : a));
 		if (t.historyVersion === historyVersion) return;
 		historyVersion = t.historyVersion;
 		histories = t.regions.map((_, r) => sim.history(r));
@@ -220,6 +238,8 @@
 
 	function restart() {
 		sim.setup($state.snapshot(scenario), diseaseId, seed);
+		// A lockdown is an event in the run, so a restart lifts it; the sliders are settings and stay.
+		lockAsked = [];
 		historyVersion = -1;
 		setTelemetry(sim.snapshot());
 	}
@@ -517,7 +537,9 @@
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
-					onlockdown={(on) => sim.send({ type: 'lockdown', region: i, on })}
+					onlockdown={(on) => askLockdown(i, on)}
+					lockOn={lockShown(i).on}
+					lockSince={lockShown(i).since}
 					history={histories[i]}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 					discs={discsInWindow}
@@ -559,7 +581,9 @@
 					onvaccination={(full, partial) => setVaccination(i, full, partial)}
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
-					onlockdown={(on) => sim.send({ type: 'lockdown', region: i, on })}
+					onlockdown={(on) => askLockdown(i, on)}
+					lockOn={lockShown(i).on}
+					lockSince={lockShown(i).since}
 					history={histories[i]}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
 					discs={discsInWindow}
