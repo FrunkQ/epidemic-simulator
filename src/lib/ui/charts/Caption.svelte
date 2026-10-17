@@ -43,9 +43,12 @@
 
 <span class="text" bind:clientWidth={room} title={shown !== title ? title : undefined}>{shown ?? ''}</span
 >{@render controls?.()}
-{#each wordings as t, k (t)}
-	<span class="measure" bind:this={measuring[k]} aria-hidden="true">{t}</span>
-{/each}
+<!-- Measured inside a clipped box of no size, so a long wording never makes the card scroll sideways. -->
+<span class="measures" aria-hidden="true">
+	{#each wordings as t, k (t)}
+		<span class="measure" bind:this={measuring[k]}>{t}</span>
+	{/each}
+</span>
 
 <style>
 	/* The chart's figcaption, which holds this. */
@@ -66,9 +69,17 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	.measures {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
+	}
 	.measure {
 		position: absolute;
-		visibility: hidden;
 		white-space: nowrap;
 		left: 0;
 		top: 0;
