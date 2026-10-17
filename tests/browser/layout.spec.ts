@@ -604,3 +604,339 @@ test('the lasting-harm details open from the keyboard, close on Escape, a click 
 	await page.setViewportSize({ width: 1366, height: 768 });
 	await expect(page.locator(`#${id}`)).toHaveCount(0);
 });
+
+test('the lasting-harm details stay open on a new height alone, follow their card when it moves, and only one is open', async ({
+	page
+}) => {
+	await open(page, 1400, 900);
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	const lines = page.locator('section.card button.harm');
+	await expect(lines.nth(1)).toBeVisible({ timeout: 60_000 });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	const first = lines.first();
+	await first.click();
+	const detail = page.locator(`#${await first.getAttribute('aria-controls')}`);
+	await expect(detail).toBeVisible();
+	// A phone's address bar showing or hiding changes only the height.
+	await page.setViewportSize({ width: 1400, height: 820 });
+	await settle(page);
+	await expect(detail).toBeVisible();
+	// From the keyboard, opening another card's details closes the first card's.
+	const second = lines.nth(1);
+	await second.focus();
+	await page.keyboard.press('Enter');
+	await expect(second).toHaveAttribute('aria-expanded', 'true');
+	await expect(first).toHaveAttribute('aria-expanded', 'false');
+	const shown = page.locator('section.card .detail');
+	await expect(shown).toHaveCount(1);
+	// A zoom moves the cards; the details move with their line rather than being left behind.
+	const card = page.locator('section.card').nth(1);
+	const before = (await card.boundingBox())!;
+	await page.mouse.move(700, 450);
+	await page.mouse.wheel(0, -600);
+	await settle(page);
+	const after = (await card.boundingBox())!;
+	expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(5);
+	await expect(shown).toHaveCount(1);
+	const line = (await second.boundingBox())!;
+	const box = (await shown.boundingBox())!;
+	expect(Math.abs(box.x - line.x)).toBeLessThan(2);
+	const below = Math.abs(box.y - (line.y + line.height + 4));
+	const above = Math.abs(box.y + box.height - (line.y - 4));
+	expect(Math.min(below, above)).toBeLessThan(2);
+});
+
+test('the blurb\'s "more" overlay stays open on a new height alone', async ({ page }) => {
+	await forceFont(page, 'DejaVu Sans');
+	await open(page, 1366, 768);
+	await requireFont(page, 'DejaVu Sans');
+	await page.selectOption('select', 'plague');
+	await settle(page);
+	await page.getByRole('button', { name: 'more' }).click();
+	await expect(page.locator('#blurb-full')).toHaveCount(1);
+	await page.setViewportSize({ width: 1366, height: 700 });
+	await settle(page);
+	await expect(page.locator('#blurb-full')).toHaveCount(1);
+});
+
+/** What an open harm details box covers that it must not: another card's header, or a city's disc. */
+async function detailCovers(page: Page) {
+	const stage = (await page.locator('canvas').first().boundingBox())!;
+	const { discs } = await probe(page);
+	return page.evaluate(
+		({ discs, sx, sy }) => {
+			const box = document.querySelector('section.card .detail');
+			if (!box) return [];
+			const b = box.getBoundingClientRect();
+			const own = box.closest('section.card')!;
+			const out: string[] = [];
+			const mine = own.querySelector(':scope > header')!.getBoundingClientRect();
+			if (
+				b.left < mine.right - 0.5 &&
+				b.right > mine.left + 0.5 &&
+				b.top < mine.bottom - 0.5 &&
+				b.bottom > mine.top + 0.5
+			)
+				out.push("covers its own card's header");
+			document.querySelectorAll('section.card').forEach((card, i) => {
+				if (card === own) return;
+				const h = card.querySelector(':scope > header')!.getBoundingClientRect();
+				if (
+					b.left < h.right - 0.5 &&
+					b.right > h.left + 0.5 &&
+					b.top < h.bottom - 0.5 &&
+					b.bottom > h.top + 0.5
+				)
+					out.push(`covers card ${i}'s header`);
+			});
+			discs.forEach((d, k) => {
+				const cx = d.x + sx;
+				const cy = d.y + sy;
+				const nx = Math.min(Math.max(cx, b.left), b.right);
+				const ny = Math.min(Math.max(cy, b.top), b.bottom);
+				if (Math.hypot(nx - cx, ny - cy) < d.r - 0.5) out.push(`covers city ${k}`);
+			});
+			if (b.left < 0 || b.top < 0 || b.right > innerWidth || b.bottom > innerHeight)
+				out.push('leaves the window');
+			return out;
+		},
+		{ discs, sx: stage.x, sy: stage.y }
+	);
+}
+
+/** Opens every lasting-harm and babies line in turn: each must open, announce it and cover nothing. */
+async function everyLineOpens(page: Page, when: string) {
+	let scrolled = 0;
+	const lines = page.locator('section.card button.harm');
+	await expect(lines.first()).toBeVisible({ timeout: 60_000 });
+	for (let i = 0; i < (await lines.count()); i++) {
+		const line = lines.nth(i);
+		await line.focus();
+		await page.keyboard.press('Enter');
+		await settle(page);
+		await expect(line, `line ${i} ${when}`).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('section.card .detail'), `line ${i} ${when}`).toBeVisible();
+		expect(await detailCovers(page), `line ${i} ${when}`).toEqual([]);
+		// The line that opened them stays in sight, so its focus ring shows where they came from.
+		const hidden = await line.evaluate((el) => {
+			const l = el.getBoundingClientRect();
+			const b = document.querySelector('section.card .detail')!.getBoundingClientRect();
+			return (
+				b.left < l.right - 0.5 && b.right > l.left + 0.5 && b.top < l.bottom - 0.5 && b.bottom > l.top + 0.5
+			);
+		});
+		expect(hidden, `line ${i} ${when} is under its details`).toBe(false);
+		// Over their own card, they take the taller of the spaces below the line and above it.
+		const side = await line.evaluate((el) => {
+			const l = el.getBoundingClientRect();
+			const b = document.querySelector('section.card .detail')!.getBoundingClientRect();
+			const card = el.closest('section.card')!;
+			const c = card.getBoundingClientRect();
+			if (Math.abs(b.left - c.left) > 0.5 || Math.abs(b.width - c.width) > 0.5) return 'beside';
+			const head = card.querySelector(':scope > header')!.getBoundingClientRect().bottom;
+			const below = Math.min(c.bottom, innerHeight) - (l.bottom + 4);
+			const above = l.top - 4 - Math.max(head, 0);
+			if (Math.max(below, above) < 40) return 'whole';
+			return b.top >= l.bottom === below >= above ? 'taller' : 'shorter';
+		});
+		expect(side, `line ${i} ${when}`).not.toBe('shorter');
+		// Details that scroll inside take keyboard focus, so their scroll is reachable without a mouse.
+		const box = page.locator('section.card .detail');
+		if (await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1)) {
+			scrolled++;
+			await expect(box, `line ${i} ${when} scrolls`).toHaveAttribute('tabindex', '0');
+		}
+		await page.keyboard.press('Escape');
+		await expect(page.locator('section.card .detail')).toHaveCount(0);
+	}
+	return scrolled;
+}
+
+for (const [w, h] of TARGETS) {
+	test(`${w}x${h}: every harm and babies line opens its details, on the start map and after New map`, async ({
+		page
+	}) => {
+		await open(page, w, h);
+		await page.selectOption('select', 'smallpox');
+		await settle(page);
+		await everyLineOpens(page, 'on the start map');
+		await page.getByRole('button', { name: 'New map' }).focus();
+		await page.keyboard.press('Enter');
+		await settle(page);
+		await everyLineOpens(page, 'after New map');
+	});
+
+	test(`${w}x${h}: the harm details never cover a city or another card's header, on open, zoom out and New map`, async ({
+		page
+	}) => {
+		await open(page, w, h);
+		await page.selectOption('select', 'smallpox');
+		await settle(page);
+		const lines = page.locator('section.card button.harm');
+		await expect(lines.first()).toBeVisible({ timeout: 60_000 });
+		for (let i = 0; i < (await lines.count()); i++) {
+			const line = lines.nth(i);
+			await line.click();
+			await settle(page);
+			expect(await detailCovers(page), `line ${i}, on open`).toEqual([]);
+			// A click elsewhere closes the details, so the map moves by the wheel and the keyboard.
+			const stage = (await page.locator('canvas').first().boundingBox())!;
+			for (const step of ['wheel out', 'wheel out', 'Back to the start view', 'New map']) {
+				if (step === 'wheel out') {
+					await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2);
+					await page.mouse.wheel(0, 400);
+				} else {
+					await page.getByRole('button', { name: step }).focus();
+					await page.keyboard.press('Enter');
+				}
+				await settle(page);
+				expect(await detailCovers(page), `line ${i}, after ${step}`).toEqual([]);
+				// Closed for want of room (or by a new map's cards): open it again for the next step.
+				if ((await page.locator('section.card .detail').count()) === 0 && (await lines.count()) > i) {
+					await lines.nth(i).click();
+					await settle(page);
+					expect(await detailCovers(page), `line ${i}, reopened after ${step}`).toEqual([]);
+				}
+			}
+			await page.keyboard.press('Escape');
+		}
+	});
+
+	test(`${w}x${h}: cards float again when the window's height shrinks and grows back`, async ({ page }) => {
+		await open(page, w, h);
+		expect(await docked(page)).toBe(0);
+		await page.setViewportSize({ width: w, height: 600 });
+		await settle(page);
+		await page.setViewportSize({ width: w, height: h });
+		await settle(page);
+		expect(await docked(page)).toBe(0);
+	});
+}
+
+test('docking for a short window keeps focus on the line whose details were open, and the details only where they fit', async ({
+	page
+}) => {
+	await open(page, 1280, 720);
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	const line = page.locator('section.card button.harm').first();
+	await expect(line).toBeVisible({ timeout: 60_000 });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await line.focus();
+	await page.keyboard.press('Enter');
+	await expect(page.locator('section.card .detail')).toHaveCount(1);
+	await page.setViewportSize({ width: 1280, height: 600 });
+	await settle(page);
+	expect(await docked(page)).toBe(1);
+	// The card is built again in the strip: focus follows to the same line, and the details open again,
+	// over the card's own body if no place beside the line keeps clear of the headers and cities.
+	const after = page.locator('section.card button.harm').first();
+	await expect(after).toBeFocused();
+	await expect(after).toHaveAttribute('aria-expanded', 'true');
+	await expect(page.locator('section.card .detail')).toBeVisible();
+	expect(await detailCovers(page)).toEqual([]);
+	// Back to a tall window: the cards float, and the details open again beside the framed card.
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await settle(page);
+	expect(await docked(page)).toBe(0);
+	const floating = page.locator('section.card button.harm').first();
+	await expect(floating).toBeFocused();
+	await expect(floating).toHaveAttribute('aria-expanded', 'true');
+	await expect(page.locator('section.card .detail')).toBeVisible();
+	expect(await detailCovers(page)).toEqual([]);
+});
+
+for (const which of ['harm', 'babies'] as const) {
+	test(`the ${which} line's open details reopen after docking and floating again, with the page scrolled`, async ({
+		page
+	}) => {
+		await open(page, 1280, 720);
+		await page.selectOption('select', 'smallpox');
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		const lines = () => page.locator('section.card').first().locator('button.harm');
+		await expect(lines().nth(1)).toBeVisible({ timeout: 90_000 });
+		await page.getByRole('button', { name: 'Paused' }).click();
+		const n = which === 'harm' ? 0 : 1;
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await settle(page);
+		expect(await docked(page)).toBe(1);
+		// Scrolled down a little, as reaching a lower line in the strip does.
+		await page.evaluate(() => scrollTo(0, 30));
+		await lines().nth(n).focus();
+		expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+		await page.keyboard.press('Enter');
+		await expect(lines().nth(n)).toHaveAttribute('aria-expanded', 'true');
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await settle(page);
+		expect(await docked(page)).toBe(0);
+		await expect(lines().nth(n)).toBeFocused();
+		await expect(lines().nth(n)).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('section.card .detail')).toBeVisible();
+		expect(await detailCovers(page)).toEqual([]);
+	});
+}
+
+test('docked, Tab goes from a line into its details when they scroll, and Page Down scrolls them', async ({
+	page
+}) => {
+	await open(page, 1280, 720);
+	await page.selectOption('select', 'smallpox');
+	await page.getByRole('button', { name: /\(8×\)/ }).click();
+	await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
+		timeout: 90_000
+	});
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await page.setViewportSize({ width: 1280, height: 600 });
+	await settle(page);
+	expect(await docked(page)).toBe(1);
+	const lines = page.locator('section.card button.harm');
+	const box = page.locator('section.card .detail');
+	let tried = 0;
+	for (let i = 0; i < (await lines.count()); i++) {
+		await lines.nth(i).focus();
+		await page.keyboard.press('Enter');
+		await expect(box).toBeVisible();
+		if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+			await page.keyboard.press('Escape');
+			continue;
+		}
+		tried++;
+		await page.keyboard.press('Tab');
+		await expect(box, `line ${i}`).toBeFocused();
+		await page.keyboard.press('PageDown');
+		await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
+		await expect(box, `line ${i} still open`).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(lines.nth(i)).toBeFocused();
+	}
+	expect(tried, 'some docked details scroll').toBeGreaterThan(0);
+});
+
+for (const [from, key] of [
+	['babies', 'Shift+Tab'],
+	['harm', 'Tab']
+] as const) {
+	test(`docking keeps focus on a line reached by ${key} from the ${from} line, and so does floating again`, async ({
+		page
+	}) => {
+		await open(page, 1280, 720);
+		await page.selectOption('select', 'smallpox');
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		const card = page.locator('section.card').first();
+		const babies = card.locator('button.harm').nth(1);
+		await expect(babies).toBeVisible({ timeout: 90_000 });
+		await page.getByRole('button', { name: 'Paused' }).click();
+		const lines = card.locator('button.harm');
+		const target = from === 'babies' ? 0 : 1;
+		await lines.nth(1 - target).focus();
+		await page.keyboard.press(key);
+		await expect(lines.nth(target)).toBeFocused();
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await settle(page);
+		expect(await docked(page)).toBe(1);
+		await expect(page.locator('section.card').first().locator('button.harm').nth(target)).toBeFocused();
+		await page.setViewportSize({ width: 1280, height: 720 });
+		await settle(page);
+		expect(await docked(page)).toBe(0);
+		await expect(page.locator('section.card').first().locator('button.harm').nth(target)).toBeFocused();
+	});
+}

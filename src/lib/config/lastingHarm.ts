@@ -142,7 +142,9 @@ export const MUMPS_LASTING_HARM: LastingHarmConfig = {
 
 export const RUBELLA_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
-	notes: ['None in the person ill: joint pain can last up to a month; long-term arthritis is rare.']
+	notes: [
+		'No lasting harm counted in the person ill: joint pain can last up to a month, and long-term arthritis is rare (CDC).'
+	]
 };
 
 export const RUBELLA_BABY_HARM: BabyHarmConfig = {
@@ -174,7 +176,9 @@ export const CHICKENPOX_BABY_HARM: BabyHarmConfig = {
 
 export const PERTUSSIS_LASTING_HARM: LastingHarmConfig = {
 	counted: [],
-	notes: [`Some babies are left with brain damage. ${NO_FIGURE}`]
+	notes: [
+		'Some babies treated in hospital get encephalopathy, a disease of the brain (CDC). Not counted: no figure for how many, if any, are left with lasting damage.'
+	]
 };
 
 export const FLU_LASTING_HARM: LastingHarmConfig = {

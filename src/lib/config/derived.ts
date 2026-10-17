@@ -651,9 +651,12 @@ export const SMALLPOX_POCKMARKS = midpoint(...SMALLPOX_POCKMARKS_RANGE);
 export const SMALLPOX_BLINDNESS = { oneEye: 24, bothEyes: 1, survivors: 5459 };
 export const SMALLPOX_BLIND_SHARE =
 	(SMALLPOX_BLINDNESS.oneEye + SMALLPOX_BLINDNESS.bothEyes) / SMALLPOX_BLINDNESS.survivors;
-/** Fenner 1988 p. 54, Table 1.15 (Rao): fetal deaths plus women who died undelivered, of all pregnant women ill. */
+/** Fenner 1988 pp. 54-55, Table 1.15 (Rao): fetal deaths plus women who died undelivered, of all pregnant women ill. */
 export const SMALLPOX_PREGNANCY = { lost: 120, women: 384 };
-/** The share of pregnancies lost when the mother has smallpox (Rao, above). */
+/**
+ * The share of pregnancies lost when the mother has smallpox (Rao, above): a minimum, since the
+ * outcome of pregnancies still going when the illness ended is unknown.
+ */
 export const SMALLPOX_PREGNANCY_LOSS = SMALLPOX_PREGNANCY.lost / SMALLPOX_PREGNANCY.women;
 
 /**

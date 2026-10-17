@@ -110,6 +110,16 @@
 		});
 	}
 
+	// Docked for a short window, the stage can sit at its smallest height with the page scrolling, so
+	// a taller window may not resize it: the window's own resize rechecks whether the cards can float.
+	$effect(() => {
+		const onresize = () => {
+			if (shortDock) frame(true);
+		};
+		addEventListener('resize', onresize);
+		return () => removeEventListener('resize', onresize);
+	});
+
 	/** The box around every city's disc, in world units. */
 	function cityBounds() {
 		let minX = Infinity;
@@ -314,6 +324,12 @@
 		return scenario.regions.map((_, i) => closedSizes[i] ?? { w: CARD_W, h: CARD_H });
 	}
 
+	/** The cities' discs in window coordinates, for what floats over the map (the harm details). */
+	function discsInWindow() {
+		const at = stageElement?.getBoundingClientRect();
+		return discsOnScreen().map((d) => ({ ...d, x: d.x + (at?.left ?? 0), y: d.y + (at?.top ?? 0) }));
+	}
+
 	function discsOnScreen() {
 		return scenario.regions.map((r, i) => {
 			const p = sim.view.worldToScreen(r.cx, r.cy);
@@ -502,6 +518,7 @@
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
+					discs={discsInWindow}
 				/>
 			{/each}
 		{/if}
@@ -541,6 +558,7 @@
 					onvaccine={(key) => setVaccine(i, key)}
 					onpolicy={(key, value) => setPolicy(i, key, value)}
 					onseed={() => sim.send({ type: 'seed', region: i, count: 1 })}
+					discs={discsInWindow}
 				/>
 			{/each}
 		</div>

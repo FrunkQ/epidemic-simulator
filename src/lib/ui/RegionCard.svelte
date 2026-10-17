@@ -1,4 +1,13 @@
+<script module lang="ts">
+	/**
+	 * Docking swaps the floating cards for the strip's, so each card is built again. A card's open
+	 * details, or focus on one of its lines, is carried across to its new copy.
+	 */
+	let carried: { region: Region['id']; which: 'harm' | 'babies'; open: boolean } | null = null;
+</script>
+
 <script lang="ts">
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
@@ -41,6 +50,8 @@
 		/** A health policy slider moved; applies live, without a restart. */
 		onpolicy: (key: LivePolicyKey, value: number) => void;
 		onseed: () => void;
+		/** The cities' discs in window coordinates, which the harm details must not cover. */
+		discs?: () => { x: number; y: number; r: number }[];
 	}
 
 	let {
@@ -62,7 +73,8 @@
 		onvaccination,
 		onvaccine,
 		onpolicy,
-		onseed
+		onseed,
+		discs = () => []
 	}: Props = $props();
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
@@ -130,43 +142,161 @@
 	/**
 	 * The details behind the harm and babies lines: each line is a button that opens them over the
 	 * map, so keyboard, touch and screen readers reach them and the card never changes size. They
-	 * close on Escape (focus goes back to the line), a click elsewhere, a resize, a scroll or a new
-	 * disease.
+	 * close on Escape (focus goes back to the line), a click elsewhere, a new window width, a scroll,
+	 * a new disease, or another card's details opening, and follow their line when the card moves.
 	 */
 	let detail: 'harm' | 'babies' | null = $state(null);
 	let detailFrom: HTMLButtonElement | undefined;
-	let detailBox = $state<HTMLDivElement>();
+	let detailBox = $state<HTMLElement>();
 	let detailAt = $state({ left: 0, top: 0 });
 	const detailText = $derived(detail === 'harm' ? harm?.hover : detail === 'babies' ? harm?.babiesHover : '');
 	const detailId = $derived(`harm-detail-${region.id}`);
 	/** Room kept between the details and the window's edge. */
 	const EDGE = 8;
+	/** The least height of card body the details may lie over: about two lines of their text. */
+	const MIN_INSET = 40;
+	/** Where the line was when the details were last placed, so a scroll that leaves it put is ignored. */
+	let lineAt = { left: 0, top: 0 };
+	/** Whether the details scroll inside: they then take keyboard focus, so arrow keys reach the rest. */
+	let detailScrolls = $state(false);
+	/** Sent on the window when a card opens its details, so the others close theirs. */
+	const DETAIL_OPENED = 'harm-detail-opened';
 	function toggleDetail(which: 'harm' | 'babies', e: MouseEvent) {
 		if (detail === which) return closeDetail(false);
 		detailFrom = e.currentTarget as HTMLButtonElement;
 		const r = detailFrom.getBoundingClientRect();
 		detailAt = { left: r.left, top: r.bottom + 4 };
 		detail = which;
+		dispatchEvent(new CustomEvent(DETAIL_OPENED, { detail: region.id }));
 	}
 	function closeDetail(refocus: boolean) {
 		detail = null;
 		if (refocus) detailFrom?.focus();
 	}
-	// Kept inside the window: shifted left if it would run off the right, above the line if below.
-	$effect(() => {
-		if (!detailBox || !detailFrom) return;
+	/**
+	 * Where the details go: below their line, else above it, else beside the card, whichever first
+	 * stays inside the window and clear of every card's header and city disc, as cards are (6.17).
+	 * Covering another card's body is allowed. With none clear they lie over their own card's body,
+	 * below its header and as wide as the card, scrolling inside it, which no other header or disc
+	 * can reach. Only when even that is off the window or too short do they close, focus on the line.
+	 */
+	function placeDetail() {
+		if (!detailBox || !detailFrom || !element) return;
+		// Measured at their own size, not the size the inset spot last gave them.
+		detailBox.style.width = '';
+		detailBox.style.maxHeight = '';
 		const box = detailBox.getBoundingClientRect();
 		const line = detailFrom.getBoundingClientRect();
-		const left = Math.max(EDGE, Math.min(detailAt.left, innerWidth - EDGE - box.width));
-		const top =
-			line.bottom + 4 + box.height > innerHeight - EDGE
-				? Math.max(EDGE, line.top - 4 - box.height)
-				: line.bottom + 4;
-		if (left !== detailAt.left || top !== detailAt.top) detailAt = { left, top };
+		const card = element.getBoundingClientRect();
+		const { width: w, height: h } = box;
+		const clampX = (l: number) => Math.max(EDGE, Math.min(l, innerWidth - EDGE - w));
+		const clampY = (t: number) => Math.max(EDGE, Math.min(t, innerHeight - EDGE - h));
+		const tries = [
+			{ left: clampX(line.left), top: line.bottom + 4 },
+			{ left: clampX(line.left), top: line.top - 4 - h },
+			{ left: card.right + 4, top: clampY(line.top) },
+			{ left: card.left - 4 - w, top: clampY(line.top) }
+		];
+		const ownHead = element.querySelector(':scope > header');
+		const headEls = [...document.querySelectorAll('section.card > header')];
+		const headers = headEls.map((el) => el.getBoundingClientRect());
+		const others = headEls.filter((el) => el !== ownHead).map((el) => el.getBoundingClientRect());
+		const cities = discs();
+		const clear = (l: number, t: number) =>
+			l >= EDGE - 0.5 &&
+			t >= EDGE - 0.5 &&
+			l + w <= innerWidth - EDGE + 0.5 &&
+			t + h <= innerHeight - EDGE + 0.5 &&
+			headers.every((r) => l >= r.right || l + w <= r.left || t >= r.bottom || t + h <= r.top) &&
+			cities.every((c) => {
+				const dx = c.x - Math.max(l, Math.min(c.x, l + w));
+				const dy = c.y - Math.max(t, Math.min(c.y, t + h));
+				return dx * dx + dy * dy >= c.r * c.r;
+			});
+		let spot = tries.find((p) => clear(p.left, p.top));
+		if (!spot) {
+			// Inside the card's body, keeping the line in sight: in the taller of the spaces below it and
+			// between the header and it, else (too little room either side) over the whole body.
+			const head = Math.max(ownHead?.getBoundingClientRect().bottom ?? card.top, 0);
+			const foot = Math.min(card.bottom, innerHeight);
+			const free = (top: number, bottom: number) =>
+				others.every(
+					(r) => card.left >= r.right || card.right <= r.left || top >= r.bottom || bottom <= r.top
+				) &&
+				cities.every((c) => {
+					const dx = c.x - Math.max(card.left, Math.min(c.x, card.right));
+					const dy = c.y - Math.max(top, Math.min(c.y, bottom));
+					return dx * dx + dy * dy >= c.r * c.r;
+				});
+			const below = { top: Math.max(line.bottom + 4, head), bottom: foot };
+			const above = { top: head, bottom: Math.min(line.top - 4, foot) };
+			const taller = (r: { top: number; bottom: number }) => r.bottom - r.top;
+			const inset = [
+				...(taller(below) >= taller(above) ? [below, above] : [above, below]),
+				{ top: head, bottom: foot }
+			].find((r) => taller(r) >= MIN_INSET && free(r.top, r.bottom));
+			if (card.left < 0 || card.right > innerWidth || !inset) return closeDetail(true);
+			detailBox.style.width = `${card.width}px`;
+			detailBox.style.maxHeight = `${inset.bottom - inset.top}px`;
+			spot = { left: card.left, top: inset.top };
+		}
+		lineAt = { left: line.left, top: line.top };
+		detailScrolls = detailBox.scrollHeight > detailBox.clientHeight + 1;
+		if (spot.left !== detailAt.left || spot.top !== detailAt.top) detailAt = spot;
+	}
+	// Placed once the box is drawn (its size depends on its text).
+	$effect(() => {
+		if (detailBox) untrack(placeDetail);
 	});
 	$effect(() => {
 		void disease.id;
 		detail = null;
+	});
+	// The details are fixed to the window, so when the card moves (a zoom, a new map, a new window
+	// height) they move with their line rather than being left behind over another card.
+	$effect(() => {
+		void x;
+		void y;
+		void docked;
+		if (!untrack(() => detail) || !detailFrom) return;
+		tick().then(placeDetail);
+	});
+	let harmLine = $state<HTMLButtonElement>();
+	let babiesLine = $state<HTMLButtonElement>();
+	/**
+	 * The line that has focus. A focused element taken out of the page may lose focus before this card
+	 * is destroyed, so it is tracked here, and cleared only when focus leaves a line still on the page.
+	 */
+	let focusedLine: 'harm' | 'babies' | null = null;
+	function lineBlurred(which: 'harm' | 'babies', e: FocusEvent) {
+		const el = e.currentTarget as HTMLElement;
+		// Focus moving to the other line has named it by now, so only this line's name is cleared.
+		setTimeout(() => {
+			if (focusedLine === which && el.isConnected && document.activeElement !== el) focusedLine = null;
+		});
+	}
+	onDestroy(() => {
+		const which = detail ?? focusedLine;
+		if (which) carried = { region: region.id, which, open: detail !== null };
+	});
+	// The new copy can mount before the old one is destroyed, so it looks once both have run.
+	onMount(() => {
+		tick().then(() => {
+			if (carried?.region !== region.id) return;
+			const { which, open: wasOpen } = carried;
+			carried = null;
+			const line = which === 'harm' ? harmLine : babiesLine;
+			if (!line) return;
+			line.focus();
+			// Opened once the page has framed the cards anew, so they are placed beside the line's
+			// final spot rather than where the card first lands.
+			if (wasOpen)
+				requestAnimationFrame(() => {
+					if (!line.isConnected) return;
+					detailFrom = line;
+					detail = which;
+				});
+		});
 	});
 	$effect(() => {
 		if (!detail) return;
@@ -177,16 +307,30 @@
 			const n = e.target as Node;
 			if (!detailBox?.contains(n) && !detailFrom?.contains(n)) closeDetail(false);
 		};
-		const onresize = () => closeDetail(false);
-		// A scroll inside the details themselves (a long text) keeps them open.
+		// Only a new window width closes them, as for the blurb's "more": a phone's address bar showing
+		// or hiding changes only the height.
+		const windowWidth = innerWidth;
+		const onresize = () => {
+			if (innerWidth !== windowWidth) closeDetail(false);
+		};
+		const onopened = (e: Event) => {
+			if ((e as CustomEvent<number | string>).detail !== region.id) closeDetail(false);
+		};
+		// A scroll inside the details themselves (a long text) keeps them open, as does one that leaves
+		// their line where it was (the page settling back to the top as the cards float again).
 		const onscroll = (e: Event) => {
-			if (!(e.target instanceof Node) || !detailBox?.contains(e.target)) closeDetail(false);
+			if (e.target instanceof Node && detailBox?.contains(e.target)) return;
+			const r = detailFrom?.getBoundingClientRect();
+			if (r && Math.abs(r.left - lineAt.left) < 0.5 && Math.abs(r.top - lineAt.top) < 0.5) return;
+			closeDetail(false);
 		};
 		addEventListener('keydown', onkey);
 		addEventListener('pointerdown', ondown);
 		addEventListener('resize', onresize);
 		addEventListener('scroll', onscroll, true);
+		addEventListener(DETAIL_OPENED, onopened);
 		return () => {
+			removeEventListener(DETAIL_OPENED, onopened);
 			removeEventListener('keydown', onkey);
 			removeEventListener('pointerdown', ondown);
 			removeEventListener('resize', onresize);
@@ -337,6 +481,30 @@
 			<p class="note" title={ERA_DEATH_RATE}>{ERA_DEATH_RATE_SHORT}</p>
 		{/if}
 	{/if}
+	<!-- Straight after the line that opens them, so Tab goes from the line into them. Spans, since
+	     they sit inside the counts paragraph. A region that scrolls must take focus so keyboard users
+	     can scroll it (WCAG 2.1.1). -->
+	{#snippet details(which: 'harm' | 'babies')}
+		{#if detail === which && detailText}
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<span
+				class="detail"
+				id={detailId}
+				role="region"
+				aria-label="{region.name}: {which === 'harm'
+					? 'lasting harm'
+					: 'babies harmed or pregnancies lost'}, what is counted"
+				bind:this={detailBox}
+				tabindex={detailScrolls ? 0 : undefined}
+				style:left="{detailAt.left}px"
+				style:top="{detailAt.top}px"
+			>
+				{#each detailText.split('\n') as line, k (k)}
+					<span class="para">{line}</span>
+				{/each}
+			</span>
+		{/if}
+	{/snippet}
 	{#if t}
 		<p class="counts">
 			<span
@@ -348,36 +516,29 @@
 			{#if harm?.line}
 				<button
 					class="harm"
+					bind:this={harmLine}
+					onfocus={() => (focusedLine = 'harm')}
+					onblur={(e) => lineBlurred('harm', e)}
 					aria-expanded={detail === 'harm'}
 					aria-controls={detail === 'harm' ? detailId : undefined}
 					onclick={(e) => toggleDetail('harm', e)}>{harm.line}</button
 				>
+				{@render details('harm')}
 			{/if}
 			<span><i style:background={COLOURS.deceased}></i>{t.deaths.toLocaleString()} died</span>
 			{#if harm?.babies}
 				<button
 					class="harm"
+					bind:this={babiesLine}
+					onfocus={() => (focusedLine = 'babies')}
+					onblur={(e) => lineBlurred('babies', e)}
 					aria-expanded={detail === 'babies'}
 					aria-controls={detail === 'babies' ? detailId : undefined}
 					onclick={(e) => toggleDetail('babies', e)}>{harm.babies}</button
 				>
+				{@render details('babies')}
 			{/if}
 		</p>
-	{/if}
-	{#if detail && detailText}
-		<div
-			class="detail"
-			id={detailId}
-			role="region"
-			aria-label="{region.name}: {detail === 'harm' ? 'lasting harm' : 'babies'}, what is counted"
-			bind:this={detailBox}
-			style:left="{detailAt.left}px"
-			style:top="{detailAt.top}px"
-		>
-			{#each detailText.split('\n') as line, k (k)}
-				<p>{line}</p>
-			{/each}
-		</div>
 	{/if}
 	<button class="seed" onclick={onseed} title={seedHover}>{seedLabel}</button>
 </section>
@@ -501,7 +662,10 @@
 	/* A line that opens its details: reads as text, with a dotted underline to show it opens. */
 	.counts .harm {
 		align-self: flex-start;
-		padding: 0 0 0 14px;
+		/* Taller to tap, with the same line spacing; above the next row, which would cover its lower part. */
+		position: relative;
+		padding: 5px 0 5px 14px;
+		margin: -5px 0;
 		border: none;
 		background: none;
 		font: inherit;
@@ -535,10 +699,11 @@
 		font-size: 12px;
 		box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
 	}
-	.detail p {
+	.detail .para {
+		display: block;
 		margin: 0 0 4px;
 	}
-	.detail p:last-child {
+	.detail .para:last-child {
 		margin-bottom: 0;
 	}
 	.counts i {
