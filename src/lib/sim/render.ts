@@ -95,6 +95,9 @@ const SEED_FADE = 1500;
 const SEED_STAY = 0.35;
 
 /** Draws the world. Holds scratch buckets so drawing allocates nothing per dot. */
+/** How far a dot near the end of its patience with a lockdown shakes on screen, in CSS pixels. */
+export const JITTER_PX = 1.8;
+
 export class Renderer {
 	/** Visible dots in index order, with each one's fill style (FILL_STYLES index). */
 	private readonly order: Int32Array;
@@ -153,6 +156,7 @@ export class Renderer {
 			this.lastTick = NaN;
 		}
 		this.place(agents, transit, tick, scene.alpha);
+		this.jitter(agents, scene.now, camera.scale);
 		const ax = this.atX;
 		const ay = this.atY;
 		const s = camera.scale;
@@ -381,6 +385,22 @@ export class Renderer {
 			const jump = dx * dx + dy * dy > GLIDE_LIMIT * GLIDE_LIMIT;
 			this.atX[i] = jump ? this.lastX[i] : this.lastX[i] - dx * k;
 			this.atY[i] = jump ? this.lastY[i] : this.lastY[i] - dy * k;
+		}
+	}
+
+	/**
+	 * Dots close to tiring of a lockdown jitter where they are drawn (6.4): an offset from the frame's
+	 * time only, so it uses no random numbers and never changes the simulation. Sized on screen,
+	 * JITTER_PX at any zoom, so it shows when zoomed out.
+	 */
+	private jitter(agents: Agents, now: number, scale: number): void {
+		const { restless } = agents;
+		const by = JITTER_PX / scale;
+		for (let i = 0; i < agents.activeCount; i++) {
+			if (restless[i] === 0) continue;
+			const t = now * 0.025 + i * 1.7;
+			this.atX[i] += Math.sin(t) * by;
+			this.atY[i] += Math.cos(t * 1.3) * by;
 		}
 	}
 

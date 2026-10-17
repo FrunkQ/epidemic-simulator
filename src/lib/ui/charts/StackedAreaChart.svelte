@@ -19,6 +19,8 @@
 		max: number;
 		yLabel?: string;
 		width?: number;
+		/** Show the hover readout under the chart rather than over the plot (charts in a card). */
+		tipBelow?: boolean;
 		height?: number;
 	}
 	let {
@@ -32,7 +34,8 @@
 		max,
 		yLabel = 'People',
 		width = 240,
-		height = 110
+		height = 110,
+		tipBelow = false
 	}: Props = $props();
 
 	const plotW = $derived(width - MARGIN.left - MARGIN.right);
@@ -104,7 +107,7 @@
 		{/if}
 	</svg>
 	{#if hover !== null}
-		<div class="tip" role="status">
+		<div class="tip" class:below={tipBelow} role="status">
 			<b>Day {days[hover]}</b>
 			{#each [...bands].reverse() as b (b.key)}
 				<span
@@ -143,6 +146,13 @@
 	text {
 		fill: #9fb3c8;
 		font-size: 10px;
+	}
+	/* Under the plot, over what follows, so it never covers the bands it reads out. */
+	.tip.below {
+		top: 100%;
+		left: 0;
+		right: auto;
+		white-space: normal;
 	}
 	.tip {
 		position: absolute;

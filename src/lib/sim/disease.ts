@@ -240,7 +240,7 @@ export function transmit(
 		transmitOne(agents, grid, slots[0], exposure[0], tick, rng, hooks[0], silentSpread);
 		return;
 	}
-	const { x, y, region } = agents;
+	const { x, y, region, contact } = agents;
 	const { cellStart, cellItems } = grid;
 	const D = slots.length;
 	const w = new Float64Array(D);
@@ -273,6 +273,7 @@ export function transmit(
 			if (!any) continue;
 			const xj = x[j];
 			const yj = y[j];
+			const cj = contact[j];
 			const cols = grid.cols[reg];
 			const rows = grid.rows[reg];
 			const base = grid.offset[reg];
@@ -298,8 +299,10 @@ export function transmit(
 							const p = slots[s];
 							const open = p.catchable(i);
 							if (open === 0) continue;
+							// A pair with someone kept home is cut once (6.4): the smaller contact of the two.
+							const wi = w[s] * (contact[i] < cj ? contact[i] : cj);
 							if (p.secondaries) {
-								const got = rng.binomial(open, 1 - Math.exp(w[s]));
+								const got = rng.binomial(open, 1 - Math.exp(wi));
 								if (got > 0) {
 									p.infect(i, got, tick, rng, hooks[s], true);
 									p.secondaries[j] += got;
@@ -312,7 +315,7 @@ export function transmit(
 								e.logEscape[i] = 0;
 								e.touched[e.touchedCount++] = i;
 							}
-							e.logEscape[i] += w[s];
+							e.logEscape[i] += wi;
 						}
 					}
 				}
@@ -342,7 +345,7 @@ function transmitOne(
 	hooks: PeopleHooks,
 	silentSpread: boolean
 ): void {
-	const { x, y, region } = agents;
+	const { x, y, region, contact } = agents;
 	const { cellStart, cellItems } = grid;
 	const { susceptible, susceptibleAgain, active } = p;
 	const { logEscape, touched, marked } = e;
@@ -357,6 +360,7 @@ function transmitOne(
 		const n = p.infectious(j, silentSpread);
 		if (n <= 0) continue;
 		const w = n * logq;
+		const cj = contact[j];
 		const xj = x[j];
 		const yj = y[j];
 		const cols = grid.cols[reg];
@@ -378,11 +382,13 @@ function transmitOne(
 				const dx = x[i] - xj;
 				const dy = y[i] - yj;
 				if (dx * dx + dy * dy > reach) continue;
+				// A pair with someone kept home is cut once (6.4): the smaller contact of the two.
+				const wi = w * (contact[i] < cj ? contact[i] : cj);
 				if (marked[i] === 0) {
 					marked[i] = 1;
-					logEscape[i] = w;
+					logEscape[i] = wi;
 					touched[touchedCount++] = i;
-				} else logEscape[i] += w;
+				} else logEscape[i] += wi;
 			}
 		}
 	}

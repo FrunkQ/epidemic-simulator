@@ -62,7 +62,10 @@ async function slowDown(page: Page) {
 	await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
 }
 
-/** Wait until 30 frames in a row drew the same layout and every card has its final size. */
+/**
+ * Wait until 30 frames in a row drew the same layout for the window as it is now, and every card
+ * has its final size (frames from before a resize can agree with each other but not the window).
+ */
 async function settle(page: Page) {
 	await page
 		.waitForFunction(() => '__layoutLog' in window, null, { timeout: 10_000 })
@@ -72,10 +75,18 @@ async function settle(page: Page) {
 			);
 		});
 	await page.waitForFunction(() => {
-		const log = (window as unknown as { __layoutLog: Frame[] }).__layoutLog;
+		const log = (window as unknown as { __layoutLog: Logged[] }).__layoutLog;
 		if (log.length < 30) return false;
 		const last = log[log.length - 1];
-		return log.slice(-30).every((f) => f.docked === last.docked && Math.abs(f.scale - last.scale) < 1e-9);
+		return log
+			.slice(-30)
+			.every(
+				(f) =>
+					f.window[0] === innerWidth &&
+					f.window[1] === innerHeight &&
+					f.docked === last.docked &&
+					Math.abs(f.scale - last.scale) < 1e-9
+			);
 	});
 }
 
@@ -205,7 +216,12 @@ async function covers(page: Page) {
 				const box = card.getBoundingClientRect();
 				if (cy < box.top || cy > box.bottom || cy < 0 || cy > innerHeight) return [];
 				const top = document.elementFromPoint(cx, cy);
-				return top && button.contains(top) ? [] : [`card ${i}: "${button.textContent?.trim()}" is covered`];
+				// A button half scrolled out of its own open panel sits under that card's padding: the
+				// panel scrolls to it, and no other card is in the way.
+				const ownEdge = top === card && card.scrollHeight > card.clientHeight;
+				return top && (button.contains(top) || ownEdge)
+					? []
+					: [`card ${i}: "${button.textContent?.trim()}" is covered`];
 			})
 		)
 	);
@@ -213,31 +229,37 @@ async function covers(page: Page) {
 }
 
 for (const [w, h] of TARGETS) {
-	test(`${w}x${h}: cards float, and no card, open or closed, covers a city or another card's buttons`, async ({
-		page
-	}) => {
-		await open(page, w, h);
-		expect(await docked(page)).toBe(0);
-		expect(await covers(page)).toEqual([]);
-		const cards = page.locator('section.card');
-		for (let i = 0; i < (await cards.count()); i++) {
-			for (const name of ['Vaccination', 'Health policy']) {
-				await cards.nth(i).getByRole('button', { name }).click();
-				await settle(page);
-				expect(await covers(page), `card ${i} ${name}`).toEqual([]);
-				await cards.nth(i).getByRole('button', { name }).click();
-				await settle(page);
+	for (const font of [undefined, 'DejaVu Sans']) {
+		test(`${w}x${h}${font ? ` in ${font}` : ''}: cards float, and no card, open or closed, covers a city or another card's buttons`, async ({
+			page
+		}) => {
+			if (font) {
+				await requireFont(page, font);
+				await forceFont(page, font);
 			}
-		}
-	});
+			await open(page, w, h);
+			expect(await docked(page)).toBe(0);
+			expect(await covers(page)).toEqual([]);
+			const cards = page.locator('section.card');
+			for (let i = 0; i < (await cards.count()); i++) {
+				for (const name of ['Vaccination', 'Health policy']) {
+					await cards.nth(i).getByRole('button', { name }).click();
+					await settle(page);
+					expect(await covers(page), `card ${i} ${name}`).toEqual([]);
+					await cards.nth(i).getByRole('button', { name }).click();
+					await settle(page);
+				}
+			}
+		});
+	}
 }
 
 /**
  * Each chart's caption, cut or not, whether its controls stay inside it, and pairs of axis labels
  * that touch (a narrow chart could run "Day" into the last day's number).
  */
-async function chartRow(page: Page) {
-	return page.locator('.charts figure').evaluateAll((figs) =>
+async function chartRow(page: Page, figures = '.charts figure') {
+	return page.locator(figures).evaluateAll((figs) =>
 		figs.flatMap((f, i) => {
 			const out: string[] = [];
 			const box = f.getBoundingClientRect();
@@ -875,41 +897,48 @@ for (const which of ['harm', 'babies'] as const) {
 	});
 }
 
-test('docked, Tab goes from a line into its details when they scroll, and Page Down scrolls them', async ({
-	page
-}) => {
-	await open(page, 1280, 720);
-	await page.selectOption('select', 'smallpox');
-	await page.getByRole('button', { name: /\(8×\)/ }).click();
-	await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
-		timeout: 90_000
-	});
-	await page.getByRole('button', { name: 'Paused' }).click();
-	await page.setViewportSize({ width: 1280, height: 600 });
-	await settle(page);
-	expect(await docked(page)).toBe(1);
-	const lines = page.locator('section.card button.harm');
-	const box = page.locator('section.card .detail');
-	let tried = 0;
-	for (let i = 0; i < (await lines.count()); i++) {
-		await lines.nth(i).focus();
-		await page.keyboard.press('Enter');
-		await expect(box).toBeVisible();
-		if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+for (const font of [undefined, 'DejaVu Sans']) {
+	test(`docked${font ? ` in ${font}` : ''}, Tab goes from a line into its details when they scroll, and Page Down scrolls them`, async ({
+		page
+	}) => {
+		if (font) await forceFont(page, font);
+		await open(page, 1280, 720);
+		if (font) await requireFont(page, font);
+		await page.selectOption('select', 'smallpox');
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		await expect(page.locator('section.card').first().locator('button.harm').nth(1)).toBeVisible({
+			timeout: 90_000
+		});
+		await page.getByRole('button', { name: 'Paused' }).click();
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await settle(page);
+		expect(await docked(page)).toBe(1);
+		// Taller details, so that in any font some find no clear spot and scroll inside their card (in
+		// DejaVu Sans their own size fits beside the card here, and nothing would scroll).
+		await page.addStyleTag({ content: 'section.card .detail .para { line-height: 2.5; }' });
+		const lines = page.locator('section.card button.harm');
+		const box = page.locator('section.card .detail');
+		let tried = 0;
+		for (let i = 0; i < (await lines.count()); i++) {
+			await lines.nth(i).focus();
+			await page.keyboard.press('Enter');
+			await expect(box).toBeVisible();
+			if (!(await box.evaluate((el) => el.scrollHeight > el.clientHeight + 1))) {
+				await page.keyboard.press('Escape');
+				continue;
+			}
+			tried++;
+			await page.keyboard.press('Tab');
+			await expect(box, `line ${i}`).toBeFocused();
+			await page.keyboard.press('PageDown');
+			await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
+			await expect(box, `line ${i} still open`).toBeVisible();
 			await page.keyboard.press('Escape');
-			continue;
+			await expect(lines.nth(i)).toBeFocused();
 		}
-		tried++;
-		await page.keyboard.press('Tab');
-		await expect(box, `line ${i}`).toBeFocused();
-		await page.keyboard.press('PageDown');
-		await expect.poll(() => box.evaluate((el) => el.scrollTop), `line ${i}`).toBeGreaterThan(0);
-		await expect(box, `line ${i} still open`).toBeVisible();
-		await page.keyboard.press('Escape');
-		await expect(lines.nth(i)).toBeFocused();
-	}
-	expect(tried, 'some docked details scroll').toBeGreaterThan(0);
-});
+		expect(tried, 'some docked details scroll').toBeGreaterThan(0);
+	});
+}
 
 for (const [from, key] of [
 	['babies', 'Shift+Tab'],
@@ -940,3 +969,127 @@ for (const [from, key] of [
 		await expect(page.locator('section.card').first().locator('button.harm').nth(target)).toBeFocused();
 	});
 }
+
+/*
+ * The lockdown charts in an open card, with scrollbars drawn as on a desktop without overlay
+ * scrollbars (headless Chromium hides them, which would hide a card that scrolls sideways): the
+ * card never scrolls sideways, and its charts' captions and labels fit, floating and docked, in the
+ * default font and in DejaVu Sans (CI's fallback, whose wider text first showed a caption's hidden
+ * measuring copy widening the card); and on a 2x screen and at browser zooms that dock the cards
+ * (150% of 1366x768, 120% of 1280x720, as CSS sizes with their device scale).
+ */
+const LOCK_PANEL_RUNS: { w: number; h: number; scale: number; font?: string }[] = [
+	...[undefined, 'DejaVu Sans'].flatMap((font) =>
+		[...TARGETS, [1280, 600] as const].map(([w, h]) => ({ w, h, scale: 1, font }))
+	),
+	...[undefined, 'DejaVu Sans'].flatMap((font) => [
+		{ w: 1280, h: 720, scale: 2, font },
+		{ w: 1920, h: 1080, scale: 2, font },
+		{ w: 911, h: 512, scale: 1.5, font },
+		{ w: 1067, h: 600, scale: 1.2, font }
+	])
+];
+test.describe('with classic scrollbars', () => {
+	for (const { w, h, scale, font } of LOCK_PANEL_RUNS) {
+		test(`${w}x${h}${scale !== 1 ? ` at ${scale}x` : ''}${font ? ` in ${font}` : ''}: an open card with its lockdown charts never scrolls sideways, and the charts fit`, async ({
+			playwright
+		}, testInfo) => {
+			// Its own browser: the shared one is launched with scrollbars hidden.
+			const browser = await playwright.chromium.launch({
+				...testInfo.project.use.launchOptions,
+				ignoreDefaultArgs: ['--hide-scrollbars']
+			});
+			const page = await browser.newPage({
+				baseURL: testInfo.project.use.baseURL,
+				deviceScaleFactor: scale
+			});
+			if (font) await forceFont(page, font);
+			await open(page, w, h);
+			if (font) await requireFont(page, font);
+			await page.selectOption('select', 'covid19');
+			await settle(page);
+			const card = page.locator('section.card').first();
+			await card.getByRole('button', { name: /^Bring in/ }).click();
+			await page.getByRole('button', { name: /\(8×\)/ }).click();
+			await card.getByRole('button', { name: 'Lockdown' }).click();
+			await expect(card.getByRole('button', { name: 'Lockdown' })).toHaveAttribute('aria-pressed', 'true');
+			await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
+			await page.waitForFunction(() => Number(/Day (\d+)/.exec(document.body.innerText)?.[1] ?? 0) >= 20);
+			await page.getByRole('button', { name: 'Paused' }).click();
+			await card.getByRole('button', { name: 'Health policy' }).click();
+			await settle(page);
+			await card.locator('.lockcharts').scrollIntoViewIfNeeded();
+			const sideways = await card.evaluate((el) => {
+				const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
+					const o = getComputedStyle(e).overflowX;
+					return o === 'auto' || o === 'scroll';
+				});
+				return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
+			});
+			expect(sideways).toEqual([]);
+			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
+			await expect(
+				card.getByText(
+					/since it began, (\d+%|under 1%) of key workers and (\d+%|under 1%) of those who stayed home at first/
+				)
+			).toBeVisible();
+			await browser.close();
+		});
+	}
+});
+
+for (const font of [undefined, 'DejaVu Sans']) {
+	for (const [w, h] of TARGETS) {
+		test(`${w}x${h}${font ? ` in ${font}` : ''}: every control in an open card shows in full below its sticky header when it takes focus going backwards (WCAG 2.4.11)`, async ({
+			page
+		}) => {
+			if (font) await forceFont(page, font);
+			await open(page, w, h);
+			if (font) await requireFont(page, font);
+			const card = page.locator('section.card').first();
+			await card.getByRole('button', { name: /^Bring in/ }).click();
+			await card.getByRole('button', { name: 'Health policy' }).click();
+			await settle(page);
+			// Start at the card's last control and go back up through it with Shift+Tab.
+			await card.evaluate((el) => {
+				const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+				all[all.length - 1].focus();
+			});
+			const hidden: string[] = [];
+			for (let step = 0; step < 120; step++) {
+				const seen = await card.evaluate((el) => {
+					const f = document.activeElement as HTMLElement | null;
+					if (!f || !el.contains(f) || f.closest('header')) return null;
+					const r = f.getBoundingClientRect();
+					const head = el.querySelector('header')!.getBoundingClientRect();
+					const box = el.getBoundingClientRect();
+					const bottom = box.top + el.clientTop + el.clientHeight;
+					const name = f.getAttribute('aria-label') || f.textContent?.trim().slice(0, 40) || f.tagName;
+					return r.top >= head.bottom - 0.5 && r.bottom <= bottom + 0.5
+						? ''
+						: `${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`;
+				});
+				if (seen === null) break;
+				if (seen) hidden.push(seen);
+				await page.keyboard.press('Shift+Tab');
+			}
+			expect(hidden).toEqual([]);
+		});
+	}
+}
+
+test('a lockdown asked for while paused shows on the card at once, and lifts on Restart', async ({
+	page
+}) => {
+	await open(page, 1280, 720);
+	const card = page.locator('section.card').first();
+	const lockdown = card.getByRole('button', { name: 'Lockdown' });
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await expect(card.getByText('No lockdown')).toBeVisible();
+	await lockdown.click();
+	await expect(lockdown).toHaveAttribute('aria-pressed', 'true');
+	await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
+	await page.getByRole('button', { name: 'Restart' }).click();
+	await expect(lockdown).toHaveAttribute('aria-pressed', 'false');
+	await expect(card.getByText('No lockdown')).toBeVisible();
+});

@@ -16,6 +16,12 @@ export function short(n: number): string {
 	return `${Math.round(n)}`;
 }
 
+/** A reading in percent, to the whole percent; a share above 0 never reads as 0%, but "under 1%". */
+export function percentReading(percent: number): string {
+	if (percent > 0 && Math.round(percent) === 0) return 'under 1%';
+	return `${Math.round(percent).toLocaleString()}%`;
+}
+
 /**
  * Round each value to a whole number so the parts add up to the rounded total (largest remainder),
  * e.g. 0.4, 0.4, 0.4 -> 1, 0, 0, matching a total shown as 1.
