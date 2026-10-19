@@ -3,20 +3,12 @@ import type { People } from './people';
 import { State } from './types';
 
 /**
- * Strength steps for look E, by the share of the dot's people, up to just under half (where it
- * fills). One ladder for the ring and the tint, so a city reads the same in either.
+ * Each dot's shown state, kept by the engine as its people change: what half or more of its people
+ * are, and whether some are infected (or dead). The map views (specks.ts) draw from People itself;
+ * the seed marker reads these to know when a seeded dot has nobody infected. `step` is the share
+ * of those people in SHARE_STEPS even steps up to half (look E's ladder, kept with its tests).
  */
 export const SHARE_STEPS = 6;
-/**
- * The faintest step (one case) and the strongest (just under half), as shares of the way to the
- * ring colour. The top stays at least ΔE 6 from the solid fill, so the step to solid at half reads.
- */
-const STEP_FLOOR = 0.12;
-const STEP_TOP = 0.55;
-/** A ring is drawn only when it is at least this many device pixels wide. */
-const RING_MIN_DEVICE_PX = 2;
-/** Ring width as a share of the dot's width: a square frame this wide has about the dot's own area. */
-const RING_SHARE = 0.2;
 
 /** How one dot looks: its fill, and the ring (or tint) marking some of its people. */
 export interface Look {
@@ -80,33 +72,3 @@ export function setLook(agents: Agents, p: People, i: number): void {
 	agents.ring[i] = scratch.ring;
 	agents.shareStep[i] = scratch.step;
 }
-
-/**
- * How wide a ring is, in CSS pixels, around a dot `size` pixels across whose neighbours sit
- * `spacing` pixels apart on average: a fifth of the dot, so the frame's area is about the dot's
- * own. 0 when that is under RING_MIN_DEVICE_PX device pixels or reaches past half the average
- * spacing: the dot is then tinted instead. Spacing is an average, so some rings that fit still
- * reach a close neighbour; the red a city shows stays on target all the same (11 Oct).
- */
-export function ringWidth(spacing: number, size: number, dpr: number): number {
-	const w = size * RING_SHARE;
-	return fits(spacing, size, w, dpr) ? w : 0;
-}
-
-/**
- * Whether a mark reaching `reach` CSS pixels beyond a dot `size` pixels across fits the ring
- * rule: at least RING_MIN_DEVICE_PX device pixels, and within half the average spacing.
- */
-export function fits(spacing: number, size: number, reach: number, dpr: number): boolean {
-	return reach * dpr >= RING_MIN_DEVICE_PX && size / 2 + reach <= spacing / 2;
-}
-
-/**
- * How far toward the ring colour each share step goes (finer-counts §5, "follow the share"): a
- * tinted dot's own colour moves this far, and a ring is drawn at this opacity. From a faint mark
- * for one case to well short of the solid fill that half or more of them bring.
- */
-export const STEP_STRENGTH = Array.from(
-	{ length: SHARE_STEPS },
-	(_, k) => STEP_FLOOR + ((STEP_TOP - STEP_FLOOR) * k) / (SHARE_STEPS - 1)
-);

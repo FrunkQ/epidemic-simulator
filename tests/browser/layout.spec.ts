@@ -1175,3 +1175,46 @@ test('a lockdown asked for while paused shows on the card at once, and lifts on 
 	await expect(lockdown).toHaveAttribute('aria-pressed', 'false');
 	await expect(card.getByText('No lockdown')).toBeVisible();
 });
+
+for (const font of [undefined, 'DejaVu Sans']) {
+	test(`the map view switch${font ? ` in ${font}` : ''}: keyboard and touch reach it, it never moves the map, and it keeps its view across a disease switch, Restart and New map`, async ({
+		page
+	}) => {
+		if (font) await forceFont(page, font);
+		await open(page, 1400, 900);
+		if (font) await requireFont(page, font);
+		const group = page.getByRole('group', { name: 'Map view' });
+		const specks = group.getByRole('button', { name: 'Specks' });
+		const shading = group.getByRole('button', { name: 'Shading' });
+		await expect(specks).toHaveAttribute('aria-pressed', 'true');
+		await expect(shading).toHaveAttribute('aria-pressed', 'false');
+		await expect(page.getByText(/Each bright speck beside a dot is one infected person/)).toBeVisible();
+		const stage = async () => JSON.stringify((await probe(page)).stage);
+		const before = await stage();
+		// Keyboard: Tab reaches the buttons, Enter and Space press them.
+		await shading.focus();
+		await page.keyboard.press('Enter');
+		await expect(shading).toHaveAttribute('aria-pressed', 'true');
+		await expect(specks).toHaveAttribute('aria-pressed', 'false');
+		await expect(page.getByText(/so even one case shows strongly/)).toBeVisible();
+		await expect(page.getByText(/Each bright speck beside a dot is one infected person/)).toBeHidden();
+		await settle(page);
+		expect(await stage(), 'switching never changes the stage').toBe(before);
+		await page.keyboard.press('Shift+Tab');
+		await expect(specks).toBeFocused();
+		await page.keyboard.press(' ');
+		await expect(specks).toHaveAttribute('aria-pressed', 'true');
+		// Touch-sized and labelled where it is seen.
+		const box = await shading.boundingBox();
+		expect(box!.height).toBeGreaterThanOrEqual(24);
+		await expect(group.getByText('Map view')).toBeVisible();
+		// Keeps its view.
+		await shading.click();
+		await page.selectOption('select', 'covid19');
+		await expect(shading).toHaveAttribute('aria-pressed', 'true');
+		await page.getByRole('button', { name: 'Restart' }).click();
+		await expect(shading).toHaveAttribute('aria-pressed', 'true');
+		await page.getByRole('button', { name: 'New map' }).click();
+		await expect(shading).toHaveAttribute('aria-pressed', 'true');
+	});
+}

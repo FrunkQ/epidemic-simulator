@@ -3,11 +3,32 @@ import { Camera } from './camera';
 import type { World } from './geography';
 import { pointAt } from './routes';
 import { MAX_PLANES, type Transit } from './transit';
-import { SHARE_STEPS, STEP_STRENGTH, fits, ringWidth } from './look';
+import type { People } from './people';
+import {
+	DEAD_DIM,
+	HEALTHY_DIM,
+	RECOVERED_DIM,
+	SHADE_STEP,
+	SPECK_MIN_CSS,
+	SPECK_PATCH,
+	css,
+	dimmed,
+	mixed,
+	packed,
+	paintSpecks,
+	rgbOf,
+	shadeStrength,
+	type Box,
+	type MapLook
+} from './specks';
 import { Protection, State, type Region, type Route, type Viewport } from './types';
 
 export interface Scene {
 	agents: Agents;
+	/** Each dot's people, which both views draw from. */
+	people: People;
+	/** Which map view to draw (specks.ts): drawing only, never the simulation. */
+	look: MapLook;
 	regions: readonly Region[];
 	radii: Float32Array;
 	routes: readonly Route[];
@@ -60,32 +81,50 @@ export const COLOURS = {
 	deceased: '#eaecef'
 } as const;
 
-const ORDER = ['deceased', 'unprotected', 'partial', 'full', 'recovered', 'silent', 'symptomatic'] as const;
-type ColourKey = (typeof ORDER)[number];
-const COLOUR_INDEX: Record<ColourKey, number> = Object.fromEntries(ORDER.map((k, i) => [k, i])) as Record<
-	ColourKey,
-	number
->;
-
-/** Ring colours for look E: the dot colours for infected and died. */
-const RINGS = [
-	{ state: State.SILENT, colour: COLOURS.silent },
-	{ state: State.SYMPTOMATIC, colour: COLOURS.symptomatic },
-	{ state: State.DECEASED, colour: COLOURS.deceased }
-] as const;
-const RING_BUCKETS = RINGS.length * SHARE_STEPS;
-/** Ring opacity per share step (look.ts STEP_STRENGTH), the same ladder as the tint. */
-const RING_STYLES = RINGS.flatMap((r) => STEP_STRENGTH.map((a) => rgba(r.colour, a)));
+/** The land the dots are dimmed toward. */
+const LAND = rgbOf(MAP_COLOURS.land);
 /**
- * Fill styles by index: the plain dot colours (ORDER), then, where dots sit too close for a ring,
- * each dot colour tinted toward each ring colour by each share step (look.ts STEP_STRENGTH), so
- * the vaccination colour still shows at low shares.
+ * The dimmed fills both views start from: a dot is drawn dead or recovered when half or more of
+ * its people are, else in its vaccination colour.
  */
-const TINTS_PER_COLOUR = RINGS.length * SHARE_STEPS;
-const FILL_STYLES = [
-	...ORDER.map((k) => COLOURS[k]),
-	...ORDER.flatMap((k) => RINGS.flatMap((r) => STEP_STRENGTH.map((t) => mix(COLOURS[k], r.colour, t))))
+const BASES = [
+	dimmed(rgbOf(COLOURS.deceased), DEAD_DIM, LAND),
+	dimmed(rgbOf(COLOURS.recovered), RECOVERED_DIM, LAND),
+	dimmed(rgbOf(COLOURS.unprotected), HEALTHY_DIM, LAND),
+	dimmed(rgbOf(COLOURS.full), HEALTHY_DIM, LAND),
+	dimmed(rgbOf(COLOURS.partial), HEALTHY_DIM, LAND)
 ];
+const BASE = { dead: 0, recovered: 1, unprotected: 2, full: 3, partial: 4 } as const;
+/** The dimmed colours as the legend shows them, by COLOURS key. */
+export const DIMMED_COLOURS = {
+	deceased: css(BASES[BASE.dead]),
+	recovered: css(BASES[BASE.recovered]),
+	unprotected: css(BASES[BASE.unprotected]),
+	full: css(BASES[BASE.full]),
+	partial: css(BASES[BASE.partial])
+} as const;
+const SHADE_TARGETS = [rgbOf(COLOURS.silent), rgbOf(COLOURS.symptomatic)];
+const SHADE_LEVELS = Math.round(1 / SHADE_STEP) + 1;
+/**
+ * Fill styles by index: the bases, then for Shading each base moved toward each infected colour
+ * by each step of strength, made once so a frame builds no strings.
+ */
+const FILL_STYLES = [
+	...BASES.map(css),
+	...BASES.flatMap((b) =>
+		SHADE_TARGETS.flatMap((t) =>
+			Array.from({ length: SHADE_LEVELS }, (_, l) => css(mixed(b, t, l * SHADE_STEP)))
+		)
+	)
+];
+const shadeStyle = (base: number, target: number, strength: number) =>
+	BASES.length + (base * SHADE_TARGETS.length + target) * SHADE_LEVELS + Math.round(strength / SHADE_STEP);
+/** Speck colours: infected people bright, deaths pale. */
+const SPECK_COLOURS = {
+	dead: packed(dimmed(rgbOf(COLOURS.deceased), DEAD_DIM, LAND)),
+	ill: packed(rgbOf(COLOURS.symptomatic)),
+	silent: packed(rgbOf(COLOURS.silent))
+};
 /**
  * A seed marker shows this long at full strength, then fades over SEED_FADE (real time, ms) to a
  * thin dim outline that stays until the dot first has nobody infected, so the first case can be watched.
@@ -101,12 +140,17 @@ export const JITTER_PX = 1.8;
 export class Renderer {
 	/** Visible dots in index order, with each one's fill style (FILL_STYLES index). */
 	private readonly order: Int32Array;
-	private readonly orderStyle: Uint8Array;
-	private readonly rings: Int32Array;
-	private readonly ringLen = new Int32Array(RING_BUCKETS);
-	/** Dots filled silent or ill, for the pulse: [silent..., ill...] by PULSE index. */
-	private readonly pulsing: Int32Array;
-	private readonly pulseLen = new Int32Array(2);
+	private readonly orderStyle: Uint16Array;
+	/** The specks' own layer, the canvas's size in device pixels, and the area painted last frame. */
+	private layer: { img: ImageData; buf: Uint32Array } | null = null;
+	/**
+	 * Where the painted area is copied to be drawn, only as big as it has needed to be: copying the
+	 * whole layer at once costs a 2x screen several ms.
+	 */
+	private blit: OffscreenCanvas | null = null;
+	private readonly painted: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+	/** How many infected people the last frame drew as specks (0 in Shading), for the tests. */
+	specksDrawn = 0;
 	/** When this renderer first drew each seed mark, by its number in the run (Scene.now). */
 	private markSeen = new Map<number, number>();
 	/** Marks whose dot has had nobody infected since; they are not drawn again. */
@@ -142,9 +186,7 @@ export class Renderer {
 		this.atX = new Float32Array(capacity);
 		this.atY = new Float32Array(capacity);
 		this.order = new Int32Array(capacity);
-		this.orderStyle = new Uint8Array(capacity);
-		this.rings = new Int32Array(capacity * RING_BUCKETS);
-		this.pulsing = new Int32Array(capacity * 2);
+		this.orderStyle = new Uint16Array(capacity);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
@@ -198,19 +240,10 @@ export class Renderer {
 
 		const size = Math.max(1.5, Math.min(6, 3.2 * s));
 		const half = size / 2;
-		// Look E (finer-counts §5). A dot some of whose people are infected (or, with none infected,
-		// dead) is marked more strongly the larger their share, in the same six steps either way: as a
-		// ring where one at least 2 device pixels wide fits within half the spacing, else as a tint of
-		// the dot's own colour. At half or more it is filled instead.
-		const dpr = ctx.getTransform().a || 1;
-		const rw = ringWidth(spacing * s, size, dpr);
-		const tint = rw === 0;
-
-		this.ringLen.fill(0);
-		this.pulseLen.fill(0);
+		const { people, look } = scene;
+		const per = people.perDot;
 		let count = 0;
 		const n = agents.activeCount;
-		const cap = this.capacity;
 		const margin = 4;
 		for (let i = 0; i < n; i++) {
 			// Air passengers ride hidden inside their plane.
@@ -219,46 +252,20 @@ export class Renderer {
 			const sx = (ax[i] - ox) * s;
 			const sy = (ay[i] - oy) * s;
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
-			const b = colourOf(agents, i);
-			let style = b;
-			if (b === COLOUR_INDEX.silent || b === COLOUR_INDEX.symptomatic) {
-				const k = b === COLOUR_INDEX.silent ? 0 : 1;
-				this.pulsing[k * cap + this.pulseLen[k]++] = i;
-			}
-			const ring = ringOf(agents.ring[i]);
-			if (ring >= 0) {
-				const step = agents.shareStep[i];
-				if (tint) style = ORDER.length + b * TINTS_PER_COLOUR + ring * SHARE_STEPS + step;
-				else {
-					const rb = ring * SHARE_STEPS + step;
-					this.rings[rb * cap + this.ringLen[rb]++] = i;
-				}
+			const base = baseOf(agents, people, i);
+			let style: number = base;
+			if (look === 'shading') {
+				const ill = people.ill[i];
+				const infected = ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
+				if (infected > 0)
+					style = shadeStyle(base, ill >= infected - ill ? 1 : 0, shadeStrength(infected, per));
 			}
 			this.order[count] = i;
 			this.orderStyle[count++] = style;
 		}
 
-		const squares = (list: Int32Array, from: number, len: number, h: number) => {
-			const d = h * 2;
-			ctx.beginPath();
-			for (let k = 0; k < len; k++) {
-				const i = list[from + k];
-				ctx.rect((ax[i] - ox) * s - h, (ay[i] - oy) * s - h, d, d);
-			}
-			ctx.fill();
-		};
-		// Dots are squares, so a ring is a square frame: a larger square, with its dot drawn over it.
-		// Rings stay inside half the spacing, so they go first, under every dot.
-		if (!tint) {
-			for (let rb = 0; rb < RING_BUCKETS; rb++) {
-				if (this.ringLen[rb] === 0) continue;
-				ctx.fillStyle = RING_STYLES[rb];
-				squares(this.rings, rb * cap, this.ringLen[rb], half + rw);
-			}
-		}
-		// Dots in index order, whatever their state, so no colour wins where dots overlap. One fillRect
-		// each is as fast as the colour batches were; the style is set only when it changes.
-		const d = size;
+		// Dots in index order, whatever their state, so no colour wins where dots overlap; the style is
+		// set only when it changes.
 		let last = -1;
 		for (let k = 0; k < count; k++) {
 			const style = this.orderStyle[k];
@@ -267,33 +274,82 @@ export class Renderer {
 				last = style;
 			}
 			const i = this.order[k];
-			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, d, d);
+			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, size, size);
 		}
 
-		// A faint pulsing ring around every dot filled as infected, only where it fits like a ring:
-		// where dots sit close, a pulse would cover many neighbours and paint the city red.
-		const pulse = 0.5 + 0.5 * Math.sin((this.gliding ? tick - 1 + scene.alpha : tick) * 0.2);
-		ctx.lineWidth = 1;
-		const showPulse = fits(spacing * s, size, size + 3 - half, dpr);
-		for (let k = 0; k < 2 && showPulse; k++) {
-			const len = this.pulseLen[k];
-			if (len === 0) continue;
-			ctx.strokeStyle =
-				k === 0 ? `rgba(255,143,31,${0.25 + 0.3 * pulse})` : `rgba(227,59,107,${0.25 + 0.3 * pulse})`;
-			ctx.beginPath();
-			const rr = size + 1.5 + pulse * 1.5;
-			for (let j = 0; j < len; j++) {
-				const i = this.pulsing[k * cap + j];
-				const sx = (ax[i] - ox) * s;
-				const sy = (ay[i] - oy) * s;
-				ctx.moveTo(sx + rr, sy);
-				ctx.arc(sx, sy, rr, 0, Math.PI * 2);
-			}
-			ctx.stroke();
+		this.specksDrawn = 0;
+		if (look === 'specks') this.drawSpecks(ctx, camera, people, count, size, spacing);
+		else if (this.layer) {
+			// Shading: clear what Specks last painted, so switching back starts from an empty layer.
+			const { buf, img } = this.layer;
+			const p = this.painted;
+			for (let y = p.y0; y < p.y1; y++) buf.fill(0, y * img.width + p.x0, y * img.width + p.x1);
+			p.x1 = p.x0;
 		}
 
 		this.drawPlanes(ctx, camera, routes, transit);
 		this.drawSeedMarks(ctx, camera, agents, routes, scene, size);
+	}
+
+	/**
+	 * Specks: each infected person, and each death, painted one by one into the specks' layer around
+	 * where their dot is drawn this frame (so they glide, travel and shake with it), then the painted
+	 * area copied onto the map.
+	 */
+	private drawSpecks(
+		ctx: CanvasRenderingContext2D,
+		camera: Camera,
+		people: People,
+		count: number,
+		size: number,
+		spacing: number
+	): void {
+		const t = ctx.getTransform();
+		const dpr = t.a || 1;
+		const W = ctx.canvas.width;
+		const H = ctx.canvas.height;
+		if (W === 0 || H === 0 || typeof OffscreenCanvas === 'undefined') return;
+		if (!this.layer || this.layer.img.width !== W || this.layer.img.height !== H) {
+			const img = new ImageData(W, H);
+			this.layer = { img, buf: new Uint32Array(img.data.buffer) };
+			this.painted.x1 = this.painted.x0;
+		}
+		const { img, buf } = this.layer;
+		this.specksDrawn = paintSpecks(
+			buf,
+			W,
+			H,
+			people,
+			{
+				list: this.order,
+				count,
+				x: this.atX,
+				y: this.atY,
+				ox: camera.x,
+				oy: camera.y,
+				scale: camera.scale * dpr,
+				patch: spacing * SPECK_PATCH,
+				minSide: Math.round(SPECK_MIN_CSS * dpr),
+				maxSide: Math.max(1, Math.round(size * dpr)),
+				colours: SPECK_COLOURS
+			},
+			this.painted
+		);
+		const p = this.painted;
+		if (p.x1 <= p.x0) return;
+		// Only the area painted this frame is copied, to the top left of the blit canvas, then drawn.
+		const w = p.x1 - p.x0;
+		const h = p.y1 - p.y0;
+		if (!this.blit || this.blit.width < w || this.blit.height < h)
+			this.blit = new OffscreenCanvas(
+				Math.max(w, this.blit?.width ?? 0),
+				Math.max(h, this.blit?.height ?? 0)
+			);
+		this.blit.getContext('2d')!.putImageData(img, -p.x0, -p.y0, p.x0, p.y0, w, h);
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.drawImage(this.blit, 0, 0, w, h, p.x0, p.y0, w, h);
+		ctx.restore();
 	}
 
 	/**
@@ -517,43 +573,13 @@ function buildLandPath(world: World): Path2D {
 	return path;
 }
 
-/** `#rrggbb` as an rgba() string. */
-function rgba(hex: string, alpha: number): string {
-	const [r, g, b] = rgb(hex);
-	return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function rgb(hex: string): [number, number, number] {
-	const v = parseInt(hex.slice(1), 16);
-	return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-}
-
-/** `from` moved share `t` of the way to `to`, as #rrggbb. */
-function mix(from: string, to: string, t: number): string {
-	const a = rgb(from);
-	const b = rgb(to);
-	return `#${a
-		.map((c, k) =>
-			Math.round(c + (b[k] - c) * t)
-				.toString(16)
-				.padStart(2, '0')
-		)
-		.join('')}`;
-}
-
-function ringOf(state: number): number {
-	for (let k = 0; k < RINGS.length; k++) if (RINGS[k].state === state) return k;
-	return -1;
-}
-
-function colourOf(agents: Agents, i: number): number {
-	const s = agents.displayState(i);
-	if (s === State.DECEASED) return COLOUR_INDEX.deceased;
-	if (s === State.SYMPTOMATIC || agents.isolated[i] === 1) return COLOUR_INDEX.symptomatic;
-	if (s === State.SILENT) return COLOUR_INDEX.silent;
-	if (s === State.RECOVERED) return COLOUR_INDEX.recovered;
+/** A dot's dimmed fill (BASES): dead or recovered when half or more of its people are, else its vaccination colour. */
+function baseOf(agents: Agents, people: People, i: number): number {
+	const per = people.perDot;
+	if (2 * people.dead[i] >= per) return BASE.dead;
+	if (2 * people.recovered[i] >= per) return BASE.recovered;
 	const p = agents.protection[i];
-	if (p === Protection.FULL) return COLOUR_INDEX.full;
-	if (p === Protection.PARTIAL) return COLOUR_INDEX.partial;
-	return COLOUR_INDEX.unprotected;
+	if (p === Protection.FULL) return BASE.full;
+	if (p === Protection.PARTIAL) return BASE.partial;
+	return BASE.unprotected;
 }

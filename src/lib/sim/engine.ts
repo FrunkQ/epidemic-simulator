@@ -28,6 +28,7 @@ import { moveInRegions, regionRadius } from './movement';
 import { isKeyWorker, Lockdown, lockdownGroup, Out, outReason } from './lockdown';
 import { generateWorld, type World } from './geography';
 import { Renderer } from './render';
+import { DEFAULT_LOOK, type MapLook } from './specks';
 import { generateRoutes } from './routes';
 import { Transit } from './transit';
 import { Rng } from './rng';
@@ -816,11 +817,20 @@ export class Simulation {
 
 	/**
 	 * Draws the map; `now` is the frame's time (ms), which only the seed marker's fade uses, and
-	 * `alpha` how far the clock is towards the next tick (Scene.alpha), for gliding.
+	 * `alpha` how far the clock is towards the next tick (Scene.alpha), for gliding, and `look` the
+	 * map view. None of the three reaches the simulation.
 	 */
-	render(ctx: CanvasRenderingContext2D, viewport: Viewport, now: number, alpha = 1): void {
+	render(
+		ctx: CanvasRenderingContext2D,
+		viewport: Viewport,
+		now: number,
+		alpha = 1,
+		look: MapLook = DEFAULT_LOOK
+	): void {
 		this.renderer.draw(ctx, viewport, this.view, {
 			agents: this.agents,
+			people: this.people,
+			look,
 			regions: this.scenario.regions,
 			radii: this.radii,
 			routes: this.routeList,
