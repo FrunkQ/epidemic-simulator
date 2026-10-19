@@ -31,6 +31,7 @@ type Sim = ReturnType<typeof createSimulation>;
 interface Positions {
 	x: Float32Array;
 	y: Float32Array;
+	route: Int16Array;
 	activeCount: number;
 }
 const agentsOf = (sim: Sim) => (sim as unknown as { agents: Positions }).agents;
@@ -49,15 +50,18 @@ describe('gliding between ticks', () => {
 		sim.render(ctx, viewport, 0, 1);
 		const fromX = Float32Array.from(agents.x);
 		const fromY = Float32Array.from(agents.y);
+		const fromRoute = Int16Array.from(agents.route);
 		sim.step(1);
 		let moved = 0;
 		for (const alpha of [0, 0.25, 0.5, 1]) {
 			sim.render(ctx, viewport, 0, alpha);
 			const { x, y } = drawn(sim);
 			for (let i = 0; i < agents.activeCount; i++) {
+				// A dot that boarded or landed in this tick jumps; the next test covers those.
+				if (agents.route[i] !== fromRoute[i]) continue;
 				const dx = agents.x[i] - fromX[i];
 				const dy = agents.y[i] - fromY[i];
-				expect(dx * dx + dy * dy).toBeLessThanOrEqual(LIMIT * LIMIT); // no one boarded here
+				expect(dx * dx + dy * dy).toBeLessThanOrEqual(LIMIT * LIMIT);
 				if (alpha === 0.5 && dx !== 0) moved++;
 				expect(x[i]).toBeCloseTo(fromX[i] + dx * alpha, 2);
 				expect(y[i]).toBeCloseTo(fromY[i] + dy * alpha, 2);
@@ -105,7 +109,12 @@ describe('gliding planes', () => {
 		place(agents: Positions, transit: Transit, tick: number, alpha: number): void;
 		planeAt(transit: Transit, p: number, axis: number): number;
 	}
-	const agents: Positions = { x: new Float32Array(4), y: new Float32Array(4), activeCount: 0 };
+	const agents: Positions = {
+		x: new Float32Array(4),
+		y: new Float32Array(4),
+		route: new Int16Array(4),
+		activeCount: 0
+	};
 
 	function flyOneTick(route: number): number {
 		const r = new Renderer(4) as unknown as Glide;

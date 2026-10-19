@@ -190,6 +190,17 @@ export class People {
 		return Math.max(this.severe[i], this.severeAgainFloor);
 	}
 
+	/**
+	 * People in dot i who have caught it in this run, the dead included: everyone who isn't still
+	 * never infected. Only people never infected are ever susceptible (first time) or vaccine-immune,
+	 * so this moves with its people in the boarding swap and counts each person once, wherever they
+	 * are now (the key-worker chart and lesson 21, 6.4). A campaign that vaccinates people who have
+	 * had it would need its own tally.
+	 */
+	everCaught(i: number): number {
+		return this.perDot - this.susceptible[i] - this.vaccineImmune[i];
+	}
+
 	catchable(i: number): number {
 		return this.susceptible[i] + this.susceptibleAgain[i];
 	}
