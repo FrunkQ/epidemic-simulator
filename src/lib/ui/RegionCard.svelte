@@ -120,13 +120,21 @@
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
 	/**
-	 * The open card's sticky header covers the top of its scroller, so focus scrolls a control clear
-	 * of it (WCAG 2.4.11): scroll padding of the header's height, less the HEADER_TUCK px it sits
-	 * above the scroller's top (its `top`), plus a small gap.
+	 * The open card's sticky header covers the top of its scroller, from the scroller's top edge down
+	 * by its full height, so focus scrolls a control clear of it (WCAG 2.4.11): scroll padding of the
+	 * header's height plus a small gap.
 	 */
 	let headerHeight = $state(0);
-	const HEADER_TUCK = 8;
 	const FOCUS_GAP = 4;
+	/**
+	 * A slider's label line sits above it, and the browser scrolls only the slider itself into view,
+	 * so focus going backwards could leave the line naming it under the header. Scroll the whole
+	 * label into view too; the scroll padding keeps it below the header.
+	 */
+	function showLabel(e: FocusEvent) {
+		if (!open) return;
+		(e.target as Element).closest('label')?.scrollIntoView({ block: 'nearest' });
+	}
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
 	$effect(() => {
@@ -400,7 +408,8 @@
 	style:left={docked ? null : `${x}px`}
 	style:top={docked ? null : `${y}px`}
 	style:max-height={docked || maxHeight === undefined ? null : `${maxHeight}px`}
-	style:scroll-padding-top={open ? `${headerHeight - HEADER_TUCK + FOCUS_GAP}px` : null}
+	style:scroll-padding-top={open ? `${headerHeight + FOCUS_GAP}px` : null}
+	onfocusin={showLabel}
 >
 	<header bind:offsetHeight={headerHeight}>
 		<h2>{region.name}</h2>
@@ -749,7 +758,7 @@
 	/* An open card scrolls inside: its name and toggles stay in view so it can be closed. */
 	.card.open header {
 		position: sticky;
-		/* HEADER_TUCK: it covers the card's top padding. */
+		/* Cancels the card's 8px top padding, so the header pins to the scroller's top edge. */
 		top: -8px;
 		z-index: 1;
 		margin-top: -8px;

@@ -928,6 +928,8 @@ for (const font of [undefined, 'DejaVu Sans']) {
 				continue;
 			}
 			tried++;
+			// Details that scroll take focus, so the keyboard can scroll them.
+			await expect(box, `line ${i}`).toHaveAttribute('tabindex', '0');
 			await page.keyboard.press('Tab');
 			await expect(box, `line ${i}`).toBeFocused();
 			await page.keyboard.press('PageDown');
@@ -1038,43 +1040,75 @@ test.describe('with classic scrollbars', () => {
 	}
 });
 
-for (const font of [undefined, 'DejaVu Sans']) {
-	for (const [w, h] of TARGETS) {
-		test(`${w}x${h}${font ? ` in ${font}` : ''}: every control in an open card shows in full below its sticky header when it takes focus going backwards (WCAG 2.4.11)`, async ({
-			page
-		}) => {
-			if (font) await forceFont(page, font);
-			await open(page, w, h);
-			if (font) await requireFont(page, font);
-			const card = page.locator('section.card').first();
-			await card.getByRole('button', { name: /^Bring in/ }).click();
-			await card.getByRole('button', { name: 'Health policy' }).click();
-			await settle(page);
-			// Start at the card's last control and go back up through it with Shift+Tab.
-			await card.evaluate((el) => {
-				const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
-				all[all.length - 1].focus();
-			});
-			const hidden: string[] = [];
-			for (let step = 0; step < 120; step++) {
-				const seen = await card.evaluate((el) => {
-					const f = document.activeElement as HTMLElement | null;
-					if (!f || !el.contains(f) || f.closest('header')) return null;
-					const r = f.getBoundingClientRect();
-					const head = el.querySelector('header')!.getBoundingClientRect();
-					const box = el.getBoundingClientRect();
-					const bottom = box.top + el.clientTop + el.clientHeight;
-					const name = f.getAttribute('aria-label') || f.textContent?.trim().slice(0, 40) || f.tagName;
-					return r.top >= head.bottom - 0.5 && r.bottom <= bottom + 0.5
-						? ''
-						: `${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`;
+/*
+ * Going backwards with Shift+Tab, each control in an open card, and the label line naming it, shows
+ * in full below the card's sticky header (WCAG 2.4.11). Also with scrollbars drawn as on a desktop
+ * without overlay scrollbars (headless Chromium hides them) and a locked city, whose lockdown
+ * controls and charts make the panel longer.
+ */
+for (const classic of [false, true]) {
+	for (const font of [undefined, 'DejaVu Sans']) {
+		for (const [w, h] of TARGETS) {
+			test(`${w}x${h}${font ? ` in ${font}` : ''}${classic ? ' with classic scrollbars and a lockdown' : ''}: every control in an open card, and its label line, shows in full below its sticky header when it takes focus going backwards (WCAG 2.4.11)`, async ({
+				page: shared,
+				playwright
+			}, testInfo) => {
+				// Classic scrollbars need their own browser: the shared one is launched with them hidden.
+				const browser = classic
+					? await playwright.chromium.launch({
+							...testInfo.project.use.launchOptions,
+							ignoreDefaultArgs: ['--hide-scrollbars']
+						})
+					: null;
+				const page = browser ? await browser.newPage({ baseURL: testInfo.project.use.baseURL }) : shared;
+				if (font) await forceFont(page, font);
+				await open(page, w, h);
+				if (font) await requireFont(page, font);
+				const card = page.locator('section.card').first();
+				await card.getByRole('button', { name: /^Bring in/ }).click();
+				if (classic) {
+					await card.getByRole('button', { name: 'Lockdown' }).click();
+					await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
+				}
+				await card.getByRole('button', { name: 'Health policy' }).click();
+				await settle(page);
+				// Start at the card's last control and go back up through it with Shift+Tab.
+				await card.evaluate((el) => {
+					const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+					all[all.length - 1].focus();
 				});
-				if (seen === null) break;
-				if (seen) hidden.push(seen);
-				await page.keyboard.press('Shift+Tab');
-			}
-			expect(hidden).toEqual([]);
-		});
+				const hidden: string[] = [];
+				for (let step = 0; step < 160; step++) {
+					const seen = await card.evaluate((el) => {
+						const f = document.activeElement as HTMLElement | null;
+						if (!f || !el.contains(f) || f.closest('header')) return null;
+						const head = el.querySelector('header')!.getBoundingClientRect();
+						const box = el.getBoundingClientRect();
+						const bottom = box.top + el.clientTop + el.clientHeight;
+						const name = f.getAttribute('aria-label') || f.textContent?.trim().slice(0, 40) || f.tagName;
+						const out: string[] = [];
+						const r = f.getBoundingClientRect();
+						if (r.top < head.bottom - 0.5 || r.bottom > bottom + 0.5)
+							out.push(`${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`);
+						// A slider's label line sits above it, so it is checked on its own.
+						const line = f.closest('label')?.firstElementChild;
+						if (line && line !== f) {
+							const l = line.getBoundingClientRect();
+							if (l.top < head.bottom - 0.5)
+								out.push(
+									`${name}'s label "${line.textContent?.trim().slice(0, 40)}": top ${l.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`
+								);
+						}
+						return out.join('; ');
+					});
+					if (seen === null) break;
+					if (seen) hidden.push(seen);
+					await page.keyboard.press('Shift+Tab');
+				}
+				expect(hidden).toEqual([]);
+				await browser?.close();
+			});
+		}
 	}
 }
 
