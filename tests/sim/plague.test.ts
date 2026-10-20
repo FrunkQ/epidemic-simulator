@@ -9,6 +9,9 @@ import { toRuntime } from '../../src/lib/sim/disease';
 import { createSimulation } from '../../src/lib/sim/engine';
 import type { DiseaseConfig, DiseaseId } from '../../src/lib/sim/types';
 
+/** Diseases whose whole silent phase is incubation: infected, no symptoms, not contagious. */
+const INCUBATING: DiseaseId[] = ['plague', 'ebola', 'marburg', 'smallpox'];
+
 /** The microcosm with nobody vaccinated and plenty of travel, so travellers are common. */
 function travelWorld(airports: boolean) {
 	const scenario = microcosm(0);
@@ -36,7 +39,27 @@ describe('latentDays (6.1)', () => {
 		};
 		expect(run(true)).toBe(run(false));
 		for (const id of Object.keys(DISEASES) as DiseaseId[])
-			if (id !== 'plague') expect(loadDisease(id).latentTicks, id).toBe(0);
+			if (!INCUBATING.includes(id)) expect(loadDisease(id).latentTicks, id).toBe(0);
+	});
+
+	it('starts Ebola, Marburg and smallpox silent and not contagious, for their whole incubation', () => {
+		for (const id of ['ebola', 'marburg', 'smallpox'] as const) {
+			const d = loadDisease(id);
+			expect(d.silentTicks, id).toBeGreaterThan(0);
+			expect(d.latentTicks, id).toBe(d.silentTicks);
+			const sim = createSimulation(singleCity({ population: 500_000 }), { seed: 4, diseaseId: id });
+			const cases = sim.seedNow(0, 200);
+			sim.step(1);
+			const p = sim.people;
+			for (const i of cases) {
+				expect(p.silentSymptomatic[i] + p.silentAsymptomatic[i], `${id} dot ${i}`).toBeGreaterThan(0);
+				expect(p.ill[i], `${id} dot ${i}`).toBe(0);
+				expect(p.infectious(i, true), `${id} dot ${i}`).toBe(0);
+			}
+			// Nobody else catches it before the first index case falls ill.
+			sim.step(d.latentTicks - 1);
+			expect(sim.snapshot().totals.everInfected, id).toBe(cases.length);
+		}
 	});
 
 	it('is never longer than the silent phase', () => {

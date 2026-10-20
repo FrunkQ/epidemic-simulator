@@ -76,8 +76,8 @@ describe('disease timing (6.1, 6.6)', () => {
 
 	for (const id of ['ebola', 'marburg', 'smallpox'] as const)
 		it(`gives index cases seeded between ticks their beds when there is no silent phase (${id})`, () => {
-			const disease = loadDisease(id);
-			expect(disease.silentTicks).toBe(0);
+			// Set explicitly: each of these now has a silent incubation (6.1).
+			const disease = { ...loadDisease(id), silentTicks: 0, latentTicks: 0 };
 			const sim = createSimulation(singleCity({ population: 500_000 }), {
 				seed: 4,
 				diseaseId: id,

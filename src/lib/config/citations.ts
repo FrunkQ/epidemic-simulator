@@ -1869,10 +1869,16 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/smallpox/signs-symptoms/index.html',
-		usedFor: ['smallpox.silentDays', 'smallpox.illDays', 'smallpox.hospitalisedShare', 'smallpox.about'],
+		usedFor: [
+			'smallpox.silentDays',
+			'smallpox.latentDays',
+			'smallpox.illDays',
+			'smallpox.hospitalisedShare',
+			'smallpox.about'
+		],
 		quote: 'At this time, people are usually too sick to carry on their normal activities',
 		location: 'Rash stages section (early rash)',
-		why: "silentDays=0: the page says 'Smallpox may be contagious during this phase but is most contagious during the next 2 stages', i.e. prodromal transmission is minor, so the preset treats pre-rash infectiousness as zero. illDays=16 is my own pick worked out from the page's timeline — the rash lasts roughly four days before scabbing, 'By the end of the second week after the rash appears, most of the sores have scabbed over', and the person is only 'no longer contagious' once all scabs have fallen off (about three to four weeks); 16 days is a middle value for the practically infectious window. hospitalisedShare=0.9 is my own pick based on the quoted sentence about patients being too sick to carry on normal activities. The same quote is the core evidence that smallpox patients stop mixing, so spread concentrates in households and hospitals.",
+		why: "The silent phase is the incubation (Nishiura 2008's 12.5 days; the page says 'This stage can last anywhere from 7 to 19 days'), and all of it is latent: the page marks the incubation period not contagious. Its 'Smallpox may be contagious during this phase but is most contagious during the next 2 stages' is about the fever before the rash, which is part of the illness here. illDays=16 is my own pick worked out from the page's timeline — the rash lasts roughly four days before scabbing, 'By the end of the second week after the rash appears, most of the sores have scabbed over', and the person is only 'no longer contagious' once all scabs have fallen off (about three to four weeks); 16 days is a middle value for the practically infectious window. hospitalisedShare=0.9 is my own pick based on the quoted sentence about patients being too sick to carry on normal activities. The same quote is the core evidence that smallpox patients stop mixing, so spread concentrates in households and hospitals.",
 		context:
 			'CDC clinical description of the eradicated disease, written for health professionals and the public; page last reviewed October 22, 2024.',
 		verified: {
@@ -1880,6 +1886,30 @@ export const CITATIONS: Citation[] = [
 			on: '2026-10-07',
 			ok: true,
 			note: "Re-opened: title 'Signs and Symptoms of Smallpox | Smallpox | CDC', last reviewed October 22, 2024; the quoted sentence and the phrases 'may be contagious during this phase but is most contagious', 'no longer contagious' and '7 to 19 days' all confirmed verbatim."
+		}
+	},
+	{
+		id: 'nishiura-2008-smallpox-transmission',
+		authors: 'Nishiura H, Brockmann SO, Eichner M',
+		title:
+			'Extracting key information from historical data to quantify the transmission dynamics of smallpox',
+		journal: 'Theoretical Biology and Medical Modelling 5:20',
+		year: 2008,
+		evidence: 'study',
+		noReviewReason:
+			'No review pools a smallpox incubation that could be opened; this is a careful fit to cases with a known single day of exposure.',
+		doi: '10.1186/1742-4682-5-20',
+		url: 'https://tbiomed.biomedcentral.com/articles/10.1186/1742-4682-5-20',
+		usedFor: ['smallpox.silentDays', 'smallpox.latentDays'],
+		quote: 'The mean incubation period is 12.5 days (SD 2.2 days).',
+		location: 'Results; Fig 1 (lognormal fit, 131 cases exposed on a single day)',
+		why: "silentDays=latentDays=12.5. Incubation runs to the onset of fever, which is where the model's illness starts (illDays covers the fever and the rash). The whole silent phase is latent: CDC marks the incubation period not contagious, and this paper finds 'Before onset of fever (i.e. between day -5 and day -1) altogether only 2.7% of all transmissions occurred.' The model rounds that 2.7% to none.",
+		context: 'Smallpox outbreaks in Germany, 1947-1970, with known exposure dates.',
+		verified: {
+			by: 'research worker (build thread)',
+			on: '2026-10-20',
+			ok: true,
+			note: 'Read in full at link.springer.com. The quote and the 2.7% sentence confirmed; Fig 1 gives a median of 12.5 days and a coefficient of variation of 18.0%.'
 		}
 	},
 	{
@@ -2162,16 +2192,41 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'WHO',
 		url: 'https://www.who.int/news-room/fact-sheets/detail/ebola-virus-disease',
-		usedFor: ['ebola.mortality', 'ebola.silentDays', 'ebola.illDays', 'ebola.about'],
+		usedFor: ['ebola.mortality', 'ebola.silentDays', 'ebola.latentDays', 'ebola.illDays', 'ebola.about'],
 		quote: 'The average Ebola disease case fatality rate is around 50%.',
 		location: 'Key facts / Transmission',
-		why: "mortality=0.50 taken directly (the fact sheet adds 'Case fatality rates have varied from 25-90% in past outbreaks'). silentDays=0 from 'People cannot transmit the disease before they have symptoms.' illDays=10 is my own pick: the fact sheet only says 'they remain infectious as long as their blood contains the virus', with no day count, and 10 days sits between symptom onset and death or recovery. The same page carries the two real exceptions the lesson needs: 'Burial ceremonies that involve direct contact with the body of a person who has died can also contribute to the transmission of Ebola disease' and 'Health and care workers have frequently been infected while treating patients with Ebola disease. This occurs through close contact with patients when infection control precautions are not strictly practiced.' It also notes 'Early intensive supportive care with rehydration and the treatment of symptoms improves survival', which is why outbreaks are deadliest where care is poor.",
+		why: "mortality=0.50 taken directly (the fact sheet adds 'Case fatality rates have varied from 25-90% in past outbreaks'). The whole silent phase (Ebola's incubation, from the WHO Ebola Response Team 2014) is latent, from 'People cannot transmit the disease before they have symptoms.' The About page gives the range, 'The incubation period or interval from infection to onset of symptoms varies from 2 to 21 days.' illDays=10 is my own pick: the fact sheet only says 'they remain infectious as long as their blood contains the virus', with no day count, and 10 days sits between symptom onset and death or recovery. The same page carries the two real exceptions the lesson needs: 'Burial ceremonies that involve direct contact with the body of a person who has died can also contribute to the transmission of Ebola disease' and 'Health and care workers have frequently been infected while treating patients with Ebola disease. This occurs through close contact with patients when infection control precautions are not strictly practiced.' It also notes 'Early intensive supportive care with rehydration and the treatment of symptoms improves survival', which is why outbreaks are deadliest where care is poor.",
 		context: "WHO's official fact sheet, last updated 24 April 2025.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
 			note: "Re-opened: title 'Ebola disease', last updated 24 April 2025; all quoted sentences confirmed. One wording caveat: the infectiousness sentence was rendered as 'People remain infectious as long as their blood contains the virus.' on the first read and 'they remain infectious as long as their blood contains the virus.' on the second (the clause follows the preceding sentence), so the clause form is the one quoted here."
+		}
+	},
+	{
+		id: 'who-ebola-response-team-2014',
+		authors: 'WHO Ebola Response Team',
+		title: 'Ebola Virus Disease in West Africa — The First 9 Months of the Epidemic and Forward Projections',
+		journal: 'New England Journal of Medicine 371:1481-1495',
+		year: 2014,
+		evidence: 'study',
+		noReviewReason:
+			"The largest single analysis of Ebola incubation, from the 2014 West African epidemic; Van Kerkhove 2015's review gives means of 9-12 days for that epidemic, around this figure, without pooling one.",
+		doi: '10.1056/NEJMoa1411100',
+		url: 'https://www.nejm.org/doi/full/10.1056/NEJMoa1411100',
+		usedFor: ['ebola.silentDays', 'ebola.latentDays'],
+		quote:
+			'The mean incubation period was 11.4 days (Table 2 and Fig. 3A), and did not vary by country (Fig. 3B, 3C, and 3D).',
+		location: 'Results, "Key time periods"; Abstract',
+		why: "silentDays=latentDays=11.4, the headline mean. The whole silent phase is latent because WHO's fact sheet says 'People cannot transmit the disease before they have symptoms.' The paper adds 'Approximately 95% of the case patients had symptom onset within 21 days after exposure'. In its Table 2, 11.4 days is the row for patients exposed over several days; patients exposed on a single day give 9.4 days, so the true mean may be a little shorter.",
+		context:
+			'Case data from Guinea, Liberia, Nigeria and Sierra Leone, 30 December 2013 to 14 September 2014.',
+		verified: {
+			by: 'research worker (build thread)',
+			on: '2026-10-20',
+			ok: true,
+			note: "Read in full from a complete PDF mirrored by China CDC (nejm.org and PMC did not open). The quote and the Abstract's 'incubation period (11.4 days)' confirmed. The two extractions of Table 2 disagreed on per-country sample sizes, so no country figure is used."
 		}
 	},
 	{
@@ -2254,19 +2309,44 @@ export const CITATIONS: Citation[] = [
 		usedFor: [
 			'marburg.mortality',
 			'marburg.silentDays',
+			'marburg.latentDays',
 			'marburg.illDays',
 			'marburg.fullEfficacy',
 			'marburg.about'
 		],
 		quote: 'The average MVD case fatality rate is around 50%.',
 		location: 'Key facts / Transmission / Treatment',
-		why: "mortality=0.50 taken directly, with the page's 'Case fatality rates have varied from 24% to 88% in past outbreaks.' as the range. silentDays=0 from 'People cannot transmit the disease before they have symptoms.' fullEfficacy is 0, and nobody is vaccinated, because of 'Currently there are no vaccines or antiviral treatments approved for MVD.' The exceptional routes are the same as for Ebola and come from this page: 'Burial ceremonies that involve direct contact with the body of the deceased can also contribute to the transmission of Marburg virus.' and 'Healthcare workers have frequently been infected while treating patients with MVD.' The page's note that 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival' is why outbreaks remain deadliest where care is poor.",
+		why: "mortality=0.50 taken directly, with the page's 'Case fatality rates have varied from 24% to 88% in past outbreaks.' as the range. The whole silent phase (Marburg's incubation, from Pavlin 2014) is latent, from 'People cannot transmit the disease before they have symptoms.' The page gives the incubation range: it 'varies from 2 to 21 days'. fullEfficacy is 0, and nobody is vaccinated, because of 'Currently there are no vaccines or antiviral treatments approved for MVD.' The exceptional routes are the same as for Ebola and come from this page: 'Burial ceremonies that involve direct contact with the body of the deceased can also contribute to the transmission of Marburg virus.' and 'Healthcare workers have frequently been infected while treating patients with MVD.' The page's note that 'Early intensive supportive care including rehydration and treatment of specific symptoms, can improve survival' is why outbreaks remain deadliest where care is poor.",
 		context: "WHO's official fact sheet, dated 20 January 2025.",
 		verified: {
 			by: 'independent verification pass',
 			on: '2026-10-07',
 			ok: true,
 			note: "Re-opened: title 'Marburg virus disease', dated 20 January 2025; all seven quoted sentences confirmed verbatim."
+		}
+	},
+	{
+		id: 'pavlin-2014-marburg-incubation',
+		authors: 'Pavlin BI',
+		title:
+			'Calculation of incubation period and serial interval from multiple outbreaks of Marburg virus disease',
+		journal: 'BMC Research Notes 7:906',
+		year: 2014,
+		evidence: 'study',
+		noReviewReason:
+			"No review pools a Marburg incubation: Cuomo-Dannenburg 2024's systematic review says 'The two incubation period estimates came from studies from the 1970s that only reported ranges with little overlap.'",
+		doi: '10.1186/1756-0500-7-906',
+		url: 'https://bmcresnotes.biomedcentral.com/articles/10.1186/1756-0500-7-906',
+		usedFor: ['marburg.silentDays', 'marburg.latentDays'],
+		quote: 'the median incubation period was 7 days.',
+		location: 'Discussion; Table 1 (outbreaks pooled)',
+		why: "silentDays=latentDays=7. The whole silent phase is latent because WHO's fact sheet says 'People cannot transmit the disease before they have symptoms.' The figure pools the outbreaks in its Table 1 (1967-2008). Qian 2023 (BMC Medicine) gives 5-10 days, with a range of 2-21, around it. Pavlin reports two cases of at least 23 and 26 days.",
+		context: 'Pooled data from Marburg outbreaks, 1967-2008.',
+		verified: {
+			by: 'research worker (build thread)',
+			on: '2026-10-20',
+			ok: true,
+			note: 'Only the Discussion and Table 1 could be opened; the Abstract and Results did not open, so the sample size, range and method are unverified. The quote is from the Discussion.'
 		}
 	},
 	{
@@ -2413,10 +2493,10 @@ export const CITATIONS: Citation[] = [
 		evidence: 'official',
 		publisher: 'CDC',
 		url: 'https://www.cdc.gov/smallpox/hcp/clinical-signs/index.html',
-		usedFor: ['smallpox.waningDays', 'smallpox.silentDays', 'smallpox.mortality'],
+		usedFor: ['smallpox.waningDays', 'smallpox.latentDays', 'smallpox.mortality'],
 		quote: 'Recovery from smallpox gives the patient prolonged immunity to re-infection with variola virus.',
 		location: 'Clinical course / immunity',
-		why: "waningDays=null follows from this sentence: CDC describes immunity after recovery as 'prolonged', with no stated end, so for a simulator that models immunity as either present or gone, treating survivor immunity as not waning is the faithful reading. ('Prolonged' is weaker than 'lifelong', so this is the one place in the smallpox preset where null is a simplification of the source.) The page also independently supports two values already in the preset: silentDays=0, from 'During this time, the infected person does not have symptoms, is not contagious, and may feel fine', and mortality=0.30, from 'the case-fatality rate differed for the different clinical forms, but it was approximately 30% overall in unvaccinated individuals.'",
+		why: "waningDays=null follows from this sentence: CDC describes immunity after recovery as 'prolonged', with no stated end, so for a simulator that models immunity as either present or gone, treating survivor immunity as not waning is the faithful reading. ('Prolonged' is weaker than 'lifelong', so this is the one place in the smallpox preset where null is a simplification of the source.) The page also independently supports two values already in the preset: a latent incubation (infected, with no symptoms and not contagious), from 'During this time, the infected person does not have symptoms, is not contagious, and may feel fine', and mortality=0.30, from 'the case-fatality rate differed for the different clinical forms, but it was approximately 30% overall in unvaccinated individuals.'",
 		context: "CDC's clinician-facing clinical description of smallpox; last reviewed October 23, 2024.",
 		verified: {
 			by: 'independent verification pass',
