@@ -199,7 +199,14 @@ describe('specks', () => {
 		const paint = (ill: number, silent: number) => {
 			const buf = new Uint32Array(W * W);
 			const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
-			paintSpecks(buf, W, W, people(50, [[0, ill, silent]]), frame(1, [[50, 50]], { patch: 30, maxSide: 2 }), box);
+			paintSpecks(
+				buf,
+				W,
+				W,
+				people(50, [[0, ill, silent]]),
+				frame(1, [[50, 50]], { patch: 30, maxSide: 2 }),
+				box
+			);
 			return buf;
 		};
 		for (const [ill, silent] of [

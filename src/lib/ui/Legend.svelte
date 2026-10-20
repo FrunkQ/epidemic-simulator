@@ -59,8 +59,8 @@
 	// the footer (WCAG asks 3:1 for a graphic).
 	const SWATCH_EDGE = '#7f97b0';
 
-	// Each swatch as the map draws it in each view: a round dot, a small square speck, or in Shading
-	// an infected dot with its light outline.
+	// Each swatch as the map draws it in each view: a round dot, or a small square speck. In Shading
+	// an infected dot is tinted toward the same colours.
 	const items = $derived(
 		[
 			{ key: 'unprotected', label: 'Not protected', colour: DIMMED_COLOURS.unprotected, speck: false },
@@ -70,15 +70,13 @@
 				key: 'silent',
 				label: 'Infected, no symptoms yet',
 				colour: LIFTED_COLOURS.silent,
-				speck: look === 'specks',
-				ring: look === 'shading' ? LIFTED_COLOURS.silent : undefined
+				speck: look === 'specks'
 			},
 			{
 				key: 'symptomatic',
 				label: 'Ill',
 				colour: LIFTED_COLOURS.symptomatic,
-				speck: look === 'specks',
-				ring: look === 'shading' ? LIFTED_COLOURS.symptomatic : undefined
+				speck: look === 'specks'
 			},
 			{ key: 'recovered', label: 'Recovered', colour: DIMMED_COLOURS.recovered, speck: false },
 			{ key: 'deceased', label: 'Died', colour: DIMMED_COLOURS.deceased, speck: look === 'specks' }
@@ -103,11 +101,7 @@
 				><i
 					class:speck={item.speck}
 					style:background={item.colour}
-					style:box-shadow={'ring' in item && item.ring
-						? `0 0 0 1px ${item.ring}`
-						: item.speck
-							? null
-							: `0 0 0 1px ${SWATCH_EDGE}`}
+					style:box-shadow={item.speck ? null : `0 0 0 1px ${SWATCH_EDGE}`}
 				></i>{item.label}</span
 			>
 		{/each}

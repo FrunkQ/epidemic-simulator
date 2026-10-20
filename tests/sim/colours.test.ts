@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { COLOURS, MAP_PALETTE } from '../../src/lib/sim/render';
+import { SHADING_SOFT_TINT_WHY, SILENT_VS_ILL, TINT_VS_DIMMED } from './shadingExemptions';
 
 /*
  * The map's colour check: every pair of colours either view draws stays at least as far apart as
  * the closest pair of full colours on the old map, under normal vision and under protan, deutan
  * and tritan colour blindness. Distance is OKLab ΔE × 100 (Ottosson 2020), colour blindness the
  * Machado, Oliveira & Fernandes 2009 simulation at severity 1, in linear RGB, as the dataviz
- * palette validator measures them.
+ * palette validator measures them. Shading's lightly tinted dots are the one exception, each pair
+ * named in shadingExemptions.ts; solid dots pass like the rest.
  */
 type Vision = 'normal' | 'protan' | 'deutan' | 'tritan';
 const VISIONS: Vision[] = ['normal', 'protan', 'deutan', 'tritan'];
@@ -64,57 +66,118 @@ function oldMapWorst(vision: Vision): number {
 	return worst;
 }
 
-/** Each pair the map draws, with the distance that tells them apart. */
-function mapPairs(vision: Vision): { name: string; e: number }[] {
-	const { bases, lifted, shadeFills } = MAP_PALETTE;
-	const out: { name: string; e: number }[] = [];
+interface Pair {
+	name: string;
+	e: number;
+	/** Shading only: the weaker of the pair's strengths, 1 for solid. */
+	strength?: number;
+	/** Shading only: the pair of dot colours, as an exemption names it. */
+	key?: string;
+}
+
+/** Each pair Specks draws, with the distance that tells them apart. */
+function specksPairs(vision: Vision): Pair[] {
+	const { bases, lifted } = MAP_PALETTE;
+	const out: Pair[] = [];
 	const b = Object.entries(bases);
 	for (let i = 0; i < b.length; i++)
 		for (let j = i + 1; j < b.length; j++) {
 			const names = [b[i][0], b[j][0]].sort().join(' | ');
 			out.push({ name: `dimmed ${names}`, e: deltaE(b[i][1], b[j][1], vision) });
 		}
-	// Specks, and Shading's outline round an infected dot, against every dimmed dot.
 	for (const [ln, l] of Object.entries(lifted))
 		for (const [bn, bc] of b) out.push({ name: `lifted ${ln} | dimmed ${bn}`, e: deltaE(l, bc, vision) });
 	out.push({ name: 'lifted silent | lifted ill', e: deltaE(lifted.silent, lifted.symptomatic, vision) });
-	// Shading: every silent dot against every ill one, from any dimmed dot at any strength drawn. A
-	// dot is its fill and its edge: the outline where it has one, else the fill. Two dots are told
-	// apart by whichever of the two is further apart. A solid dot, drawn without an outline, must also
-	// stand apart from every dimmed dot by its fill alone.
-	const look = (s: { fill: string; outline: boolean }, target: 'silent' | 'symptomatic') => ({
-		fill: s.fill,
-		edge: s.outline ? lifted[target] : s.fill
-	});
+	return out;
+}
+
+/**
+ * Each pair Shading draws that Specks doesn't: every silent dot against every ill one, from any
+ * dimmed dot at any strength drawn, and every tinted dot against every dimmed one, by fill.
+ */
+function shadingPairs(vision: Vision): Pair[] {
+	const { bases, shadeFills } = MAP_PALETTE;
+	const out: Pair[] = [];
+	const b = Object.entries(bases);
 	for (const silent of shadeFills.filter((f) => f.target === 'silent'))
 		for (const ill of shadeFills.filter((f) => f.target === 'symptomatic'))
 			for (const s of silent.fills)
-				for (const t of ill.fills) {
-					const [x, y] = [look(s, 'silent'), look(t, 'symptomatic')];
+				for (const t of ill.fills)
 					out.push({
 						name: `shaded ${silent.base} silent at ${s.strength.toFixed(2)} | ${ill.base} ill at ${t.strength.toFixed(2)}`,
-						e: Math.max(deltaE(x.fill, y.fill, vision), deltaE(x.edge, y.edge, vision))
+						e: deltaE(s.fill, t.fill, vision),
+						strength: Math.min(s.strength, t.strength),
+						key: `silent ${silent.base} | ill ${ill.base}`
 					});
-				}
 	for (const f of shadeFills)
-		for (const s of f.fills.filter((s) => !s.outline))
+		for (const s of f.fills)
 			for (const [bn, bc] of b)
 				out.push({
-					name: `shaded ${f.base} ${f.target} at ${s.strength.toFixed(2)}, no outline | dimmed ${bn}`,
-					e: deltaE(s.fill, bc, vision)
+					name: `shaded ${f.base} ${f.target} at ${s.strength.toFixed(2)} | dimmed ${bn}`,
+					e: deltaE(s.fill, bc, vision),
+					strength: s.strength,
+					key: `${f.base} ${f.target} | dimmed ${bn}`
 				});
 	return out;
 }
 
+/** The strength from which an exempt Shading pair passes, by vision and pair; 0 if none is listed. */
+function exemptFrom(vision: Vision, key: string): number {
+	const tint = TINT_VS_DIMMED.find(
+		(x) => x.vision === vision && `${x.base} ${x.target} | dimmed ${x.dimmed}` === key
+	);
+	const pair = SILENT_VS_ILL.find(
+		(x) => x.vision === vision && `silent ${x.silentBase} | ill ${x.illBase}` === key
+	);
+	return tint?.from ?? pair?.from ?? 0;
+}
+
 describe('map colours', () => {
-	for (const vision of VISIONS)
-		it(`every pair the map draws is at least as far apart as the old map's closest pair (${vision})`, () => {
+	for (const vision of VISIONS) {
+		it(`every pair Specks draws is at least as far apart as the old map's closest pair (${vision})`, () => {
 			const bar = oldMapWorst(vision);
-			const close = mapPairs(vision)
+			const close = specksPairs(vision)
 				.filter((p) => p.e < bar)
 				.map((p) => `${p.name}: ${p.e.toFixed(1)} < ${bar.toFixed(1)}`);
 			expect(close).toEqual([]);
 		});
+
+		it(`every pair Shading draws passes too, solid dots always, lightly tinted ones unless listed (${vision})`, () => {
+			const bar = oldMapWorst(vision);
+			const close = shadingPairs(vision)
+				// Failing, and not a lightly tinted pair below its listed strength.
+				.filter((p) => p.e < bar && !(p.strength! < 1 && p.strength! < exemptFrom(vision, p.key!) - 1e-9))
+				.map((p) => `${p.name}: ${p.e.toFixed(1)} < ${bar.toFixed(1)}`);
+			expect(close).toEqual([]);
+			const solid = shadingPairs(vision).filter((p) => p.strength! >= 1 && p.e < bar);
+			expect(solid.map((p) => p.name)).toEqual([]);
+		});
+
+		it(`each Shading exemption is still needed, and no wider than it must be (${vision})`, () => {
+			const bar = oldMapWorst(vision);
+			const pairs = shadingPairs(vision);
+			const entries = [
+				...TINT_VS_DIMMED.filter((x) => x.vision === vision).map((x) => ({
+					key: `${x.base} ${x.target} | dimmed ${x.dimmed}`,
+					from: x.from
+				})),
+				...SILENT_VS_ILL.filter((x) => x.vision === vision).map((x) => ({
+					key: `silent ${x.silentBase} | ill ${x.illBase}`,
+					from: x.from
+				}))
+			];
+			for (const { key, from } of entries) {
+				const mine = pairs.filter((p) => p.key === key);
+				expect(mine.length, key).toBeGreaterThan(0);
+				// A pair just below its listed strength fails, so the entry is needed and starts no lower.
+				expect(
+					mine.some((p) => Math.abs(p.strength! - (from - 0.05)) < 1e-9 && p.e < bar),
+					`${key} fails just below ${from}`
+				).toBe(true);
+			}
+			expect(SHADING_SOFT_TINT_WHY).toMatch(/Alex's card of 20 Oct 2026/);
+		});
+	}
 
 	it('the check sees a pair that is too close', () => {
 		// The dimmed colours before this check: green and yellow 10 apart for normal vision.

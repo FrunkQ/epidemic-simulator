@@ -11,7 +11,6 @@ import {
 	PARTIAL_DIM,
 	RECOVERED_DIM,
 	SHADE_FLOOR,
-	SHADE_RING_PX,
 	SHADE_STEP,
 	UNPROTECTED_DIM,
 	speckMinSide,
@@ -109,14 +108,17 @@ export const DIMMED_COLOURS = {
 	partial: css(BASES[BASE.partial])
 } as const;
 const WHITE = rgbOf('#ffffff');
-/** Infected people's specks, and Shading's infected colours and outlines: orange and red lifted toward white. */
+/** Infected people's specks: orange and red lifted toward white. */
 const LIFTED = [
 	mixed(rgbOf(COLOURS.silent), WHITE, INFECTED_LIFT),
 	mixed(rgbOf(COLOURS.symptomatic), WHITE, INFECTED_LIFT)
 ];
 /** The lifted colours as the legend shows them. */
 export const LIFTED_COLOURS = { silent: css(LIFTED[0]), symptomatic: css(LIFTED[1]) } as const;
-const RING_STYLES = LIFTED.map(css);
+/**
+ * Shading's soft tint (look B, no outline): a dot with anyone infected moves toward the lifted
+ * orange or red, so a solid dot stands apart from every dimmed one; plain orange and red do not.
+ */
 const SHADE_TARGETS = LIFTED;
 const SHADE_LEVELS = Math.round(1 / SHADE_STEP) + 1;
 /**
@@ -135,7 +137,7 @@ const shadeStyle = (base: number, target: number, strength: number) =>
 	BASES.length + (base * SHADE_TARGETS.length + target) * SHADE_LEVELS + Math.round(strength / SHADE_STEP);
 /**
  * Every colour the map draws dots in, for the colour check (colours.test.ts): the dimmed dots,
- * the specks and outlines, and each Shading fill a dot with anyone infected can take.
+ * the specks, and each Shading fill a dot with anyone infected can take.
  */
 export const MAP_PALETTE = {
 	bases: { ...DIMMED_COLOURS },
@@ -148,8 +150,7 @@ export const MAP_PALETTE = {
 				.filter((strength) => strength >= SHADE_FLOOR - 1e-9)
 				.map((strength) => ({
 					strength,
-					fill: FILL_STYLES[shadeStyle(b, t, strength)],
-					outline: strength < 1
+					fill: FILL_STYLES[shadeStyle(b, t, strength)]
 				}))
 		}))
 	)
@@ -176,8 +177,6 @@ export class Renderer {
 	/** Visible dots in index order, with each one's fill style (FILL_STYLES index). */
 	private readonly order: Int32Array;
 	private readonly orderStyle: Uint16Array;
-	/** Shading: each drawn dot's outline, 0 for none, else 1 + its infected colour's index. */
-	private readonly orderRing: Uint8Array;
 	/** The specks' own layer, the canvas's size in device pixels, and the area painted last frame. */
 	private layer: { img: ImageData; buf: Uint32Array } | null = null;
 	/**
@@ -224,7 +223,6 @@ export class Renderer {
 		this.atY = new Float32Array(capacity);
 		this.order = new Int32Array(capacity);
 		this.orderStyle = new Uint16Array(capacity);
-		this.orderRing = new Uint8Array(capacity);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
@@ -293,7 +291,6 @@ export class Renderer {
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const base = baseOf(agents, people, i);
 			let style: number = base;
-			let ring = 0;
 			if (look === 'shading') {
 				const ill = people.ill[i];
 				const infected = ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
@@ -301,42 +298,23 @@ export class Renderer {
 					const target = ill >= infected - ill ? 1 : 0;
 					const strength = shadeStrength(infected, per);
 					style = shadeStyle(base, target, strength);
-					// A solid dot reads as infected by its fill; a paler one needs its outline.
-					if (strength < 1) ring = 1 + target;
 				}
 			}
-			this.orderRing[count] = ring;
 			this.order[count] = i;
 			this.orderStyle[count++] = style;
 		}
 
 		// Dots in index order, whatever their state, so no colour wins where dots overlap; the style is
-		// set only when it changes. In Shading a dot with anyone infected that is not yet solid sits on
-		// a light square SHADE_RING_PX wider each side, its outline, so it reads as infected by
-		// lightness and not by colour alone. The square is snapped to device pixels so it stays crisp.
-		const dpr = ctx.getTransform().a || 1;
-		const ringDev = Math.max(1, Math.round(SHADE_RING_PX * dpr));
+		// set only when it changes.
 		let last = -1;
 		for (let k = 0; k < count; k++) {
-			const i = this.order[k];
-			const x = (ax[i] - ox) * s - half;
-			const y = (ay[i] - oy) * s - half;
-			const ring = this.orderRing[k];
-			if (ring) {
-				const x0 = Math.floor(x * dpr) - ringDev;
-				const y0 = Math.floor(y * dpr) - ringDev;
-				const x1 = Math.ceil((x + size) * dpr) + ringDev;
-				const y1 = Math.ceil((y + size) * dpr) + ringDev;
-				ctx.fillStyle = RING_STYLES[ring - 1];
-				ctx.fillRect(x0 / dpr, y0 / dpr, (x1 - x0) / dpr, (y1 - y0) / dpr);
-				last = -1;
-			}
 			const style = this.orderStyle[k];
 			if (style !== last) {
 				ctx.fillStyle = FILL_STYLES[style];
 				last = style;
 			}
-			ctx.fillRect(x, y, size, size);
+			const i = this.order[k];
+			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, size, size);
 		}
 
 		this.specksDrawn = 0;

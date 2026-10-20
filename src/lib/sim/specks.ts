@@ -5,10 +5,11 @@
  * - Specks (the default): every dot is drawn dimmed in its usual colour, and every infected person
  *   is drawn as their own bright speck in a small patch around their dot, each death as a pale one.
  *   The first cases show at any zoom.
- * - Shading: dots dimmed the same way, and any infected person moves a dot at least SHADE_FLOOR of
- *   the way to orange or red (lifted, INFECTED_LIFT), solid once SHADE_FULL_SHARE of its people are
- *   infected. Until it is solid, a 1 px outline in the lifted colour (SHADE_RING_PX) marks it, so
- *   it reads as infected whatever colour vision a viewer has; a solid dot's fill does that alone.
+ * - Shading: dots dimmed the same way, and any infected person tints a dot at least SHADE_FLOOR of
+ *   the way to orange or red (lifted, INFECTED_LIFT; red once half or more of its infected are ill), solid once
+ *   SHADE_FULL_SHARE of its people are infected. A soft tint, as the owner chose: a dot with few
+ *   cases is faint for some colour vision (colours.test.ts names each such pair); Specks shows each
+ *   case.
  */
 export type MapLook = 'specks' | 'shading';
 export const MAP_LOOKS: readonly MapLook[] = ['specks', 'shading'];
@@ -16,8 +17,8 @@ export const DEFAULT_LOOK: MapLook = 'specks';
 
 /**
  * How far each dot keeps its own colour against the land (0 is land), set per colour so that every
- * pair either view draws, under normal vision and protan, deutan and tritan colour blindness, is
- * at least as far apart as the closest pair of full colours on the old map (colours.test.ts).
+ * pair Specks draws, under normal vision and protan, deutan and tritan colour blindness, is at
+ * least as far apart as the closest pair of full colours on the old map (colours.test.ts).
  */
 export const UNPROTECTED_DIM = 0.3;
 export const FULL_DIM = 0.53;
@@ -25,15 +26,13 @@ export const PARTIAL_DIM = 0.61;
 export const RECOVERED_DIM = 0.5;
 export const DEAD_DIM = 0.91;
 /**
- * How far infected people's specks, and Shading's outline, move from orange and red toward white,
+ * How far infected people's specks move from orange and red toward white,
  * so they stand apart from the dimmed dots by lightness as well as colour (same check).
  */
 export const INFECTED_LIFT = 0.29;
 
 /** Shading: the least a dot with anyone infected moves toward the infected colour. */
 export const SHADE_FLOOR = 0.4;
-/** Shading: the outline round a dot with anyone infected that is not yet solid, in CSS pixels. */
-export const SHADE_RING_PX = 1;
 /** Shading: the share of a dot's people infected at which it is solid. */
 export const SHADE_FULL_SHARE = 0.25;
 /** Shading strengths are drawn in steps this size, so the styles can be made once. */

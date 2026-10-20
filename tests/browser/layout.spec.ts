@@ -1249,8 +1249,8 @@ for (const font of [undefined, 'DejaVu Sans']) {
 		await page.keyboard.press('Enter');
 		await expect(shading).toHaveAttribute('aria-pressed', 'true');
 		await expect(specks).toHaveAttribute('aria-pressed', 'false');
-		await expect(line).toContainText('A dot turns orange or red with its first case');
-		await expect(line).not.toContainText('speck');
+		await expect(line).toContainText('A dot tints orange or red with its first case');
+		await expect(line).not.toContainText('bright speck');
 		await settle(page);
 		expect(await stage(), 'switching never changes the stage').toBe(before);
 		await page.keyboard.press('Shift+Tab');
@@ -1275,7 +1275,7 @@ for (const font of [undefined, 'DejaVu Sans']) {
 /**
  * What drawing the infected may add to a map frame, in either view, on a 2x screen: a quarter of
  * TICK_BUDGET_MS's 60 Hz frame and then some. The first round's stroked Shading outlines added
- * 10-14 ms here; filled ones add about 3.
+ * 10-14 ms here, which this catches; Shading's soft tint draws no outline.
  */
 const INFECTED_DRAW_MS = 6;
 
