@@ -140,7 +140,8 @@ describe('lasting harm on the map (6.17)', () => {
 		for (const r of [0, 1, 2]) sim.send({ type: 'seed', region: r, count: 3 });
 		const rate = DISEASES.smallpox.lastingHarm.counted[0].rate.value[0];
 		let checked = 0;
-		for (let day = 0; day < 150; day++) {
+		// Long enough for smallpox's incubation (6.1) and then its wave.
+		for (let day = 0; day < 200; day++) {
 			sim.step(TICKS_PER_DAY);
 			if (day % 10 !== 9) continue;
 			const t = sim.snapshot();

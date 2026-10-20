@@ -801,7 +801,19 @@ export const DISEASES = {
 		group: 'eradicated',
 		blurb: 'Killed about 3 in 10 people it made ill. Wiped out in 1980, so almost no one is protected now.',
 		r0: { value: 5, sources: ['costantino2018-smallpox-r0', 'gani-2001-smallpox-r0'] },
-		silentDays: { value: 0, sources: ['cdc-smallpox-signs-symptoms', 'cdc-smallpox-clinical-signs'] },
+		// The whole silent phase is latent: infected, no symptoms, not yet contagious, able to travel.
+		silentDays: {
+			value: 12.5,
+			sources: ['nishiura-2008-smallpox-transmission', 'cdc-smallpox-signs-symptoms']
+		},
+		latentDays: {
+			value: 12.5,
+			sources: [
+				'nishiura-2008-smallpox-transmission',
+				'cdc-smallpox-signs-symptoms',
+				'cdc-smallpox-clinical-signs'
+			]
+		},
 		illDays: { value: 16, sources: ['cdc-smallpox-signs-symptoms', 'who-smallpox-qa'] },
 		asymptomaticFraction: { value: 0, sources: ['who-smallpox-eradication-subclinical'] },
 		mortalityBasis: 'modern-care',
@@ -852,7 +864,9 @@ export const DISEASES = {
 		blurb:
 			'Kills about half of those who fall ill, but they are soon too sick to move about, so it spreads less far.',
 		r0: { value: 1.95, sources: ['muzembo2024-ebola-r0', 'vankerkhove-2015-ebola-parameters'] },
-		silentDays: { value: 0, sources: ['who-ebola-factsheet'] },
+		// The whole silent phase is latent: infected, no symptoms, not yet contagious, able to travel.
+		silentDays: { value: 11.4, sources: ['who-ebola-response-team-2014', 'who-ebola-factsheet'] },
+		latentDays: { value: 11.4, sources: ['who-ebola-response-team-2014', 'who-ebola-factsheet'] },
 		illDays: { value: 10, sources: ['who-ebola-factsheet'] },
 		asymptomaticFraction: {
 			value: 0,
@@ -895,7 +909,9 @@ export const DISEASES = {
 		blurb:
 			'A close cousin of Ebola. Very deadly and no vaccine, but it spreads mainly to people caring for the sick.',
 		r0: { value: 1.59, sources: ['ajelli-2012-marburg-transmission', 'cuomodannenburg2024-marburg-review'] },
-		silentDays: { value: 0, sources: ['who-marburg-factsheet'] },
+		// The whole silent phase is latent: infected, no symptoms, not yet contagious, able to travel.
+		silentDays: { value: 7, sources: ['pavlin-2014-marburg-incubation', 'who-marburg-factsheet'] },
+		latentDays: { value: 7, sources: ['pavlin-2014-marburg-incubation', 'who-marburg-factsheet'] },
 		illDays: { value: 8, sources: ['who-marburg-factsheet', 'ajelli-2012-marburg-transmission'] },
 		asymptomaticFraction: {
 			value: 0,

@@ -36,7 +36,8 @@ describe('the lasting harm chart (6.17)', () => {
 	it('plots the numbers the cards show, in people', () => {
 		const sim = createSimulation(microcosm(), { seed: 1, diseaseId: 'smallpox' });
 		for (const r of [0, 1, 2]) sim.send({ type: 'seed', region: r, count: 3 });
-		sim.step(80 * TICKS_PER_DAY);
+		// Long enough for smallpox's incubation (6.1) and then its wave.
+		sim.step(110 * TICKS_PER_DAY);
 		const t = sim.snapshot();
 		t.regions.forEach((r, k) => {
 			const h = sim.history(k);
