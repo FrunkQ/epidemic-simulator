@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withCaution } from './helpers';
 import { microcosm, singleCity } from '../../src/lib/config/scenarios';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 import { Exposure, transmit } from '../../src/lib/sim/disease';
@@ -8,6 +9,9 @@ import type { SpatialGrid } from '../../src/lib/sim/grid';
 import type { PeopleHooks } from '../../src/lib/sim/people';
 import type { Rng } from '../../src/lib/sim/rng';
 import type { Scenario } from '../../src/lib/sim/types';
+
+/** Caution (6.18) at 0, so these tests check the lockdown alone. */
+const noCaution = <S extends Scenario>(scenario: S): S => withCaution(scenario, 0);
 
 /*
  * The lockdown's mechanics, pinned one by one (6.4): the contact cut on a pair, who may move or
@@ -67,7 +71,7 @@ describe('the contact cut', () => {
 	it.each([false, true])(
 		'a pair with someone staying home is cut once by exactly (1 − cut), and two movers not at all (secondary counts: %s)',
 		(secondaryOnly) => {
-			const sim = createSimulation(microcosm(0), { seed: 4, diseaseId: 'covid19', secondaryOnly });
+			const sim = createSimulation(noCaution(microcosm(0)), { seed: 4, diseaseId: 'covid19', secondaryOnly });
 			sim.seedNow(0, INDEX_CASES);
 			sim.step(8 * TICKS_PER_DAY);
 			const a = sim.agents;
@@ -110,7 +114,7 @@ describe('the contact cut', () => {
 
 describe('dots kept home', () => {
 	it('never move or leave, and arrivals walking to their spot never leave either', () => {
-		const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 		for (let r = 0; r < 3; r++) sim.seedNow(r, INDEX_CASES);
 		sim.step(3 * TICKS_PER_DAY);
 		for (let r = 0; r < 3; r++) sim.send({ type: 'lockdown', region: r, on: true });
@@ -140,7 +144,7 @@ describe('dots kept home', () => {
 
 	it('never pile up where travellers land: arrivals walk to a spot of their own first', () => {
 		// One city locked, so travellers from the others keep arriving into it.
-		const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 		sim.send({ type: 'lockdown', region: 0, on: true });
 		const a = sim.agents;
 		let most = 0;
@@ -160,7 +164,7 @@ describe('dots kept home', () => {
 });
 
 it("person-days add up the living people in a locked city's dots, not travellers, each locked day", () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(5 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -191,7 +195,10 @@ it("person-days add up the living people in a locked city's dots, not travellers
 it.each([0.2, 0.5])(
 	'a dot stops for illness once %s of its people are ill (Scenario.illStopShare)',
 	(share) => {
-		const sim = createSimulation({ ...microcosm(0), illStopShare: share }, { seed: 2, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution({ ...microcosm(0), illStopShare: share }), {
+			seed: 2,
+			diseaseId: 'covid19'
+		});
 		sim.seedNow(0, INDEX_CASES);
 		const a = sim.agents;
 		const p = sim.people;
@@ -210,7 +217,7 @@ it.each([0.2, 0.5])(
 
 describe('the key-worker cohort', () => {
 	it('is the dots in the city when its lockdown began, never the travellers away', () => {
-		const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 		sim.step(10 * TICKS_PER_DAY);
 		const a = sim.agents;
 		// The command applies at the start of the next tick, before anyone leaves or arrives.
@@ -228,7 +235,7 @@ describe('the key-worker cohort', () => {
 
 	it('is not stamped again by a second "on" while the city is still locked down', () => {
 		const run = (twice: boolean) => {
-			const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+			const sim = createSimulation(noCaution(microcosm(0)), { seed: 2, diseaseId: 'covid19' });
 			sim.seedNow(0, INDEX_CASES);
 			sim.step(5 * TICKS_PER_DAY);
 			sim.send({ type: 'lockdown', region: 0, on: true });
@@ -245,7 +252,7 @@ describe('the key-worker cohort', () => {
 
 describe('who stays home', () => {
 	it('key workers are never held and are all working age; some tire once the fatigue mean has passed; a lift clears every hold', () => {
-		const sim = createSimulation(microcosm(0), { seed: 2, diseaseId: 'covid19' });
+		const sim = createSimulation(noCaution(microcosm(0)), { seed: 2, diseaseId: 'covid19' });
 		sim.seedNow(0, INDEX_CASES);
 		sim.send({ type: 'lockdown', region: 0, on: true });
 		const a = sim.agents;
@@ -290,7 +297,7 @@ it.each(['covid19omicron', 'flu'] as const)(
 	(diseaseId) => {
 		// With vaccinated people, so a count that left out vaccine immunity would show.
 		const scenario = singleCity({ population: 200_000, vaccinatedFull: 0.4, vaccinatedPartial: 0.1 });
-		const sim = createSimulation(scenario, { seed: 2, diseaseId });
+		const sim = createSimulation(noCaution(scenario), { seed: 2, diseaseId });
 		sim.seedNow(0, INDEX_CASES);
 		const a = sim.agents;
 		const p = sim.people;
@@ -315,7 +322,7 @@ it.each(['covid19omicron', 'flu'] as const)(
 );
 
 it('walkers on their way home and held dots have the held contact; everyone kept home is exactly who outReason says', () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(3 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -330,7 +337,7 @@ it('walkers on their way home and held dots have the held contact; everyone kept
 		for (let i = 0; i < a.activeCount; i++) {
 			// Who stays home is worked out at the start of the tick, before this tick's arrivals land.
 			if (a.landedTick[i] === inner.tick) continue;
-			const home = a.region[i] === 0 && outReason(a, i, policy, ticks) === Out.HOME;
+			const home = a.region[i] === 0 && outReason(a, i, policy, ticks, 0) === Out.HOME;
 			// A walker that reached its spot this tick is held from the next one.
 			const reached = a.held[i] === 0 && a.x[i] === a.goalX[i] && a.y[i] === a.goalY[i];
 			if (!reached) expect(a.held[i] + a.walking[i]).toBe(home ? 1 : 0);
@@ -342,7 +349,7 @@ it('walkers on their way home and held dots have the held contact; everyone kept
 });
 
 it('walkers head for spots spread evenly over the city disc, not bunched at its centre', () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(3 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -368,7 +375,7 @@ it('walkers head for spots spread evenly over the city disc, not bunched at its 
 });
 
 it("a locked city's boarding swap takes a partner from the same group and the same side of the cohort", () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(3 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -392,7 +399,7 @@ it("a locked city's boarding swap takes a partner from the same group and the sa
 });
 
 it("a city's key-worker chart is exactly its cohort's rise in people who have caught it, group by group", () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(5 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -414,7 +421,7 @@ it("a city's key-worker chart is exactly its cohort's rise in people who have ca
  * a group's rise can fall below 0. Here ill key workers board straight after a 1-tick lockdown.
  */
 it.each([1, 2, 3])('a group whose rise falls below 0 shows as 0, not less (seed %i)', (seed) => {
-	const sim = createSimulation(microcosm(0), { seed, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(microcosm(0)), { seed, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(10 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });
@@ -435,7 +442,7 @@ it.each([1, 2, 3])('a group whose rise falls below 0 shows as 0, not less (seed 
 });
 
 it("an unlocked city's boarding swap always takes the nearest partner, whatever its group", () => {
-	const sim = createSimulation(travelling(3), { seed: 2, diseaseId: 'covid19' });
+	const sim = createSimulation(noCaution(travelling(3)), { seed: 2, diseaseId: 'covid19' });
 	sim.seedNow(0, INDEX_CASES);
 	sim.step(3 * TICKS_PER_DAY);
 	sim.send({ type: 'lockdown', region: 0, on: true });

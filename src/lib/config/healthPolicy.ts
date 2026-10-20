@@ -5,7 +5,8 @@ import {
 	KEY_WORKER_SHARE,
 	KH03_Q2_2023,
 	LOCKDOWN_COMPLIANCE,
-	ONS_KEY_WORKERS_2019
+	ONS_KEY_WORKERS_2019,
+	WOSKIE_2021_SWEDEN_AWAY_FALL
 } from './derived';
 import { POPULATION } from './population';
 
@@ -34,6 +35,13 @@ export interface HealthPolicy {
 	 * dots where at least one stays home has its chance scaled by 1 minus this, once. Live.
 	 */
 	lockdownContactCut: Sourced;
+	/**
+	 * The most people who aren't key workers stay in by choice, reached as deaths here rise (6.18):
+	 * caution = this x D / (D + D half), D the deaths here in the last days per 100,000. Live.
+	 */
+	cautionShare: Sourced;
+	/** The contact cut for people staying in by choice (6.18), borrowed from the lockdown figure. Live. */
+	cautionContactCut: Sourced;
 	/** Share of silent cases a mass test finds. Engine hook in step 3. */
 	testingReach: Sourced;
 	/** Days before a population can mass test again. Engine hook in step 3. */
@@ -127,8 +135,31 @@ export const LOCKDOWN_POLICY_FIELDS = [
 	explain: string;
 }[];
 
+/** The caution slider (6.18), with its own heading on the card. */
+export const CAUTION_POLICY_FIELDS = [
+	{
+		key: 'cautionShare',
+		label: 'Stay in when deaths are high',
+		min: 0,
+		max: 1,
+		step: 0.01,
+		format: (v: number) => `${Math.round(v * 100)}%`,
+		explain: `In the model, how many people who aren't key workers choose to stay in when deaths here are high. The default, ${Math.round(WOSKIE_2021_SWEDEN_AWAY_FALL * 100)}%, is at most 1 in ${Math.round(1 / WOSKIE_2021_SWEDEN_AWAY_FALL)}: a general estimate from Sweden, spring 2020. It acts once people die of it here.`
+	}
+] as const satisfies readonly {
+	key: keyof HealthPolicy;
+	label: string;
+	min: number;
+	max: number;
+	step: number;
+	format: (v: number) => string;
+	explain: string;
+}[];
+
 export type LivePolicyKey =
-	(typeof LIVE_POLICY_FIELDS)[number]['key'] | (typeof LOCKDOWN_POLICY_FIELDS)[number]['key'];
+	| (typeof LIVE_POLICY_FIELDS)[number]['key']
+	| (typeof LOCKDOWN_POLICY_FIELDS)[number]['key']
+	| (typeof CAUTION_POLICY_FIELDS)[number]['key'];
 
 const TESTING_PLACEHOLDER = 'Mass testing arrives in step 3, with its sourced reach and cooldown.';
 
@@ -142,6 +173,8 @@ export const DEFAULT_POLICY: HealthPolicy = {
 	lockdownContactCut: BEHAVIOUR.lockdownContactCut,
 	lockdownFatigueMeanDays: BEHAVIOUR.lockdownFatigueMeanDays,
 	lockdownFatigueSdDays: BEHAVIOUR.lockdownFatigueSdDays,
+	cautionShare: BEHAVIOUR.cautionShare,
+	cautionContactCut: BEHAVIOUR.cautionContactCut,
 	testingReach: { value: 1, sources: [], provisional: TESTING_PLACEHOLDER },
 	testingCooldownDays: { value: 7, sources: [], provisional: TESTING_PLACEHOLDER },
 	travelFrequency: {

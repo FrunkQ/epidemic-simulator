@@ -123,7 +123,15 @@ describe('citations', () => {
 	});
 
 	it('labels the behaviour research from COVID-19 the same way', () => {
-		const behaviour = CITATIONS.filter((c) => c.usedFor.some((u) => u.startsWith('behaviour.lockdown')));
+		// Every behaviour study from 2020 on (lockdown, caution, hospital strain); official data such as
+		// bed counts and population is labelled by its own country and year.
+		const behaviour = CITATIONS.filter(
+			(c) =>
+				c.usedFor.some((u) => u.startsWith('behaviour.')) &&
+				c.evidence !== 'official' &&
+				typeof c.year === 'number' &&
+				c.year >= 2020
+		);
 		expect(behaviour.length).toBeGreaterThan(0);
 		for (const c of behaviour) expect(c.context, c.id).toBe('COVID-19 era');
 	});
@@ -145,7 +153,7 @@ describe('citations', () => {
 		}
 	});
 
-	it('names each UK figure that stands in for the general (EU) default, with its reason', () => {
+	it('names each one-country figure that stands in for the general (EU) default, with its reason', () => {
 		expect(COUNTRY_EXEMPTIONS.length).toBeGreaterThan(0);
 		// Each named exemption is still a use of that source, by an exact key, with its reason.
 		for (const e of COUNTRY_EXEMPTIONS) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withCaution } from './helpers';
 import { DISEASES } from '../../src/lib/config/diseases';
 import { CALIBRATION } from '../../src/lib/config/diseases.generated';
 import { singleCity } from '../../src/lib/config/scenarios';
@@ -46,7 +47,9 @@ describe('ever infected', () => {
 			waningMeanTicks: (20 * TICKS_PER_DAY) / Math.LN2,
 			afterInfectionSevere: 0
 		};
-		const scenario = singleCity({ population: 100_000 });
+		// Caution (6.18) at 0: it slows spread once people die, and this needs enough infections to
+		// pass the population.
+		const scenario = withCaution(singleCity({ population: 100_000 }), 0);
 		for (const r of scenario.regions) {
 			r.vaccinatedFull = 0;
 			r.vaccinatedPartial = 0;

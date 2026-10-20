@@ -1,6 +1,7 @@
+import { expect } from 'vitest';
 import { singleCity } from '../../src/lib/config/scenarios';
 import { createSimulation, type Simulation } from '../../src/lib/sim/engine';
-import type { DiseaseId, Region } from '../../src/lib/sim/types';
+import type { DiseaseId, Region, Scenario } from '../../src/lib/sim/types';
 import { TICKS_PER_DAY } from '../../src/lib/sim/constants';
 
 export function cityRun(id: DiseaseId, seed: number, region: Partial<Region> = {}): Simulation {
@@ -23,7 +24,17 @@ export function runOut(sim: Simulation, maxDays: number): void {
 export function shareOf(seeds: number, pass: (seed: number) => boolean): number {
 	let ok = 0;
 	for (let s = 1; s <= seeds; s++) if (pass(s)) ok++;
-	return ok / seeds;
+	return reportShare(ok / seeds);
+}
+
+/**
+ * A lesson's pass share, printed with its test's name when LESSON_SHARES=1, so a change such as
+ * caution (6.18) can report every lesson's share before and after.
+ */
+export function reportShare(share: number): number {
+	if (process.env.LESSON_SHARES)
+		console.log(`pass share ${share.toFixed(2)}: ${expect.getState().currentTestName}`);
+	return share;
 }
 
 /**
@@ -46,4 +57,16 @@ export function attackRate(full: number, seed: number): number {
 	const unprotected = sim.unprotectedPeople(0);
 	const r = sim.snapshot().regions[0];
 	return (r.counts.everInfected - LESSON1_IMPORTED_PEOPLE) / (unprotected - LESSON1_IMPORTED_PEOPLE);
+}
+
+/**
+ * `scenario` with every city's caution (6.18) at `share`: 0 for tests of other mechanics, such as
+ * the lockdown's, which caution would otherwise mix into once people die.
+ */
+export function withCaution<S extends Scenario>(scenario: S, share: number): S {
+	for (const region of scenario.regions) {
+		const p = region.policy;
+		region.policy = { ...p, cautionShare: { ...p.cautionShare, value: share } };
+	}
+	return scenario;
 }

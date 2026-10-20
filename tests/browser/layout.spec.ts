@@ -1020,15 +1020,18 @@ test.describe('with classic scrollbars', () => {
 			await page.getByRole('button', { name: 'Paused' }).click();
 			await card.getByRole('button', { name: 'Health policy' }).click();
 			await settle(page);
-			await card.locator('.lockcharts').scrollIntoViewIfNeeded();
-			const sideways = await card.evaluate((el) => {
-				const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
-					const o = getComputedStyle(e).overflowX;
-					return o === 'auto' || o === 'scroll';
+			// Every chart block shown by day 20 (caution's has its own test below).
+			for (const charts of await card.locator('.lockcharts').all()) {
+				await charts.scrollIntoViewIfNeeded();
+				const sideways = await card.evaluate((el) => {
+					const scroller = [el, ...el.querySelectorAll('*')].filter((e) => {
+						const o = getComputedStyle(e).overflowX;
+						return o === 'auto' || o === 'scroll';
+					});
+					return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
 				});
-				return scroller.filter((e) => e.scrollWidth > e.clientWidth + 0.5).map((e) => e.className);
-			});
-			expect(sideways).toEqual([]);
+				expect(sideways).toEqual([]);
+			}
 			expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
 			await expect(
 				card.getByText(
@@ -1039,6 +1042,50 @@ test.describe('with classic scrollbars', () => {
 		});
 	}
 });
+
+/*
+ * Caution in an open card once deaths have kept people in (Ebola, which kills soon): the chart
+ * shows and fits, the deaths line and the share are visible text, the slider says its value, and
+ * the three papers' links open in a new tab and say so to a screen reader.
+ */
+for (const font of [undefined, 'DejaVu Sans']) {
+	test(`1366x768${font ? ` in ${font}` : ''}: caution's chart, deaths line, slider and links in an open card`, async ({
+		page
+	}) => {
+		test.setTimeout(120_000);
+		if (font) await forceFont(page, font);
+		await open(page, 1366, 768);
+		if (font) await requireFont(page, font);
+		await page.selectOption('select', 'ebola');
+		await settle(page);
+		const card = page.locator('section.card').first();
+		// Paused, so the cases all start together, and ten of them, so the outbreak never fizzles.
+		await page.getByRole('button', { name: 'Paused' }).click();
+		for (let k = 0; k < 10; k++) await card.getByRole('button', { name: /^Bring in/ }).click();
+		await card.getByRole('button', { name: 'Health policy' }).click();
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		const chart = card.locator('.lockcharts figure', { hasText: 'Kept in by caution' });
+		await expect(chart).toBeVisible({ timeout: 60_000 });
+		await page.getByRole('button', { name: 'Paused' }).click();
+		await settle(page);
+		await chart.scrollIntoViewIfNeeded();
+		expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
+		const line = card.getByText(
+			/^Deaths here in the last \d+ days: (\d[\d,.]*|under 0\.1) per 100,000; about (\d+%|under 1%) of people who aren't key workers are staying in out of caution\.$/
+		);
+		await expect(line).toBeVisible();
+		// With deaths in the window, some people are staying in.
+		await expect(line).not.toHaveText(/: 0 per 100,000/);
+		const slider = card.getByRole('slider', { name: /^Stay in when deaths are high/ });
+		await expect(slider).toHaveAttribute('aria-valuetext', /^\d+%$/);
+		await expect(card.getByText(/The default, \d+%, is at most 1 in \d+/)).toBeVisible();
+		for (const name of ['Weitz 2020', 'Gupta 2020 (PDF)', 'Goolsbee 2021']) {
+			const link = card.getByRole('link', { name: `${name} (opens in a new tab)` });
+			await expect(link).toHaveAttribute('target', '_blank');
+			await expect(link).toHaveAttribute('href', /^https:\/\//);
+		}
+	});
+}
 
 /*
  * Going backwards with Shift+Tab, each control in an open card, and the label line naming it, shows
@@ -1072,6 +1119,9 @@ for (const classic of [false, true]) {
 						await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
 					}
 					await card.getByRole('button', { name: 'Health policy' }).click();
+					// The lockdown's charts mount once its first tick is shown, a tick and a telemetry
+					// publish after the button press: walk the controls only once they are there.
+					if (classic) await expect(card.locator('.lockcharts')).not.toHaveCount(0);
 					await settle(page);
 					// Start at the card's last control and go back up through it with Shift+Tab.
 					await card.evaluate((el) => {
@@ -1118,6 +1168,44 @@ for (const classic of [false, true]) {
 		}
 	}
 }
+
+test("charts that appear below a focused control in an open card don't leave it out of view", async ({
+	page
+}) => {
+	await open(page, 1366, 768);
+	const card = page.locator('section.card').first();
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await card.getByRole('button', { name: 'Health policy' }).click();
+	await settle(page);
+	// Keyboard focus on the card's last control: focus the one before it, then Tab.
+	await card.evaluate((el) => {
+		const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+		all[all.length - 2].focus();
+	});
+	await page.keyboard.press('Tab');
+	const inView = () =>
+		card.evaluate((el) => {
+			const f = document.activeElement as HTMLElement;
+			const r = f.getBoundingClientRect();
+			const head = el.querySelector('header')!.getBoundingClientRect();
+			const bottom = el.getBoundingClientRect().top + el.clientTop + el.clientHeight;
+			return el.contains(f) && r.top >= head.bottom - 0.5 && r.bottom <= bottom + 0.5;
+		});
+	expect(await inView()).toBe(true);
+	// Lock the city and run a tick without moving focus, so the lockdown's charts mount above it.
+	await card.evaluate((el) => {
+		[...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Lockdown')!.click();
+	});
+	await page.evaluate(() =>
+		[...document.querySelectorAll('button')]
+			.find((b) => /\(1×\)/.test(b.getAttribute('aria-label') ?? b.textContent ?? ''))!
+			.click()
+	);
+	await expect(card.locator('.lockcharts')).not.toHaveCount(0);
+	await page.evaluate(() => document.querySelector<HTMLButtonElement>('[aria-label="Paused"]')!.click());
+	await settle(page);
+	expect(await inView(), 'the focused control is still in view').toBe(true);
+});
 
 /*
  * Keyboard focus scrolls a slider's label line into view, but pressing the mouse on a slider, or

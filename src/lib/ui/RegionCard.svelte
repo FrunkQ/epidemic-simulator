@@ -10,9 +10,14 @@
 	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { loadDisease } from '../config';
 	import { BEHAVIOUR } from '../config/behaviour';
-	import { LOCKDOWN_CONTACT_CUT } from '../config/derived';
+	import { CAUTION_CONTACT_CUT, CAUTION_WINDOW_DAYS, LOCKDOWN_CONTACT_CUT } from '../config/derived';
 	import { ERA_DEATH_RATE, ERA_DEATH_RATE_SHORT } from '../config/careBasis';
-	import { LIVE_POLICY_FIELDS, LOCKDOWN_POLICY_FIELDS, type LivePolicyKey } from '../config/healthPolicy';
+	import {
+		CAUTION_POLICY_FIELDS,
+		LIVE_POLICY_FIELDS,
+		LOCKDOWN_POLICY_FIELDS,
+		type LivePolicyKey
+	} from '../config/healthPolicy';
 	import { vaccineKey } from '../config/vaccines';
 	import { waningWords } from '../config/waning';
 	import { overallSevere, unvaccinatedShare, vaccineFor } from '../sim/disease';
@@ -29,6 +34,7 @@
 	import LineChart from './charts/LineChart.svelte';
 	import StackedAreaChart from './charts/StackedAreaChart.svelte';
 	import { percentReading } from './charts/scale';
+	import { CAUTION_READING } from './cautionReading';
 	import { harmText } from './harmText';
 
 	interface Props {
@@ -116,6 +122,16 @@
 	/** The charts fill the panel's measured width, whatever the scrollbar and docking leave. */
 	let lockChartsWidth = $state(0);
 	const lockChartW = $derived(Math.max(140, Math.floor(lockChartsWidth || 178)));
+	let cautionChartsWidth = $state(0);
+	const cautionChartW = $derived(Math.max(140, Math.floor(cautionChartsWidth || 178)));
+	/** Whether caution has kept anyone in here yet this run: its chart shows from then on. */
+	const hadCaution = $derived(history ? history.series.cautionShare.some((v) => v > 0) : false);
+	/**
+	 * Deaths per 100,000: whole numbers from 10 (including what rounds to 10), one decimal below,
+	 * "0" for none, and never 0 for a death.
+	 */
+	const perHundredThousand = (v: number) =>
+		v <= 0 ? '0' : v < 0.05 ? 'under 0.1' : v >= 9.95 ? Math.round(v).toLocaleString() : v.toFixed(1);
 	const lockStatus = $derived(lockOn ? `Locked down since day ${lockSince}` : 'No lockdown');
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
@@ -135,6 +151,20 @@
 	function showLabel(e: FocusEvent) {
 		if (!open || !(e.target as Element).matches(':focus-visible')) return;
 		(e.target as Element).closest('label')?.scrollIntoView({ block: 'nearest' });
+	}
+	/**
+	 * Charts that mount while a control in this card has keyboard focus (the lockdown's once its
+	 * first tick is shown, caution's once deaths keep anyone in) push everything below them down,
+	 * which could leave the focused control out of view. Once they are laid out, scroll it (and its
+	 * label line) back into view, as the focus handler does.
+	 */
+	function keepFocusInView(charts: HTMLElement) {
+		requestAnimationFrame(() => {
+			const f = document.activeElement;
+			if (!charts.isConnected) return;
+			if (!element?.contains(f) || !f?.matches(':focus-visible')) return;
+			(f.closest('label') ?? f).scrollIntoView({ block: 'nearest' });
+		});
 	}
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
@@ -483,6 +513,7 @@
 			<p class="note">
 				Still going out: <b>{people(t.out.key)}</b> key workers, <b>{people(t.out.ignoring)}</b> not keeping
 				to it and <b>{people(t.out.tired)}</b> tired of it, out of the {people(t.underLockdown)} people here.
+				{#if t.keptInByCaution > 0}{`${people(t.keptInByCaution)} more stay in out of caution.`}{/if}
 			</p>
 		{/if}
 		{#each LOCKDOWN_POLICY_FIELDS as f (f.key)}
@@ -502,7 +533,7 @@
 			</label>
 		{/each}
 		{#if hadLockdown && history && t}
-			<div class="lockcharts" bind:clientWidth={lockChartsWidth}>
+			<div class="lockcharts" bind:clientWidth={lockChartsWidth} use:keepFocusInView>
 				<StackedAreaChart
 					title="{region.name}: people out during the lockdown, by reason"
 					caption="Out in lockdown"
@@ -570,6 +601,69 @@
 				<p class="note">
 					A person-day is one person living in a locked-down city for one day: {people(t.personDays)} so far.
 				</p>
+			</div>
+		{/if}
+		<h3>Caution</h3>
+		<p class="note">
+			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: worked out from a survey of all UK adults, people still going to work included, in the first week of the March 2020 lockdown; no study we found has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported.`}
+		</p>
+		<p class="note">
+			In US data from spring 2020, people went out more again before deaths peaked (<a
+				href={CAUTION_READING.weitz.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.weitz.name}<span class="sr-only"> (opens in a new tab)</span></a
+			>) and mostly before official reopenings (<a
+				href={CAUTION_READING.gupta.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.gupta.name} (PDF)<span class="sr-only"> (opens in a new tab)</span></a
+			>), and visits to businesses fell more in counties with more reported deaths (<a
+				href={CAUTION_READING.goolsbee.url}
+				target="_blank"
+				rel="noopener">{CAUTION_READING.goolsbee.name}<span class="sr-only"> (opens in a new tab)</span></a
+			>).
+		</p>
+		{#each CAUTION_POLICY_FIELDS as f (f.key)}
+			{@const value = region.policy[f.key].value}
+			<label>
+				<span>{f.label} <b>{f.format(value)}</b></span>
+				<input
+					type="range"
+					min={f.min}
+					max={f.max}
+					step={f.step}
+					{value}
+					aria-valuetext={f.format(value)}
+					onchange={(e) => onpolicy(f.key, Number(e.currentTarget.value))}
+				/>
+				<small>{f.explain}</small>
+			</label>
+		{/each}
+		{#if t}
+			<!-- Shown as text, so keyboard, touch and screen readers reach the numbers, not only the chart. -->
+			<p class="note">
+				{`Deaths here in the last ${CAUTION_WINDOW_DAYS} days: ${perHundredThousand(t.recentDeaths)} per 100,000; about ${pctOf(t.cautionShare)} of people who aren't key workers are staying in out of caution${t.lockedDown ? ', besides those the lockdown keeps home' : ''}.`}
+			</p>
+		{/if}
+		{#if hadCaution && history}
+			<div class="lockcharts" bind:clientWidth={cautionChartsWidth} use:keepFocusInView>
+				<LineChart
+					title="{region.name}: people kept in by caution, as a share of people who aren't key workers"
+					caption="Kept in by caution"
+					days={lockdownDays}
+					lines={[
+						{
+							key: 'caution',
+							label: "Of people who aren't key workers",
+							colour: '#cfd6de',
+							values: Array.from(history.series.cautionShare, (v) => v * 100)
+						}
+					]}
+					unit="%"
+					yLabel="% kept in"
+					width={cautionChartW}
+					tipBelow
+					keyless
+				/>
 			</div>
 		{/if}
 	{/if}
@@ -710,6 +804,15 @@
 </section>
 
 <style>
+	/* Read out, not shown: the caution links open in a new tab. */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
 	.card {
 		position: absolute;
 		width: 230px;
@@ -862,6 +965,9 @@
 	.note {
 		margin: 2px 0 4px;
 		color: #9fb3c8;
+	}
+	.note a {
+		color: #9cc3ea;
 	}
 	.counts {
 		display: flex;

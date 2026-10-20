@@ -8,7 +8,11 @@ import {
 	LOCKDOWN_COMPLIANCE,
 	LOCKDOWN_CONTACT_CUT,
 	LOCKDOWN_FATIGUE_MEAN_DAYS,
-	STRAIN
+	CAUTION_CONTACT_CUT,
+	CAUTION_HALF_DEATHS_PER_100K,
+	CAUTION_WINDOW_DAYS,
+	STRAIN,
+	WOSKIE_2021_SWEDEN_AWAY_FALL
 } from './derived';
 
 /**
@@ -26,6 +30,14 @@ export interface BehaviourConfig {
 	lockdownFatigueMeanDays: Sourced;
 	/** Spread of that point between people, in days. */
 	lockdownFatigueSdDays: Sourced;
+	/** The most people who aren't key workers stay in by choice when deaths here are high (6.18). */
+	cautionShare: Sourced;
+	/** How much less contact outside the home people staying in by choice have (6.18). */
+	cautionContactCut: Sourced;
+	/** Deaths in the window per 100,000 people at which caution is half its full level (6.18). */
+	cautionHalfDeathsPer100k: Sourced;
+	/** How many days of deaths people react to (6.18). */
+	cautionWindowDays: Sourced;
 	/** Default hospital beds for short-term (curative) care per 1,000 people for a new population. */
 	hospitalBedsPerThousand: Sourced;
 	/** Share of those beds normally free (1 - normal occupancy), so only spare beds count as capacity. */
@@ -74,6 +86,26 @@ export const BEHAVIOUR: BehaviourConfig = {
 		value: 20,
 		sources: ['petherick2021-pandemic-fatigue'],
 		provisional: 'An assumption shown against Petherick 2021.'
+	},
+	cautionShare: {
+		value: WOSKIE_2021_SWEDEN_AWAY_FALL,
+		sources: ['woskie2021-europe-mobility', 'sheridan2020-scandinavia', 'mendolia2021-mobility-information']
+	},
+	cautionContactCut: {
+		value: CAUTION_CONTACT_CUT,
+		sources: ['jarvis2020-comix-uk', 'liu2021-contact-review']
+	},
+	cautionHalfDeathsPer100k: {
+		value: CAUTION_HALF_DEATHS_PER_100K,
+		sources: [],
+		provisional:
+			'No study found gives a half-response in deaths per person. Weitz 2020 (PNAS, doi 10.1073/pnas.2009911117) uses the same shape when its sharpness k is 1 with a half-saturation constant, but sweeps it for illustration rather than fitting it; Rahmandad 2021 (Syst Dyn Rev, doi 10.1002/sdr.1673) fits a response to perceived death risk in 92 nations, in a supplement not yet read. Chosen so caution is about half on when deaths are clearly visible locally.'
+	},
+	cautionWindowDays: {
+		value: CAUTION_WINDOW_DAYS,
+		sources: [],
+		provisional:
+			'No study found gives a fixed window of days of deaths people react to. Zhang 2025 (BMC Med Res Methodol, doi 10.1186/s12874-025-02696-x) finds US mobility followed deaths with a fading delay of about 3.2 weeks on average (Oct 2020-Jul 2021), which points to a longer memory than 14 days; ECDC reported COVID-19 deaths over 14 days: a reporting window, not how long people reacted.'
 	},
 	hospitalBedsPerThousand: { value: EU_CURATIVE_BEDS_PER_1000, sources: ['eurostat-curative-beds-2023'] },
 	spareBedShare: { value: 1 - EU_CURATIVE_OCCUPANCY, sources: ['eurostat-curative-occupancy-2023'] },
