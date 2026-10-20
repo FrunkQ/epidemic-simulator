@@ -7,7 +7,8 @@ const MARKS =
 /** Each map view in one short line, for the legend; "more" there opens the full text below. */
 export const DOT_SHORT = {
 	specks: 'A bright speck is one infected person, drawn larger than life; pale specks show deaths.',
-	shading: 'A dot tints orange or red with its first case; light tints are faint, and Specks shows each case.'
+	shading:
+		'A dot tints orange with its first case and red where most of its cases are ill; light tints are faint.'
 } as const;
 
 /**
