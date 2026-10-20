@@ -601,7 +601,7 @@
 			>) and mostly before official reopenings (<a
 				href={CAUTION_READING.gupta.url}
 				target="_blank"
-				rel="noopener">{CAUTION_READING.gupta.name}<span class="sr-only"> (opens in a new tab)</span></a
+				rel="noopener">{CAUTION_READING.gupta.name} (PDF)<span class="sr-only"> (opens in a new tab)</span></a
 			>), and visits to businesses fell more in counties with more reported deaths (<a
 				href={CAUTION_READING.goolsbee.url}
 				target="_blank"
