@@ -543,11 +543,14 @@ test('the blurb\'s "more" shows the whole text over the map, and Escape closes i
 	await page.selectOption('select', 'plague');
 	await settle(page);
 	const before = await probe(page);
-	const more = page.getByRole('button', { name: 'more' });
+	const more = page.locator('header').getByRole('button', { name: 'more' });
 	await expect(more).toHaveAttribute('aria-expanded', 'false');
 	await more.click();
 	await expect(page.locator('#blurb-full')).toContainText('before antibiotics');
-	await expect(page.getByRole('button', { name: 'less' })).toHaveAttribute('aria-expanded', 'true');
+	await expect(page.locator('header').getByRole('button', { name: 'less' })).toHaveAttribute(
+		'aria-expanded',
+		'true'
+	);
 	await settle(page);
 	const after = await probe(page);
 	expect(after.stage).toEqual(before.stage);
@@ -577,7 +580,7 @@ for (const [from, to] of [
 		await requireFont(page, 'DejaVu Sans');
 		await page.selectOption('select', 'plague');
 		await settle(page);
-		await page.getByRole('button', { name: 'more' }).click();
+		await page.locator('header').getByRole('button', { name: 'more' }).click();
 		await expect(page.locator('#blurb-full')).toHaveCount(1);
 		await page.setViewportSize({ width: to[0], height: to[1] });
 		await settle(page);
@@ -675,7 +678,7 @@ test('the blurb\'s "more" overlay stays open on a new height alone', async ({ pa
 	await requireFont(page, 'DejaVu Sans');
 	await page.selectOption('select', 'plague');
 	await settle(page);
-	await page.getByRole('button', { name: 'more' }).click();
+	await page.locator('header').getByRole('button', { name: 'more' }).click();
 	await expect(page.locator('#blurb-full')).toHaveCount(1);
 	await page.setViewportSize({ width: 1366, height: 700 });
 	await settle(page);
@@ -1200,7 +1203,7 @@ test(`the legend's "more" shows the whole text for the view in use, and Escape, 
 	page
 }) => {
 	await open(page, 1366, 768);
-	const more = page.locator('.legend').getByRole('button', { name: 'more' });
+	const more = page.locator('.legend button.more');
 	const full = page.locator('#legend-full');
 	await page.locator('.legend').getByRole('button', { name: 'Specks' }).click();
 	await page.keyboard.press('Tab');
