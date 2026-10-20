@@ -6,19 +6,34 @@
  *   is drawn as their own bright speck in a small patch around their dot, each death as a pale one.
  *   The first cases show at any zoom.
  * - Shading: dots dimmed the same way, and any infected person moves a dot at least SHADE_FLOOR of
- *   the way to orange or red, solid once SHADE_FULL_SHARE of its people are infected.
+ *   the way to orange or red (lifted, INFECTED_LIFT), solid once SHADE_FULL_SHARE of its people are
+ *   infected. Until it is solid, a 1 px outline in the lifted colour (SHADE_RING_PX) marks it, so
+ *   it reads as infected whatever colour vision a viewer has; a solid dot's fill does that alone.
  */
 export type MapLook = 'specks' | 'shading';
 export const MAP_LOOKS: readonly MapLook[] = ['specks', 'shading'];
 export const DEFAULT_LOOK: MapLook = 'specks';
 
-/** How far healthy, recovered and dead dots keep their own colour against the land (0 is land). */
-export const HEALTHY_DIM = 0.42;
-export const RECOVERED_DIM = 0.55;
-export const DEAD_DIM = 0.6;
+/**
+ * How far each dot keeps its own colour against the land (0 is land), set per colour so that every
+ * pair either view draws, under normal vision and protan, deutan and tritan colour blindness, is
+ * at least as far apart as the closest pair of full colours on the old map (colours.test.ts).
+ */
+export const UNPROTECTED_DIM = 0.3;
+export const FULL_DIM = 0.53;
+export const PARTIAL_DIM = 0.61;
+export const RECOVERED_DIM = 0.5;
+export const DEAD_DIM = 0.91;
+/**
+ * How far infected people's specks, and Shading's outline, move from orange and red toward white,
+ * so they stand apart from the dimmed dots by lightness as well as colour (same check).
+ */
+export const INFECTED_LIFT = 0.29;
 
 /** Shading: the least a dot with anyone infected moves toward the infected colour. */
 export const SHADE_FLOOR = 0.4;
+/** Shading: the outline round a dot with anyone infected that is not yet solid, in CSS pixels. */
+export const SHADE_RING_PX = 1;
 /** Shading: the share of a dot's people infected at which it is solid. */
 export const SHADE_FULL_SHARE = 0.25;
 /** Shading strengths are drawn in steps this size, so the styles can be made once. */
@@ -32,6 +47,16 @@ export const SPECK_PATCH = 0.75;
  * says so, and the numbers on the cards stay exact.
  */
 export const SPECK_MIN_CSS = 1.5;
+
+/** The smallest speck in device pixels at a device scale: never under SPECK_MIN_CSS CSS pixels. */
+export const speckMinSide = (dpr: number) => Math.ceil(SPECK_MIN_CSS * dpr - 1e-9);
+
+/**
+ * How many specks a dot's patch can show apart, at most: its area over one speck's, doubled for
+ * the overlap of spots. Past that, more specks repaint the same pixels, so they are left out.
+ */
+export const speckCap = (patchPx: number, side: number) =>
+	Math.max(1, Math.ceil((2 * Math.PI * (patchPx + side) * (patchPx + side)) / (side * side)));
 
 export type Rgb = readonly [number, number, number];
 
@@ -135,11 +160,12 @@ function scratch(n: number): Float32Array {
 }
 
 /**
- * Paints each dot's dead, then (over every death, so none is covered) its infected people, one
- * square each, into `buf` (W × H pixels). Clears `box`, last frame's painted area, first and sets
- * it to this frame's. Returns how many infected people were painted: a speck that would cross the
- * edge of the layer is left out, so with the whole map in view this is every infected person
- * outside a plane.
+ * Paints each dot's dead, then over them its infected people, one square each, at least
+ * `minSide`, into `buf` (W × H pixels), so a death shows where no case is drawn over it. A dot's
+ * ill and silent people are interleaved, so neither colour is painted over the other wholesale.
+ * Each pass paints at most speckCap specks a dot: more would repaint the same pixels. Clears
+ * `box`, last frame's painted area, first and sets it to this frame's. Returns how many infected
+ * people's specks were painted: one that would cross the edge of the layer is left out.
  */
 export function paintSpecks(
 	buf: Uint32Array,
@@ -158,17 +184,17 @@ export function paintSpecks(
 	const spots = speckSpots(per);
 	const stride = speckStride(per);
 	const rs = f.patch * f.scale;
-	// The ground one person's share of the patch covers, 70% of it, at least 1 device pixel.
+	// The ground one person's share of the patch covers, 70% of it, at least minSide.
 	const natural = Math.min(f.maxSide, Math.max(1, Math.floor(0.7 * rs * Math.sqrt(Math.PI / per))));
-	const infectedSide = Math.max(natural, f.minSide);
+	const side = Math.max(natural, f.minSide);
+	const half = side / 2;
+	const cap = speckCap(rs, side);
 	// Each spot's offset in device pixels this frame, and the stride as a step below per.
 	const ox = scratch(2 * per);
 	for (let k = 0; k < 2 * per; k++) ox[k] = spots[k] * rs;
 	const step = stride % per;
 	let painted = 0;
 	for (let pass = 0; pass < 2; pass++) {
-		const side = pass === 0 ? natural : infectedSide;
-		const half = side / 2;
 		// A dot whose whole patch is on the layer needs no check per person.
 		const reach = rs + side + 1;
 		for (let k = 0; k < f.count; k++) {
@@ -176,8 +202,12 @@ export function paintSpecks(
 			const dead = people.dead[i];
 			const ill = people.ill[i];
 			const from = pass === 0 ? 0 : dead;
-			const to = pass === 0 ? dead : dead + ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
-			if (from >= to) continue;
+			const all = pass === 0 ? dead : dead + ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
+			if (from >= all) continue;
+			const to = Math.min(all, from + cap);
+			// Bresenham along the infected: ill specks are spread among the silent ones in proportion.
+			const infected = all - dead;
+			let acc = infected >> 1;
 			// Half a pixel added, so truncating below rounds to the nearest pixel.
 			const cx = (f.x[i] - f.ox) * f.scale - half + 0.5;
 			const cy = (f.y[i] - f.oy) * f.scale - half + 0.5;
@@ -185,10 +215,17 @@ export function paintSpecks(
 			// Each dot starts its people at its own spot, so neighbours' patches don't line up.
 			let slot = (((i * 13) % per) + from * step) % per;
 			for (let j = from; j < to; j++, slot = slot + step >= per ? slot + step - per : slot + step) {
+				let colour = f.colours.dead;
+				if (pass === 1) {
+					acc += ill;
+					if (acc >= infected) {
+						acc -= infected;
+						colour = f.colours.ill;
+					} else colour = f.colours.silent;
+				}
 				const px = Math.floor(cx + ox[2 * slot]);
 				const py = Math.floor(cy + ox[2 * slot + 1]);
 				if (!inside && (px < 0 || py < 0 || px + side > W || py + side > H)) continue;
-				const colour = j < dead ? f.colours.dead : j < dead + ill ? f.colours.ill : f.colours.silent;
 				// Plain writes: a fill() call per row costs more than the few pixels a speck has.
 				for (let row = 0, o = py * W + px; row < side; row++, o += W)
 					for (let col = 0; col < side; col++) buf[o + col] = colour;

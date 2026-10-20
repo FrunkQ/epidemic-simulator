@@ -4,7 +4,10 @@ import { createSimulation, type Simulation } from '../../src/lib/sim/engine';
 import {
 	SHADE_FLOOR,
 	SHADE_FULL_SHARE,
+	SPECK_MIN_CSS,
 	paintSpecks,
+	speckCap,
+	speckMinSide,
 	shadeStrength,
 	speckSpots,
 	speckStride,
@@ -145,6 +148,66 @@ describe('specks', () => {
 			}
 		);
 		for (let k = 0; k < alone.length; k++) if (alone[k]) expect(buf[k]).toBe(alone[k]);
+	});
+
+	it('never draws a speck under SPECK_MIN_CSS CSS pixels, at any device scale', () => {
+		for (const dpr of [1, 1.25, 1.5, 1.75, 2, 2.25, 3]) {
+			const minSide = speckMinSide(dpr);
+			expect(minSide / dpr, `dpr ${dpr}`).toBeGreaterThanOrEqual(SPECK_MIN_CSS);
+			// One death and one case, each alone in its own dot, painted at that floor.
+			const W = 80;
+			const buf = new Uint32Array(W * W);
+			const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+			const p = people(100, [
+				[1, 0, 0],
+				[0, 1, 0]
+			]);
+			const at: [number, number][] = [
+				[20, 20],
+				[60, 60]
+			];
+			paintSpecks(buf, W, W, p, frame(2, at, { patch: 0.5, minSide, maxSide: 6 }), box);
+			const t = tally(buf);
+			expect(t[DEAD], `dpr ${dpr}: a death`).toBe(minSide * minSide);
+			expect(t[ILL], `dpr ${dpr}: a case`).toBe(minSide * minSide);
+		}
+	});
+
+	it("shows ill and silent people in about their shares, even where a dot's specks overlap", () => {
+		// The default frame: a patch about 3 device pixels across holding 100 people.
+		const W = 400;
+		const buf = new Uint32Array(W * W);
+		const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+		const mixes: [number, number, number][] = [];
+		const at: [number, number][] = [];
+		for (let k = 0; k < 100; k++) {
+			const ill = 10 + ((k * 37) % 80);
+			mixes.push([0, ill, 100 - ill - (k % 7)]);
+			at.push([20 + (k % 10) * 36, 20 + Math.floor(k / 10) * 36]);
+		}
+		paintSpecks(buf, W, W, people(100, mixes), frame(100, at, { patch: 1.5, minSide: 2 }), box);
+		// Over the map, as a city's card counts them, the red share of lit pixels is within a few
+		// points of the ill share (painting all the ill first, then the silent, gave 46% for 74%).
+		const t = tally(buf);
+		const ill = mixes.reduce((s, m) => s + m[1], 0);
+		const infected = mixes.reduce((s, m) => s + m[1] + m[2], 0);
+		expect(Math.abs(t[ILL] / (t[ILL] + t[SILENT]) - ill / infected)).toBeLessThan(0.04);
+	});
+
+	it('paints no more specks a dot than its patch can show apart', () => {
+		const W = 60;
+		const buf = new Uint32Array(W * W);
+		const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+		const drawn = paintSpecks(
+			buf,
+			W,
+			W,
+			people(100, [[0, 50, 50]]),
+			frame(1, [[30, 30]], { patch: 1.5 }),
+			box
+		);
+		expect(drawn).toBe(speckCap(1.5, 2));
+		expect(drawn).toBeLessThan(100);
 	});
 
 	it("clears last frame's specks, so a person who recovers leaves none behind", () => {

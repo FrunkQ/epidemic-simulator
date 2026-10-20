@@ -368,6 +368,8 @@
 	// logs its scale and whether the strip was on the page then, for the first-frame check.
 	if (import.meta.env.VITE_LAYOUT_PROBE === '1') {
 		const probe = window as unknown as {
+			/** The simulation, for the map's frame-time check. */
+			__sim: typeof sim;
 			__layoutProbe: () => unknown;
 			__layoutLog: {
 				scale: number;
@@ -383,6 +385,7 @@
 				mark?: true;
 			}[];
 		};
+		probe.__sim = sim;
 		probe.__layoutProbe = () => ({
 			stage: { ...size },
 			discs: discsOnScreen(),

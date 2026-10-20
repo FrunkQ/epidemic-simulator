@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { DOT_COUNTS } from '../config/dotCounts';
-	import { COLOURS, DIMMED_COLOURS } from '../sim/render';
+	import { onMount } from 'svelte';
+	import { DOT_COUNTS, DOT_SHORT } from '../config/dotCounts';
+	import { DIMMED_COLOURS, LIFTED_COLOURS } from '../sim/render';
 	import { MAP_LOOKS, type MapLook } from '../sim/specks';
 
 	interface Props {
@@ -16,14 +17,69 @@
 
 	const LOOK_LABELS: Record<MapLook, string> = { specks: 'Specks', shading: 'Shading' };
 
-	// Each swatch as the map draws it in each view: a round dot, or a small square speck.
+	// One short line for the view in use; "more" opens the whole text over the map above, as the
+	// header's blurb does, so the legend keeps the map's height (§3).
+	let moreOpen = $state(false);
+	let moreButton = $state<HTMLButtonElement>();
+	let overlay = $state<HTMLDivElement>();
+	const full = $derived(
+		`Each dot stands for ${peoplePerDot.toLocaleString()} ${peoplePerDot === 1 ? 'person' : 'people'}.` +
+			(peoplePerDot > 1 ? ` ${DOT_COUNTS[look]} Every count is real people.` : '')
+	);
+	onMount(() => {
+		// Only a new window width closes it, as for the header's blurb.
+		let windowWidth = innerWidth;
+		const onresize = () => {
+			if (innerWidth !== windowWidth) {
+				windowWidth = innerWidth;
+				moreOpen = false;
+			}
+		};
+		const onkey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && moreOpen) {
+				moreOpen = false;
+				moreButton?.focus();
+			}
+		};
+		const ondown = (e: PointerEvent) => {
+			const t = e.target as Node;
+			if (moreOpen && !overlay?.contains(t) && !moreButton?.contains(t)) moreOpen = false;
+		};
+		addEventListener('resize', onresize);
+		addEventListener('keydown', onkey);
+		addEventListener('pointerdown', ondown);
+		return () => {
+			removeEventListener('resize', onresize);
+			removeEventListener('keydown', onkey);
+			removeEventListener('pointerdown', ondown);
+		};
+	});
+
+	// A dimmed dot is drawn close to the footer's colour, so its swatch gets an edge at 5.2:1 against
+	// the footer (WCAG asks 3:1 for a graphic).
+	const SWATCH_EDGE = '#7f97b0';
+
+	// Each swatch as the map draws it in each view: a round dot, a small square speck, or in Shading
+	// an infected dot with its light outline.
 	const items = $derived(
 		[
 			{ key: 'unprotected', label: 'Not protected', colour: DIMMED_COLOURS.unprotected, speck: false },
 			{ key: 'full', label: 'Fully vaccinated', colour: DIMMED_COLOURS.full, speck: false },
 			{ key: 'partial', label: 'Partly vaccinated', colour: DIMMED_COLOURS.partial, speck: false },
-			{ key: 'silent', label: 'Infected, no symptoms yet', colour: COLOURS.silent, speck: look === 'specks' },
-			{ key: 'symptomatic', label: 'Ill', colour: COLOURS.symptomatic, speck: look === 'specks' },
+			{
+				key: 'silent',
+				label: 'Infected, no symptoms yet',
+				colour: LIFTED_COLOURS.silent,
+				speck: look === 'specks',
+				ring: look === 'shading' ? LIFTED_COLOURS.silent : undefined
+			},
+			{
+				key: 'symptomatic',
+				label: 'Ill',
+				colour: LIFTED_COLOURS.symptomatic,
+				speck: look === 'specks',
+				ring: look === 'shading' ? LIFTED_COLOURS.symptomatic : undefined
+			},
 			{ key: 'recovered', label: 'Recovered', colour: DIMMED_COLOURS.recovered, speck: false },
 			{ key: 'deceased', label: 'Died', colour: DIMMED_COLOURS.deceased, speck: look === 'specks' }
 		].filter(
@@ -43,26 +99,45 @@
 	</span>
 	<span class="items" role="list" aria-label="What the colours mean">
 		{#each items as item (item.key)}
-			<span role="listitem"><i class:speck={item.speck} style:background={item.colour}></i>{item.label}</span>
-		{/each}
-	</span>
-	<!-- Both views' lines sit in one cell, the other hidden, so switching never changes the legend's
-	height and moves the map. -->
-	<span class="scale">
-		{#each MAP_LOOKS as v (v)}
-			<span class:off={v !== look} aria-hidden={v !== look}
-				>Each dot stands for {peoplePerDot.toLocaleString()}
-				{peoplePerDot === 1
-					? 'person'
-					: 'people'}.{#if peoplePerDot > 1}{` ${DOT_COUNTS[v]} Every count is real people.`}{/if}</span
+			<span role="listitem"
+				><i
+					class:speck={item.speck}
+					style:background={item.colour}
+					style:box-shadow={'ring' in item && item.ring
+						? `0 0 0 1px ${item.ring}`
+						: item.speck
+							? null
+							: `0 0 0 1px ${SWATCH_EDGE}`}
+				></i>{item.label}</span
 			>
 		{/each}
 	</span>
 	<span class="routes"><b class="road"></b>Road <b class="ferry"></b>Ferry <b class="air"></b>Flight</span>
+	<span class="scale">
+		<span aria-hidden="true"
+			>Each dot stands for {peoplePerDot.toLocaleString()}
+			{peoplePerDot === 1 ? 'person' : 'people'}.{#if peoplePerDot > 1}{` ${DOT_SHORT[look]}`}{/if}</span
+		>
+		{#if peoplePerDot > 1}
+			<span class="sr-only">{full}</span>
+			<button
+				type="button"
+				class="more"
+				bind:this={moreButton}
+				aria-expanded={moreOpen}
+				aria-controls={moreOpen ? 'legend-full' : undefined}
+				onclick={() => (moreOpen = !moreOpen)}>{moreOpen ? 'less' : 'more'}</button
+			>
+		{/if}
+	</span>
+	{#if moreOpen}
+		<div class="full" id="legend-full" bind:this={overlay}>{full}</div>
+	{/if}
 </div>
 
 <style>
 	.legend {
+		position: relative;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -112,23 +187,56 @@
 		border-left: none;
 		border-radius: 0 4px 4px 0;
 	}
+	/* The view in use stands out as the chosen speed does (TopBar.svelte). */
 	.switch button[aria-pressed='true'] {
-		background: #2a4562;
-		color: #e6edf5;
+		background: #9cc3ea;
+		color: #0b1a2e;
+		font-weight: 600;
 	}
 	.switch button:focus-visible {
 		outline: 2px solid #8fb8ff;
 		outline-offset: 1px;
 	}
 	.scale {
-		display: grid;
+		flex-basis: 100%;
 		color: #9fb3c8;
 	}
-	.scale > span {
-		grid-area: 1 / 1;
+	.more {
+		font: inherit;
+		margin-left: 4px;
+		padding: 0 2px;
+		border: none;
+		background: none;
+		color: #9cc3ea;
+		text-decoration: underline;
+		cursor: pointer;
 	}
-	.scale .off {
-		visibility: hidden;
+	.more:focus-visible {
+		outline: 2px solid #8fb8ff;
+		outline-offset: 1px;
+	}
+	/* The whole text, over the charts above, so the map keeps its size. */
+	.full {
+		position: absolute;
+		bottom: 100%;
+		left: 0;
+		z-index: 20;
+		max-width: min(520px, calc(100% - 32px));
+		box-sizing: border-box;
+		padding: 8px 12px;
+		background: #11233a;
+		border: 1px solid #22405f;
+		border-radius: 6px 6px 0 0;
+		color: #c9d6e3;
+		box-shadow: 0 -6px 16px rgb(0 0 0 / 0.4);
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 	.routes b {
 		display: inline-block;

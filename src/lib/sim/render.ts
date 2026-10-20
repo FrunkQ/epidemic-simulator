@@ -6,10 +6,15 @@ import { MAX_PLANES, type Transit } from './transit';
 import type { People } from './people';
 import {
 	DEAD_DIM,
-	HEALTHY_DIM,
+	FULL_DIM,
+	INFECTED_LIFT,
+	PARTIAL_DIM,
 	RECOVERED_DIM,
+	SHADE_FLOOR,
+	SHADE_RING_PX,
 	SHADE_STEP,
-	SPECK_MIN_CSS,
+	UNPROTECTED_DIM,
+	speckMinSide,
 	SPECK_PATCH,
 	css,
 	dimmed,
@@ -66,10 +71,10 @@ export const MAP_COLOURS = {
 } as const;
 
 /**
- * Display colours, checked with the dataviz palette validator on the dark map: every pair stays
- * apart under protan, deutan and tritan colour blindness, and infectious dots also get a ring.
- * Died is pale (10 Oct) so it differs from both infected colours by lightness: OKLab ΔE at least
- * 32 from ill and 23 from silent under protan and deutan (the darker grey before was 7 from ill).
+ * The full colours: the charts and cards draw them as they are, and the map draws them dimmed
+ * (BASES) or lifted (LIFTED). Died is pale (10 Oct) so it differs from both infected colours by
+ * lightness. Their closest pair under each colour vision is the bar colours.test.ts holds every
+ * pair the map draws to.
  */
 export const COLOURS = {
 	unprotected: '#3a7bf0',
@@ -90,9 +95,9 @@ const LAND = rgbOf(MAP_COLOURS.land);
 const BASES = [
 	dimmed(rgbOf(COLOURS.deceased), DEAD_DIM, LAND),
 	dimmed(rgbOf(COLOURS.recovered), RECOVERED_DIM, LAND),
-	dimmed(rgbOf(COLOURS.unprotected), HEALTHY_DIM, LAND),
-	dimmed(rgbOf(COLOURS.full), HEALTHY_DIM, LAND),
-	dimmed(rgbOf(COLOURS.partial), HEALTHY_DIM, LAND)
+	dimmed(rgbOf(COLOURS.unprotected), UNPROTECTED_DIM, LAND),
+	dimmed(rgbOf(COLOURS.full), FULL_DIM, LAND),
+	dimmed(rgbOf(COLOURS.partial), PARTIAL_DIM, LAND)
 ];
 const BASE = { dead: 0, recovered: 1, unprotected: 2, full: 3, partial: 4 } as const;
 /** The dimmed colours as the legend shows them, by COLOURS key. */
@@ -103,7 +108,16 @@ export const DIMMED_COLOURS = {
 	full: css(BASES[BASE.full]),
 	partial: css(BASES[BASE.partial])
 } as const;
-const SHADE_TARGETS = [rgbOf(COLOURS.silent), rgbOf(COLOURS.symptomatic)];
+const WHITE = rgbOf('#ffffff');
+/** Infected people's specks, and Shading's infected colours and outlines: orange and red lifted toward white. */
+const LIFTED = [
+	mixed(rgbOf(COLOURS.silent), WHITE, INFECTED_LIFT),
+	mixed(rgbOf(COLOURS.symptomatic), WHITE, INFECTED_LIFT)
+];
+/** The lifted colours as the legend shows them. */
+export const LIFTED_COLOURS = { silent: css(LIFTED[0]), symptomatic: css(LIFTED[1]) } as const;
+const RING_STYLES = LIFTED.map(css);
+const SHADE_TARGETS = LIFTED;
 const SHADE_LEVELS = Math.round(1 / SHADE_STEP) + 1;
 /**
  * Fill styles by index: the bases, then for Shading each base moved toward each infected colour
@@ -119,11 +133,32 @@ const FILL_STYLES = [
 ];
 const shadeStyle = (base: number, target: number, strength: number) =>
 	BASES.length + (base * SHADE_TARGETS.length + target) * SHADE_LEVELS + Math.round(strength / SHADE_STEP);
+/**
+ * Every colour the map draws dots in, for the colour check (colours.test.ts): the dimmed dots,
+ * the specks and outlines, and each Shading fill a dot with anyone infected can take.
+ */
+export const MAP_PALETTE = {
+	bases: { ...DIMMED_COLOURS },
+	lifted: { ...LIFTED_COLOURS },
+	shadeFills: Object.entries(BASE).flatMap(([base, b]) =>
+		SHADE_TARGETS.map((_, t) => ({
+			base,
+			target: t === 0 ? 'silent' : 'symptomatic',
+			fills: Array.from({ length: SHADE_LEVELS }, (_, l) => l * SHADE_STEP)
+				.filter((strength) => strength >= SHADE_FLOOR - 1e-9)
+				.map((strength) => ({
+					strength,
+					fill: FILL_STYLES[shadeStyle(b, t, strength)],
+					outline: strength < 1
+				}))
+		}))
+	)
+};
 /** Speck colours: infected people bright, deaths pale. */
 const SPECK_COLOURS = {
 	dead: packed(dimmed(rgbOf(COLOURS.deceased), DEAD_DIM, LAND)),
-	ill: packed(rgbOf(COLOURS.symptomatic)),
-	silent: packed(rgbOf(COLOURS.silent))
+	ill: packed(LIFTED[1]),
+	silent: packed(LIFTED[0])
 };
 /**
  * A seed marker shows this long at full strength, then fades over SEED_FADE (real time, ms) to a
@@ -141,6 +176,8 @@ export class Renderer {
 	/** Visible dots in index order, with each one's fill style (FILL_STYLES index). */
 	private readonly order: Int32Array;
 	private readonly orderStyle: Uint16Array;
+	/** Shading: each drawn dot's outline, 0 for none, else 1 + its infected colour's index. */
+	private readonly orderRing: Uint8Array;
 	/** The specks' own layer, the canvas's size in device pixels, and the area painted last frame. */
 	private layer: { img: ImageData; buf: Uint32Array } | null = null;
 	/**
@@ -187,6 +224,7 @@ export class Renderer {
 		this.atY = new Float32Array(capacity);
 		this.order = new Int32Array(capacity);
 		this.orderStyle = new Uint16Array(capacity);
+		this.orderRing = new Uint8Array(capacity);
 	}
 
 	draw(ctx: CanvasRenderingContext2D, viewport: Viewport, camera: Camera, scene: Scene): void {
@@ -244,7 +282,8 @@ export class Renderer {
 		const per = people.perDot;
 		let count = 0;
 		const n = agents.activeCount;
-		const margin = 4;
+		// In Specks a dot's people reach a patch away from it, so a dot just off screen is still drawn.
+		const margin = 4 + (look === 'specks' ? spacing * SPECK_PATCH * s : 0);
 		for (let i = 0; i < n; i++) {
 			// Air passengers ride hidden inside their plane.
 			const route = agents.route[i];
@@ -254,12 +293,19 @@ export class Renderer {
 			if (sx < -margin || sy < -margin || sx > width + margin || sy > height + margin) continue;
 			const base = baseOf(agents, people, i);
 			let style: number = base;
+			let ring = 0;
 			if (look === 'shading') {
 				const ill = people.ill[i];
 				const infected = ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
-				if (infected > 0)
-					style = shadeStyle(base, ill >= infected - ill ? 1 : 0, shadeStrength(infected, per));
+				if (infected > 0) {
+					const target = ill >= infected - ill ? 1 : 0;
+					const strength = shadeStrength(infected, per);
+					style = shadeStyle(base, target, strength);
+					// A solid dot reads as infected by its fill; a paler one needs its outline.
+					if (strength < 1) ring = 1 + target;
+				}
 			}
+			this.orderRing[count] = ring;
 			this.order[count] = i;
 			this.orderStyle[count++] = style;
 		}
@@ -275,6 +321,27 @@ export class Renderer {
 			}
 			const i = this.order[k];
 			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, size, size);
+		}
+
+		// Shading: a light outline round each dot with anyone infected that is not yet solid, over
+		// its neighbours, so it reads as infected by lightness and not by colour alone.
+		if (look === 'shading') {
+			const w = SHADE_RING_PX;
+			const edge = half + w / 2;
+			ctx.lineWidth = w;
+			for (let r = 1; r <= RING_STYLES.length; r++) {
+				ctx.beginPath();
+				let any = false;
+				for (let k = 0; k < count; k++) {
+					if (this.orderRing[k] !== r) continue;
+					const i = this.order[k];
+					ctx.rect((ax[i] - ox) * s - edge, (ay[i] - oy) * s - edge, size + w, size + w);
+					any = true;
+				}
+				if (!any) continue;
+				ctx.strokeStyle = RING_STYLES[r - 1];
+				ctx.stroke();
+			}
 		}
 
 		this.specksDrawn = 0;
@@ -329,7 +396,7 @@ export class Renderer {
 				oy: camera.y,
 				scale: camera.scale * dpr,
 				patch: spacing * SPECK_PATCH,
-				minSide: Math.round(SPECK_MIN_CSS * dpr),
+				minSide: speckMinSide(dpr),
 				maxSide: Math.max(1, Math.round(size * dpr)),
 				colours: SPECK_COLOURS
 			},

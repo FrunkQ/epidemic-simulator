@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { TICK_BUDGET_MS } from '../../src/lib/sim/constants';
 
 /*
  * Browser checks of the card layout (10), against a build with VITE_LAYOUT_PROBE=1, which exposes
@@ -1176,6 +1177,53 @@ test('a lockdown asked for while paused shows on the card at once, and lifts on 
 	await expect(card.getByText('No lockdown')).toBeVisible();
 });
 
+/** The legend's height on main before the map views, the lower of its two fonts (68 and 64 px). */
+const MAIN_LEGEND_PX = 64;
+
+for (const font of [undefined, 'DejaVu Sans'])
+	test(`the legend${font ? ` in ${font}` : ''} is no taller than before the map views at the four target sizes, in either view`, async ({
+		page
+	}) => {
+		if (font) await forceFont(page, font);
+		for (const [w, h] of TARGETS) {
+			await open(page, w, h);
+			if (font) await requireFont(page, font);
+			for (const view of ['Specks', 'Shading']) {
+				await page.getByRole('group', { name: 'Map view' }).getByRole('button', { name: view }).click();
+				const height = await page.locator('.legend').evaluate((e) => e.getBoundingClientRect().height);
+				expect(height, `${w}x${h} ${view}`).toBeLessThanOrEqual(MAIN_LEGEND_PX);
+			}
+		}
+	});
+
+test(`the legend's "more" shows the whole text for the view in use, and Escape, a click elsewhere and a new width close it`, async ({
+	page
+}) => {
+	await open(page, 1366, 768);
+	const more = page.locator('.legend').getByRole('button', { name: 'more' });
+	const full = page.locator('#legend-full');
+	await page.locator('.legend').getByRole('button', { name: 'Specks' }).click();
+	await page.keyboard.press('Tab');
+	await page.keyboard.press('Tab');
+	await expect(more).toBeFocused();
+	const stage = JSON.stringify((await probe(page)).stage);
+	await page.keyboard.press('Enter');
+	await expect(more).toHaveAttribute('aria-expanded', 'true');
+	await settle(page);
+	expect(JSON.stringify((await probe(page)).stage), 'the overlay never moves the map').toBe(stage);
+	await expect(full).toContainText('Pale specks show deaths where no case is drawn over them');
+	await expect(full).toContainText('Every count is real people.');
+	await page.keyboard.press('Escape');
+	await expect(full).toHaveCount(0);
+	await expect(more).toBeFocused();
+	await more.click();
+	await page.mouse.click(5, 300);
+	await expect(full).toHaveCount(0);
+	await more.click();
+	await page.setViewportSize({ width: 1280, height: 768 });
+	await expect(full).toHaveCount(0);
+});
+
 for (const font of [undefined, 'DejaVu Sans']) {
 	test(`the map view switch${font ? ` in ${font}` : ''}: keyboard and touch reach it, it never moves the map, and it keeps its view across a disease switch, Restart and New map`, async ({
 		page
@@ -1188,16 +1236,19 @@ for (const font of [undefined, 'DejaVu Sans']) {
 		const shading = group.getByRole('button', { name: 'Shading' });
 		await expect(specks).toHaveAttribute('aria-pressed', 'true');
 		await expect(shading).toHaveAttribute('aria-pressed', 'false');
-		await expect(page.getByText(/Each bright speck beside a dot is one infected person/)).toBeVisible();
+		const line = page.locator('.legend .scale > span[aria-hidden="true"]');
+		await expect(line).toContainText('A bright speck is one infected person');
 		const stage = async () => JSON.stringify((await probe(page)).stage);
 		const before = await stage();
 		// Keyboard: Tab reaches the buttons, Enter and Space press them.
-		await shading.focus();
+		await specks.click();
+		await page.keyboard.press('Tab');
+		await expect(shading).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(shading).toHaveAttribute('aria-pressed', 'true');
 		await expect(specks).toHaveAttribute('aria-pressed', 'false');
-		await expect(page.getByText(/so even one case shows strongly/)).toBeVisible();
-		await expect(page.getByText(/Each bright speck beside a dot is one infected person/)).toBeHidden();
+		await expect(line).toContainText('A dot turns orange or red with its first case');
+		await expect(line).not.toContainText('speck');
 		await settle(page);
 		expect(await stage(), 'switching never changes the stage').toBe(before);
 		await page.keyboard.press('Shift+Tab');
@@ -1218,3 +1269,55 @@ for (const font of [undefined, 'DejaVu Sans']) {
 		await expect(shading).toHaveAttribute('aria-pressed', 'true');
 	});
 }
+
+test('on a 2x screen at the peak of a measles wave, either view draws the map within what a frame leaves after the ticks', async ({
+	browser
+}, testInfo) => {
+	// dot-scale.md §6: the draw must fit in what TICK_BUDGET_MS leaves of a 60 fps frame.
+	const page = await browser.newPage({ baseURL: testInfo.project.use.baseURL, deviceScaleFactor: 2 });
+	try {
+		await open(page, 1400, 900);
+		await page.getByRole('button', { name: 'Paused' }).click();
+		const rows = await page.evaluate(() => {
+			type Sim = {
+				day: number;
+				send(c: unknown): void;
+				step(n: number): void;
+				render(c: CanvasRenderingContext2D, v: unknown, now: number, a: number, look: string): void;
+				snapshot(): { regions: { counts: { silent: number; symptomatic: number } }[] };
+			};
+			const sim = (window as unknown as { __sim: Sim }).__sim;
+			sim.send({ type: 'seed', region: 2, count: 1 });
+			const canvas = document.querySelector('canvas')!;
+			const ctx = canvas.getContext('2d')!;
+			const vp = { width: canvas.clientWidth, height: canvas.clientHeight };
+			const out: { day: number; infected: number; specks: number; shading: number }[] = [];
+			for (const day of [10, 12, 14, 16, 18, 20]) {
+				while (sim.day < day) sim.step(1);
+				const infected = sim
+					.snapshot()
+					.regions.reduce((a, r) => a + r.counts.silent + r.counts.symptomatic, 0);
+				const median = (look: string) => {
+					const t: number[] = [];
+					for (let k = 0; k < 25; k++) {
+						const t0 = performance.now();
+						sim.render(ctx, vp, performance.now(), 1, look);
+						t.push(performance.now() - t0);
+					}
+					return t.sort((a, b) => a - b)[12];
+				};
+				out.push({ day, infected, specks: median('specks'), shading: median('shading') });
+			}
+			return out;
+		});
+		const peak = rows.reduce((a, r) => (r.infected > a.infected ? r : a));
+		expect(peak, 'the wave peaks inside the days timed').not.toBe(rows[0]);
+		expect(peak).not.toBe(rows[rows.length - 1]);
+		for (const r of rows) {
+			expect(r.specks, `Specks on day ${r.day}`).toBeLessThanOrEqual(TICK_BUDGET_MS);
+			expect(r.shading, `Shading on day ${r.day}`).toBeLessThanOrEqual(TICK_BUDGET_MS);
+		}
+	} finally {
+		await page.close();
+	}
+});
