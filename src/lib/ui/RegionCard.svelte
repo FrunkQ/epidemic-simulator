@@ -129,10 +129,11 @@
 	/**
 	 * A slider's label line sits above it, and the browser scrolls only the slider itself into view,
 	 * so focus going backwards could leave the line naming it under the header. Scroll the whole
-	 * label into view too; the scroll padding keeps it below the header.
+	 * label into view too; the scroll padding keeps it below the header. Only for keyboard focus: a
+	 * press of the mouse, a tap or a click on the label's text would move the card under the pointer.
 	 */
 	function showLabel(e: FocusEvent) {
-		if (!open) return;
+		if (!open || !(e.target as Element).matches(':focus-visible')) return;
 		(e.target as Element).closest('label')?.scrollIntoView({ block: 'nearest' });
 	}
 	/** Which settings panel is open, if any. */

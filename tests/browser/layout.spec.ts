@@ -1060,57 +1060,105 @@ for (const classic of [false, true]) {
 							ignoreDefaultArgs: ['--hide-scrollbars']
 						})
 					: null;
-				const page = browser ? await browser.newPage({ baseURL: testInfo.project.use.baseURL }) : shared;
-				if (font) await forceFont(page, font);
-				await open(page, w, h);
-				if (font) await requireFont(page, font);
-				const card = page.locator('section.card').first();
-				await card.getByRole('button', { name: /^Bring in/ }).click();
-				if (classic) {
-					await card.getByRole('button', { name: 'Lockdown' }).click();
-					await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
-				}
-				await card.getByRole('button', { name: 'Health policy' }).click();
-				await settle(page);
-				// Start at the card's last control and go back up through it with Shift+Tab.
-				await card.evaluate((el) => {
-					const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
-					all[all.length - 1].focus();
-				});
-				const hidden: string[] = [];
-				for (let step = 0; step < 160; step++) {
-					const seen = await card.evaluate((el) => {
-						const f = document.activeElement as HTMLElement | null;
-						if (!f || !el.contains(f) || f.closest('header')) return null;
-						const head = el.querySelector('header')!.getBoundingClientRect();
-						const box = el.getBoundingClientRect();
-						const bottom = box.top + el.clientTop + el.clientHeight;
-						const name = f.getAttribute('aria-label') || f.textContent?.trim().slice(0, 40) || f.tagName;
-						const out: string[] = [];
-						const r = f.getBoundingClientRect();
-						if (r.top < head.bottom - 0.5 || r.bottom > bottom + 0.5)
-							out.push(`${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`);
-						// A slider's label line sits above it, so it is checked on its own.
-						const line = f.closest('label')?.firstElementChild;
-						if (line && line !== f) {
-							const l = line.getBoundingClientRect();
-							if (l.top < head.bottom - 0.5)
-								out.push(
-									`${name}'s label "${line.textContent?.trim().slice(0, 40)}": top ${l.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`
-								);
-						}
-						return out.join('; ');
+				try {
+					const page = browser ? await browser.newPage({ baseURL: testInfo.project.use.baseURL }) : shared;
+					if (font) await forceFont(page, font);
+					await open(page, w, h);
+					if (font) await requireFont(page, font);
+					const card = page.locator('section.card').first();
+					await card.getByRole('button', { name: /^Bring in/ }).click();
+					if (classic) {
+						await card.getByRole('button', { name: 'Lockdown' }).click();
+						await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
+					}
+					await card.getByRole('button', { name: 'Health policy' }).click();
+					await settle(page);
+					// Start at the card's last control and go back up through it with Shift+Tab.
+					await card.evaluate((el) => {
+						const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+						all[all.length - 1].focus();
 					});
-					if (seen === null) break;
-					if (seen) hidden.push(seen);
-					await page.keyboard.press('Shift+Tab');
+					const hidden: string[] = [];
+					for (let step = 0; step < 160; step++) {
+						const seen = await card.evaluate((el) => {
+							const f = document.activeElement as HTMLElement | null;
+							if (!f || !el.contains(f) || f.closest('header')) return null;
+							const head = el.querySelector('header')!.getBoundingClientRect();
+							const box = el.getBoundingClientRect();
+							const bottom = box.top + el.clientTop + el.clientHeight;
+							const name =
+								f.getAttribute('aria-label') ||
+								f.closest('label')?.firstElementChild?.textContent?.trim().slice(0, 40) ||
+								f.textContent?.trim().slice(0, 40) ||
+								f.tagName;
+							const out: string[] = [];
+							const r = f.getBoundingClientRect();
+							if (r.top < head.bottom - 0.5 || r.bottom > bottom + 0.5)
+								out.push(`${name}: top ${r.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`);
+							// A slider's label line sits above it, so it is checked on its own.
+							const line = f.closest('label')?.firstElementChild;
+							if (line && line !== f) {
+								const l = line.getBoundingClientRect();
+								if (l.top < head.bottom - 0.5)
+									out.push(
+										`${name}'s label "${line.textContent?.trim().slice(0, 40)}": top ${l.top.toFixed(1)} under the header to ${head.bottom.toFixed(1)}`
+									);
+							}
+							return out.join('; ');
+						});
+						if (seen === null) break;
+						if (seen) hidden.push(seen);
+						await page.keyboard.press('Shift+Tab');
+					}
+					expect(hidden).toEqual([]);
+				} finally {
+					await browser?.close();
 				}
-				expect(hidden).toEqual([]);
-				await browser?.close();
 			});
 		}
 	}
 }
+
+/*
+ * Keyboard focus scrolls a slider's label line into view, but pressing the mouse on a slider, or
+ * clicking its label's text, never moves the card under the pointer.
+ */
+test('pressing the mouse on a slider or its label text in an open card never scrolls the card', async ({
+	page
+}) => {
+	await open(page, 1366, 768);
+	const card = page.locator('section.card').first();
+	await card.getByRole('button', { name: /^Bring in/ }).click();
+	await card.getByRole('button', { name: 'Health policy' }).click();
+	await settle(page);
+	const sliders = card.locator('input[type="range"]');
+	expect(await sliders.count()).toBeGreaterThan(1);
+	// Scroll so a slider sits just above the card's bottom with its explanation cut off below it.
+	const placeSecond = () =>
+		card.evaluate((el) => {
+			const input = el.querySelectorAll<HTMLInputElement>('input[type="range"]')[1];
+			const box = el.getBoundingClientRect();
+			const bottom = box.top + el.clientTop + el.clientHeight;
+			el.scrollTop += input.getBoundingClientRect().bottom - (bottom - 4);
+			const small = input.closest('label')!.querySelector('small')!.getBoundingClientRect();
+			return { scrollTop: el.scrollTop, cut: small.bottom > bottom + 1 };
+		});
+	for (const target of ['slider', 'label text'] as const) {
+		const before = await placeSecond();
+		expect(before.cut, target).toBe(true);
+		const hit =
+			target === 'slider'
+				? await sliders.nth(1).boundingBox()
+				: await sliders.nth(1).locator('xpath=ancestor::label/*[1]').boundingBox();
+		await page.mouse.move(hit!.x + 4, hit!.y + hit!.height / 2);
+		await page.mouse.down();
+		await page.waitForTimeout(100);
+		expect(await card.evaluate((el) => el.scrollTop), `${target}, pressed`).toBe(before.scrollTop);
+		await page.mouse.up();
+		await page.waitForTimeout(100);
+		expect(await card.evaluate((el) => el.scrollTop), `${target}, released`).toBe(before.scrollTop);
+	}
+});
 
 test('a lockdown asked for while paused shows on the card at once, and lifts on Restart', async ({
 	page
