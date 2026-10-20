@@ -132,6 +132,19 @@ function exemptFrom(vision: Vision, key: string): number {
 	return tint?.from ?? pair?.from ?? 0;
 }
 
+/** Every Shading exemption by vision and pair, as exemptFrom finds them. */
+function exemptionKeys(tint: typeof TINT_VS_DIMMED, pairs: typeof SILENT_VS_ILL): string[] {
+	return [
+		...tint.map((x) => `${x.vision}: ${x.base} ${x.target} | dimmed ${x.dimmed}`),
+		...pairs.map((x) => `${x.vision}: silent ${x.silentBase} | ill ${x.illBase}`)
+	];
+}
+
+/** Keys listed more than once: exemptFrom reads only the first, so a second is never checked. */
+function duplicated(keys: string[]): string[] {
+	return [...new Set(keys.filter((k, i) => keys.indexOf(k) !== i))];
+}
+
 describe('map colours', () => {
 	for (const vision of VISIONS) {
 		it(`every pair Specks draws is at least as far apart as the old map's closest pair (${vision})`, () => {
@@ -178,6 +191,18 @@ describe('map colours', () => {
 			expect(SHADING_SOFT_TINT_WHY).toMatch(/Alex's card of 20 Oct 2026/);
 		});
 	}
+
+	it('no Shading exemption is listed twice', () => {
+		expect(duplicated(exemptionKeys(TINT_VS_DIMMED, SILENT_VS_ILL))).toEqual([]);
+	});
+
+	it('the duplicate check sees an entry listed twice', () => {
+		const planted = [...TINT_VS_DIMMED, { ...TINT_VS_DIMMED[3], from: 0.9 }];
+		const key = exemptionKeys([TINT_VS_DIMMED[3]], [])[0];
+		expect(duplicated(exemptionKeys(planted, SILENT_VS_ILL))).toEqual([key]);
+		const pair = [...SILENT_VS_ILL, SILENT_VS_ILL[0]];
+		expect(duplicated(exemptionKeys(TINT_VS_DIMMED, pair))).toHaveLength(1);
+	});
 
 	it('the check sees a pair that is too close', () => {
 		// The dimmed colours before this check: green and yellow 10 apart for normal vision.
