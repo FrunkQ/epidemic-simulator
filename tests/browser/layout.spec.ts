@@ -1,5 +1,4 @@
 import { expect, test, type Page } from '@playwright/test';
-import { TICK_BUDGET_MS } from '../../src/lib/sim/constants';
 
 /*
  * Browser checks of the card layout (10), against a build with VITE_LAYOUT_PROBE=1, which exposes
@@ -1273,10 +1272,20 @@ for (const font of [undefined, 'DejaVu Sans']) {
 	});
 }
 
-test('on a 2x screen at the peak of a measles wave, either view draws the map within what a frame leaves after the ticks', async ({
+/**
+ * What drawing the infected may add to a map frame, in either view, on a 2x screen: a quarter of
+ * TICK_BUDGET_MS's 60 Hz frame and then some. The first round's stroked Shading outlines added
+ * 10-14 ms here; filled ones add about 3.
+ */
+const INFECTED_DRAW_MS = 6;
+
+test('on a 2x screen through a measles wave, drawing the infected adds little to a frame in either view', async ({
 	browser
 }, testInfo) => {
-	// dot-scale.md §6: the draw must fit in what TICK_BUDGET_MS leaves of a 60 fps frame.
+	// dot-scale.md §6. Headless Chromium draws in software, so the whole map frame here costs about
+	// what main's does (14-16 ms); what this checks is what each view adds over the same map with one
+	// case. Each draw ends with a pixel read back, which waits for the canvas to finish drawing, so the
+	// time is the whole draw and not only the JavaScript that queues it.
 	const page = await browser.newPage({ baseURL: testInfo.project.use.baseURL, deviceScaleFactor: 2 });
 	try {
 		await open(page, 1400, 900);
@@ -1291,11 +1300,12 @@ test('on a 2x screen at the peak of a measles wave, either view draws the map wi
 			};
 			const sim = (window as unknown as { __sim: Sim }).__sim;
 			sim.send({ type: 'seed', region: 2, count: 1 });
+			sim.step(1);
 			const canvas = document.querySelector('canvas')!;
 			const ctx = canvas.getContext('2d')!;
 			const vp = { width: canvas.clientWidth, height: canvas.clientHeight };
 			const out: { day: number; infected: number; specks: number; shading: number }[] = [];
-			for (const day of [10, 12, 14, 16, 18, 20]) {
+			for (const day of [0, 10, 14, 18, 20, 24, 28]) {
 				while (sim.day < day) sim.step(1);
 				const infected = sim
 					.snapshot()
@@ -1305,6 +1315,7 @@ test('on a 2x screen at the peak of a measles wave, either view draws the map wi
 					for (let k = 0; k < 25; k++) {
 						const t0 = performance.now();
 						sim.render(ctx, vp, performance.now(), 1, look);
+						ctx.getImageData(0, 0, 1, 1);
 						t.push(performance.now() - t0);
 					}
 					return t.sort((a, b) => a - b)[12];
@@ -1313,12 +1324,13 @@ test('on a 2x screen at the peak of a measles wave, either view draws the map wi
 			}
 			return out;
 		});
-		const peak = rows.reduce((a, r) => (r.infected > a.infected ? r : a));
-		expect(peak, 'the wave peaks inside the days timed').not.toBe(rows[0]);
-		expect(peak).not.toBe(rows[rows.length - 1]);
-		for (const r of rows) {
-			expect(r.specks, `Specks on day ${r.day}`).toBeLessThanOrEqual(TICK_BUDGET_MS);
-			expect(r.shading, `Shading on day ${r.day}`).toBeLessThanOrEqual(TICK_BUDGET_MS);
+		const [first, ...wave] = rows;
+		const peak = wave.reduce((a, r) => (r.infected > a.infected ? r : a));
+		expect(peak, 'the wave peaks inside the days timed').not.toBe(wave[0]);
+		expect(peak).not.toBe(wave[wave.length - 1]);
+		for (const r of wave) {
+			expect(r.specks - first.specks, `Specks on day ${r.day}`).toBeLessThanOrEqual(INFECTED_DRAW_MS);
+			expect(r.shading - first.shading, `Shading on day ${r.day}`).toBeLessThanOrEqual(INFECTED_DRAW_MS);
 		}
 	} finally {
 		await page.close();

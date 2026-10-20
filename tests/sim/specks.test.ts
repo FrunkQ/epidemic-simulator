@@ -194,6 +194,42 @@ describe('specks', () => {
 		expect(Math.abs(t[ILL] / (t[ILL] + t[SILENT]) - ill / infected)).toBeLessThan(0.04);
 	});
 
+	it('changes one speck when one person falls ill, so specks keep their colour from frame to frame', () => {
+		const W = 100;
+		const paint = (ill: number, silent: number) => {
+			const buf = new Uint32Array(W * W);
+			const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+			paintSpecks(buf, W, W, people(50, [[0, ill, silent]]), frame(1, [[50, 50]], { patch: 30, maxSide: 2 }), box);
+			return buf;
+		};
+		for (const [ill, silent] of [
+			[10, 20],
+			[24, 1],
+			[1, 30]
+		]) {
+			const before = paint(ill, silent);
+			const after = paint(ill + 1, silent - 1);
+			let changed = 0;
+			for (let k = 0; k < before.length; k++)
+				if (before[k] !== after[k]) {
+					changed++;
+					expect(after[k]).toBe(ILL);
+				}
+			// One 2 x 2 speck at most, less where a neighbour overlaps it.
+			expect(changed).toBeGreaterThan(0);
+			expect(changed).toBeLessThanOrEqual(4);
+		}
+	});
+
+	it('clips a speck crossing the edge of the layer rather than leaving it out', () => {
+		const W = 20;
+		const buf = new Uint32Array(W * W);
+		const box: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
+		// One person a dot sits on the dot, here half off the left edge.
+		paintSpecks(buf, W, W, people(1, [[0, 1, 0]]), frame(1, [[0, 10]], { patch: 1, minSide: 4 }), box);
+		expect(tally(buf)[ILL]).toBeGreaterThan(0);
+	});
+
 	it('paints no more specks a dot than its patch can show apart', () => {
 		const W = 60;
 		const buf = new Uint32Array(W * W);

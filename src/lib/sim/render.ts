@@ -186,7 +186,7 @@ export class Renderer {
 	 */
 	private blit: OffscreenCanvas | null = null;
 	private readonly painted: Box = { x0: 0, y0: 0, x1: 0, y1: 0 };
-	/** How many infected people the last frame drew as specks (0 in Shading), for the tests. */
+	/** How many infected specks the last frame painted, at most speckCap a dot (0 in Shading), for the tests. */
 	specksDrawn = 0;
 	/** When this renderer first drew each seed mark, by its number in the run (Scene.now). */
 	private markSeen = new Map<number, number>();
@@ -311,37 +311,32 @@ export class Renderer {
 		}
 
 		// Dots in index order, whatever their state, so no colour wins where dots overlap; the style is
-		// set only when it changes.
+		// set only when it changes. In Shading a dot with anyone infected that is not yet solid sits on
+		// a light square SHADE_RING_PX wider each side, its outline, so it reads as infected by
+		// lightness and not by colour alone. The square is snapped to device pixels so it stays crisp.
+		const dpr = ctx.getTransform().a || 1;
+		const ringDev = Math.max(1, Math.round(SHADE_RING_PX * dpr));
 		let last = -1;
 		for (let k = 0; k < count; k++) {
+			const i = this.order[k];
+			const x = (ax[i] - ox) * s - half;
+			const y = (ay[i] - oy) * s - half;
+			const ring = this.orderRing[k];
+			if (ring) {
+				const x0 = Math.floor(x * dpr) - ringDev;
+				const y0 = Math.floor(y * dpr) - ringDev;
+				const x1 = Math.ceil((x + size) * dpr) + ringDev;
+				const y1 = Math.ceil((y + size) * dpr) + ringDev;
+				ctx.fillStyle = RING_STYLES[ring - 1];
+				ctx.fillRect(x0 / dpr, y0 / dpr, (x1 - x0) / dpr, (y1 - y0) / dpr);
+				last = -1;
+			}
 			const style = this.orderStyle[k];
 			if (style !== last) {
 				ctx.fillStyle = FILL_STYLES[style];
 				last = style;
 			}
-			const i = this.order[k];
-			ctx.fillRect((ax[i] - ox) * s - half, (ay[i] - oy) * s - half, size, size);
-		}
-
-		// Shading: a light outline round each dot with anyone infected that is not yet solid, over
-		// its neighbours, so it reads as infected by lightness and not by colour alone.
-		if (look === 'shading') {
-			const w = SHADE_RING_PX;
-			const edge = half + w / 2;
-			ctx.lineWidth = w;
-			for (let r = 1; r <= RING_STYLES.length; r++) {
-				ctx.beginPath();
-				let any = false;
-				for (let k = 0; k < count; k++) {
-					if (this.orderRing[k] !== r) continue;
-					const i = this.order[k];
-					ctx.rect((ax[i] - ox) * s - edge, (ay[i] - oy) * s - edge, size + w, size + w);
-					any = true;
-				}
-				if (!any) continue;
-				ctx.strokeStyle = RING_STYLES[r - 1];
-				ctx.stroke();
-			}
+			ctx.fillRect(x, y, size, size);
 		}
 
 		this.specksDrawn = 0;

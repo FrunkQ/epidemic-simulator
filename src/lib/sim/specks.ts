@@ -165,7 +165,7 @@ function scratch(n: number): Float32Array {
  * ill and silent people are interleaved, so neither colour is painted over the other wholesale.
  * Each pass paints at most speckCap specks a dot: more would repaint the same pixels. Clears
  * `box`, last frame's painted area, first and sets it to this frame's. Returns how many infected
- * people's specks were painted: one that would cross the edge of the layer is left out.
+ * specks were painted, at most speckCap a dot; one crossing the edge of the layer is clipped to it.
  */
 export function paintSpecks(
 	buf: Uint32Array,
@@ -201,35 +201,57 @@ export function paintSpecks(
 			const i = f.list[k];
 			const dead = people.dead[i];
 			const ill = people.ill[i];
-			const from = pass === 0 ? 0 : dead;
 			const all = pass === 0 ? dead : dead + ill + people.silentSymptomatic[i] + people.silentAsymptomatic[i];
+			const from = pass === 0 ? 0 : dead;
 			if (from >= all) continue;
-			const to = Math.min(all, from + cap);
-			// Bresenham along the infected: ill specks are spread among the silent ones in proportion.
-			const infected = all - dead;
-			let acc = infected >> 1;
 			// Half a pixel added, so truncating below rounds to the nearest pixel.
 			const cx = (f.x[i] - f.ox) * f.scale - half + 0.5;
 			const cy = (f.y[i] - f.oy) * f.scale - half + 0.5;
 			const inside = cx - reach >= 0 && cy - reach >= 0 && cx + reach <= W && cy + reach <= H;
-			// Each dot starts its people at its own spot, so neighbours' patches don't line up.
-			let slot = (((i * 13) % per) + from * step) % per;
-			for (let j = from; j < to; j++, slot = slot + step >= per ? slot + step - per : slot + step) {
-				let colour = f.colours.dead;
-				if (pass === 1) {
+			// Each dot starts its people at its own spot, so neighbours' patches don't line up. Person j
+			// of the dot (its dead first, then its ill, then its silent) always has the same spot and
+			// colour, so one person falling ill changes one speck.
+			const base = (i * 13) % per;
+			const n = Math.min(all - from, cap);
+			// The infected are painted with ill and silent interleaved in proportion (Bresenham), so
+			// neither colour is painted over the other wholesale.
+			const infected = all - from;
+			let acc = infected >> 1;
+			let nextIll = from;
+			let nextSilent = from + (pass === 0 ? 0 : ill);
+			for (let t = 0; t < n; t++) {
+				let j: number;
+				let colour: number;
+				if (pass === 0) {
+					j = from + t;
+					colour = f.colours.dead;
+				} else {
 					acc += ill;
 					if (acc >= infected) {
 						acc -= infected;
+						j = nextIll++;
 						colour = f.colours.ill;
-					} else colour = f.colours.silent;
+					} else {
+						j = nextSilent++;
+						colour = f.colours.silent;
+					}
 				}
+				const slot = (base + ((j * step) % per)) % per;
 				const px = Math.floor(cx + ox[2 * slot]);
 				const py = Math.floor(cy + ox[2 * slot + 1]);
-				if (!inside && (px < 0 || py < 0 || px + side > W || py + side > H)) continue;
-				// Plain writes: a fill() call per row costs more than the few pixels a speck has.
-				for (let row = 0, o = py * W + px; row < side; row++, o += W)
-					for (let col = 0; col < side; col++) buf[o + col] = colour;
 				if (pass === 1) painted++;
+				if (inside) {
+					// Plain writes: a fill() call per row costs more than the few pixels a speck has.
+					for (let row = 0, o = py * W + px; row < side; row++, o += W)
+						for (let col = 0; col < side; col++) buf[o + col] = colour;
+				} else {
+					// Near the layer's edge a speck is clipped to it, not left out.
+					const c0 = Math.max(0, px);
+					const c1 = Math.min(W, px + side);
+					const r0 = Math.max(0, py);
+					const r1 = Math.min(H, py + side);
+					for (let row = r0; row < r1; row++) for (let col = c0; col < c1; col++) buf[row * W + col] = colour;
+				}
 			}
 			// The box grows by the whole patch, clipped to the layer: a little more than was painted.
 			const bx0 = Math.max(0, Math.floor(cx - rs - 1));
