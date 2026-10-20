@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { LIFTED_COLOURS } from '../../src/lib/sim/render';
 
 /*
  * Browser checks of the card layout (10), against a build with VITE_LAYOUT_PROBE=1, which exposes
@@ -1364,11 +1365,12 @@ for (const font of [undefined, 'DejaVu Sans']) {
 
 /**
  * What drawing the infected may add to a map frame, in either view, on a 2x screen: a quarter of
- * TICK_BUDGET_MS's 60 Hz frame and then some. The first round's stroked Shading outlines (commit
- * cb4aed1) added about 7-10 ms on the middle wave day on the two machines measured, which this
- * catches; Shading's soft tint draws no outline and adds about 0.1-1.6 ms, Specks about 0.9-2.2.
+ * TICK_BUDGET_MS's 60 Hz frame and then some. Against the same-moment base map, the first round's
+ * stroked Shading outlines (commit cb4aed1) added about 6.6-9 ms on the 4th-cheapest wave day and
+ * 8.5-10.7 ms on days 24-28 on the two machines measured, which this catches; Specks adds about
+ * 0.9-3.0 ms and Shading's soft tint about 0.1-1.7.
  */
-const INFECTED_DRAW_MS = 6;
+const INFECTED_DRAW_MS = 5;
 
 /** Draws timed per view per day; the 10th percentile of these is that day's frame. */
 const FRAME_DRAWS = 50;
@@ -1385,51 +1387,72 @@ test('on a 2x screen through a measles wave, drawing the infected adds little to
 	// a low percentile of many draws, the base map and the two views taking turns so a slowdown
 	// lands on all three alike. The check bounds the 4th-cheapest of the six wave days' added cost:
 	// up to two slow days can't fail it, so a cost confined to two wave days passes at any size.
-	// That fits what it is for, catching the +8 to +15 ms class of the outlines, whose cost rises
-	// over the wave (about 2 ms on day 10, 10-15 ms on days 24-28).
+	// That fits what it is for, catching the class of the outlines, whose cost rises over the wave
+	// (about 2 ms on day 10, 8.5-10.7 ms on days 24-28 over the base map). The base map counts as
+	// one only while it draws no infected colour, so on day 18 each look's whole frame is read back:
+	// the base map has no pixel of the lifted orange or red, and Specks and Shading each have some.
 	const page = await browser.newPage({ baseURL: testInfo.project.use.baseURL, deviceScaleFactor: 2 });
 	try {
 		await open(page, 1400, 900);
 		await page.getByRole('button', { name: 'Paused' }).click();
-		const rows = await page.evaluate((draws) => {
-			type Sim = {
-				day: number;
-				send(c: unknown): void;
-				step(n: number): void;
-				render(c: CanvasRenderingContext2D, v: unknown, now: number, a: number, look: string): void;
-				snapshot(): { regions: { counts: { silent: number; symptomatic: number } }[] };
-			};
-			const sim = (window as unknown as { __sim: Sim }).__sim;
-			sim.send({ type: 'seed', region: 2, count: 1 });
-			sim.step(1);
-			const canvas = document.querySelector('canvas')!;
-			const ctx = canvas.getContext('2d')!;
-			const vp = { width: canvas.clientWidth, height: canvas.clientHeight };
-			const time = (look: string) => {
-				const t0 = performance.now();
-				sim.render(ctx, vp, performance.now(), 1, look);
-				ctx.getImageData(0, 0, 1, 1);
-				return performance.now() - t0;
-			};
-			const low = (t: number[]) => t.sort((a, b) => a - b)[Math.floor(t.length / 10)];
-			const out: { day: number; infected: number; base: number; specks: number; shading: number }[] = [];
-			for (const day of [0, 10, 14, 18, 20, 24, 28]) {
-				while (sim.day < day) sim.step(1);
-				const infected = sim
-					.snapshot()
-					.regions.reduce((a, r) => a + r.counts.silent + r.counts.symptomatic, 0);
-				const base: number[] = [];
-				const specks: number[] = [];
-				const shading: number[] = [];
-				for (let k = 0; k < draws; k++) {
-					base.push(time('base'));
-					specks.push(time('specks'));
-					shading.push(time('shading'));
+		const result = await page.evaluate(
+			([draws, lifted]) => {
+				type Sim = {
+					day: number;
+					send(c: unknown): void;
+					step(n: number): void;
+					render(c: CanvasRenderingContext2D, v: unknown, now: number, a: number, look: string): void;
+					snapshot(): { regions: { counts: { silent: number; symptomatic: number } }[] };
+				};
+				const sim = (window as unknown as { __sim: Sim }).__sim;
+				sim.send({ type: 'seed', region: 2, count: 1 });
+				sim.step(1);
+				const canvas = document.querySelector('canvas')!;
+				const ctx = canvas.getContext('2d')!;
+				const vp = { width: canvas.clientWidth, height: canvas.clientHeight };
+				const time = (look: string) => {
+					const t0 = performance.now();
+					sim.render(ctx, vp, performance.now(), 1, look);
+					ctx.getImageData(0, 0, 1, 1);
+					return performance.now() - t0;
+				};
+				const low = (t: number[]) => t.sort((a, b) => a - b)[Math.floor(t.length / 10)];
+				const rgb = lifted.map((c) => c.match(/\d+/g)!.map(Number));
+				const infectedPixels = (look: string) => {
+					sim.render(ctx, vp, performance.now(), 1, look);
+					const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+					let n = 0;
+					for (let i = 0; i < d.length; i += 4)
+						if (rgb.some(([r, g, b]) => d[i] === r && d[i + 1] === g && d[i + 2] === b)) n++;
+					return n;
+				};
+				const pixels: Record<string, number> = {};
+				const out: { day: number; infected: number; base: number; specks: number; shading: number }[] = [];
+				for (const day of [0, 10, 14, 18, 20, 24, 28]) {
+					while (sim.day < day) sim.step(1);
+					const infected = sim
+						.snapshot()
+						.regions.reduce((a, r) => a + r.counts.silent + r.counts.symptomatic, 0);
+					const base: number[] = [];
+					const specks: number[] = [];
+					const shading: number[] = [];
+					for (let k = 0; k < draws; k++) {
+						base.push(time('base'));
+						specks.push(time('specks'));
+						shading.push(time('shading'));
+					}
+					out.push({ day, infected, base: low(base), specks: low(specks), shading: low(shading) });
+					if (day === 18)
+						for (const look of ['base', 'specks', 'shading']) pixels[look] = infectedPixels(look);
 				}
-				out.push({ day, infected, base: low(base), specks: low(specks), shading: low(shading) });
-			}
-			return out;
-		}, FRAME_DRAWS);
+				return { out, pixels };
+			},
+			[FRAME_DRAWS, Object.values(LIFTED_COLOURS)] as const
+		);
+		const { out: rows, pixels } = result;
+		expect(pixels.base, 'the base map draws no infected colour').toBe(0);
+		expect(pixels.specks, 'Specks draws the infected').toBeGreaterThan(0);
+		expect(pixels.shading, 'Shading draws the infected').toBeGreaterThan(0);
 		const [, ...wave] = rows;
 		const peak = wave.reduce((a, r) => (r.infected > a.infected ? r : a));
 		expect(peak, 'the wave peaks inside the days timed').not.toBe(wave[0]);
