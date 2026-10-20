@@ -19,7 +19,8 @@ export function short(n: number): string {
 /** A reading in percent, to the whole percent; a share above 0 never reads as 0%, but "under 1%". */
 export function percentReading(percent: number): string {
 	if (percent > 0 && Math.round(percent) === 0) return 'under 1%';
-	return `${Math.round(percent).toLocaleString()}%`;
+	// `|| 0` turns the -0 that a small negative rounds to into 0, which would otherwise read "-0%".
+	return `${(Math.round(percent) || 0).toLocaleString()}%`;
 }
 
 /**

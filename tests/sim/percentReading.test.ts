@@ -12,4 +12,10 @@ describe('a reading in percent', () => {
 		expect(percentReading(12.4)).toBe('12%');
 		expect(percentReading(100)).toBe('100%');
 	});
+	it('never shows "-0%" for a small negative, such as a float left just under 0', () => {
+		expect(percentReading(-0.3)).toBe('0%');
+		expect(percentReading(-0)).toBe('0%');
+		expect(percentReading(-0.5)).toBe('0%');
+		expect(percentReading(-0.6)).toBe('-1%');
+	});
 });
