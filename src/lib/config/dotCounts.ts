@@ -8,7 +8,7 @@ const MARKS =
 export const DOT_SHORT = {
 	specks: 'A bright speck is one infected person, drawn larger than life; pale specks show deaths.',
 	shading:
-		'A dot tints orange with its first case and red where most of its cases are ill; light tints are faint.'
+		'A dot tints orange or red with its first case, red once half or more of its cases are ill; light tints are faint.'
 } as const;
 
 /**

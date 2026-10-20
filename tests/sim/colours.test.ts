@@ -197,11 +197,13 @@ describe('map colours', () => {
 	});
 
 	it('the duplicate check sees an entry listed twice', () => {
-		const planted = [...TINT_VS_DIMMED, { ...TINT_VS_DIMMED[3], from: 0.9 }];
-		const key = exemptionKeys([TINT_VS_DIMMED[3]], [])[0];
-		expect(duplicated(exemptionKeys(planted, SILENT_VS_ILL))).toEqual([key]);
-		const pair = [...SILENT_VS_ILL, SILENT_VS_ILL[0]];
-		expect(duplicated(exemptionKeys(TINT_VS_DIMMED, pair))).toHaveLength(1);
+		// Its own fixture, so a real duplicate fails only the check above.
+		const entry = TINT_VS_DIMMED[0];
+		const pair = SILENT_VS_ILL[0];
+		const key = exemptionKeys([entry], [])[0];
+		expect(duplicated(exemptionKeys([entry, { ...entry, from: 0.9 }], []))).toEqual([key]);
+		expect(duplicated(exemptionKeys([], [pair, pair]))).toHaveLength(1);
+		expect(duplicated(exemptionKeys([entry], [pair]))).toEqual([]);
 	});
 
 	it('the check sees a pair that is too close', () => {
