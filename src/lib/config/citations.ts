@@ -1574,7 +1574,7 @@ export const CITATIONS: Citation[] = [
 		journal: 'PLoS ONE',
 		year: 2021,
 		evidence: 'study',
-		noReviewReason: `No meta-analysis or systematic review of the size of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1). Sweden had the smallest fall of Woskie's ${WOSKIE_2021_COUNTRIES} European countries and relied mostly on advice rather than mandates (${WOSKIE_COUNTRIES_NO_STAY_HOME_MANDATE} of the ${WOSKIE_2021_COUNTRIES} had no mandatory stay-at-home up to 12 April 2020, by the Oxford COVID-19 Government Response Tracker: Hale 2021, Nat Hum Behav 5:529-538, doi 10.1038/s41562-021-01079-8, file compact_national_v1, C6M of 2 or more, national, 1 March-12 April), so it is the clearest view of people staying in without a stay-at-home mandate.`,
+		noReviewReason: `No meta-analysis or systematic review of the size of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1, §9.3). Sweden had the smallest fall of Woskie's ${WOSKIE_2021_COUNTRIES} European countries and relied mostly on advice rather than mandates (${WOSKIE_COUNTRIES_NO_STAY_HOME_MANDATE} of the ${WOSKIE_2021_COUNTRIES} had no mandatory stay-at-home up to 12 April 2020, by the Oxford COVID-19 Government Response Tracker: Hale 2021, Nat Hum Behav 5:529-538, doi 10.1038/s41562-021-01079-8, file compact_national_v1, C6M of 2 or more, national, 1 March-12 April), so it is the clearest view of people staying in without a stay-at-home mandate.`,
 		doi: '10.1371/journal.pone.0253071',
 		usedFor: ['behaviour.cautionShare'],
 		quote:
@@ -1599,7 +1599,7 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'study',
 		noReviewReason:
-			'No review of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1); a cross-check on the caution default, not its source.',
+			'No review of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1, §9.3); a cross-check on the caution default, not its source.',
 		doi: '10.1073/pnas.2010068117',
 		usedFor: ['behaviour.cautionShare'],
 		quote: 'We estimate that aggregate spending dropped by around 25% (95% CI: 24 to 26%) in Sweden',
@@ -1622,7 +1622,7 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'study',
 		noReviewReason:
-			'No review of how much of the fall in mobility was voluntary was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1); a cross-check on the caution default, not its source.',
+			'No review of how much of the fall in mobility was voluntary was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1, §9.3); a cross-check on the caution default, not its source.',
 		doi: '10.1016/j.jebo.2021.01.023',
 		usedFor: ['behaviour.cautionShare'],
 		quote:

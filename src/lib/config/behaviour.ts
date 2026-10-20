@@ -105,7 +105,7 @@ export const BEHAVIOUR: BehaviourConfig = {
 		value: CAUTION_WINDOW_DAYS,
 		sources: [],
 		provisional:
-			'No study found gives a fixed window of days of deaths people react to. Zhang 2025 (BMC Med Res Methodol, doi 10.1186/s12874-025-02696-x) finds US mobility followed deaths with a fading delay of about 3.2 weeks on average (Oct 2020-Jul 2021), which points to a longer memory than 14 days; ECDC reported COVID-19 deaths over 14 days, which is how ECDC reported them, not how long people reacted.'
+			'No study found gives a fixed window of days of deaths people react to. Zhang 2025 (BMC Med Res Methodol, doi 10.1186/s12874-025-02696-x) finds US mobility followed deaths with a fading delay of about 3.2 weeks on average (Oct 2020-Jul 2021), which points to a longer memory than 14 days; ECDC reported COVID-19 deaths over 14 days: a reporting window, not how long people reacted.'
 	},
 	hospitalBedsPerThousand: { value: EU_CURATIVE_BEDS_PER_1000, sources: ['eurostat-curative-beds-2023'] },
 	spareBedShare: { value: 1 - EU_CURATIVE_OCCUPANCY, sources: ['eurostat-curative-occupancy-2023'] },
