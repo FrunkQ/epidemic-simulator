@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { MAX_TICKS_PER_FRAME, TICKS_PER_SECOND, TICK_BUDGET_MS } from '../sim/constants';
 	import type { Simulation } from '../sim/engine';
+	import { DEFAULT_LOOK, type MapLook } from '../sim/specks';
 	import type { Telemetry } from '../sim/types';
 
 	interface Props {
@@ -12,9 +13,11 @@
 		onresize?: (width: number, height: number) => void;
 		/** Called after the user pans or zooms. */
 		onview?: () => void;
+		/** The map view; drawing only. */
+		look?: MapLook;
 	}
 
-	let { sim, ontelemetry, onresize, onview }: Props = $props();
+	let { sim, ontelemetry, onresize, onview, look = DEFAULT_LOOK }: Props = $props();
 	let canvas: HTMLCanvasElement;
 	let host: HTMLDivElement;
 	/** Dev builds only (10): frames per second, refreshed twice a second. */
@@ -96,7 +99,8 @@
 				// The layout may have moved on since: the page settling after loading, or the strip coming
 				// and going in this frame, which the observer reports only on the next. Size again first.
 				if (host.clientWidth !== width || host.clientHeight !== height) resize();
-				else if (width > 0 && height > 0) simulation.render(ctx, { width, height }, performance.now(), carry);
+				else if (width > 0 && height > 0)
+					simulation.render(ctx, { width, height }, performance.now(), carry, look);
 			});
 		};
 		const observer = new ResizeObserver(resize);
@@ -133,7 +137,7 @@
 				if (performance.now() - start >= TICK_BUDGET_MS) break;
 			}
 			// Part way to the next tick: the renderer glides dots between their last two positions.
-			sim.render(ctx, { width, height }, now, carry);
+			sim.render(ctx, { width, height }, now, carry, look);
 			if (now - lastPublish >= 100) {
 				lastPublish = now;
 				ontelemetry(sim.snapshot());

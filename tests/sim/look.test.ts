@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { SHARE_STEPS, STEP_STRENGTH, fits, lookOf, ringWidth } from '../../src/lib/sim/look';
+import { SHARE_STEPS, lookOf } from '../../src/lib/sim/look';
 import { State } from '../../src/lib/sim/types';
 
 const NONE = State.SUSCEPTIBLE;
 
-describe('look E', () => {
+// lookOf still sets each dot's shown and ring states, which the seed marker reads (§3).
+describe("a dot's shown state", () => {
 	it('shows nothing extra for a dot with nobody infected or dead (k = 0)', () => {
 		expect(lookOf(100, 0, 0, 0, 0)).toMatchObject({ fill: NONE, ring: NONE, step: 0 });
 		expect(lookOf(100, 0, 0, 0, 30)).toMatchObject({ fill: NONE, ring: NONE, step: 0 });
@@ -62,42 +63,5 @@ describe('look E', () => {
 				last = step;
 			}
 		}
-	});
-
-	it('keeps the strongest step well short of solid, and the faintest still visible', () => {
-		expect(STEP_STRENGTH).toHaveLength(SHARE_STEPS);
-		expect(STEP_STRENGTH[0]).toBeGreaterThan(0);
-		expect(STEP_STRENGTH[0]).toBeLessThan(0.2);
-		expect(STEP_STRENGTH[SHARE_STEPS - 1]).toBeLessThanOrEqual(0.55);
-	});
-
-	it('draws a ring only when it is 2 device pixels wide and fits between neighbours, else tints', () => {
-		// At 1x a dot is at most 6 px, so its ring (a fifth of it) is never 2 px: always tint.
-		expect(ringWidth(2.6, 1.5, 1)).toBe(0);
-		expect(ringWidth(40, 6, 1)).toBe(0);
-		// The 1400x900 default on a 2x screen: a 0.3 px ring is 0.6 device pixels.
-		expect(ringWidth(2.6, 1.5, 2)).toBe(0);
-		// Zoomed in on a 2x screen: 6 px dots 20 px apart get a 1.2 px ring.
-		expect(ringWidth(20, 6, 2)).toBeCloseTo(1.2);
-		// Too close for it to fit: tint.
-		expect(ringWidth(8, 6, 2)).toBe(0);
-		for (const [sp, size, dpr] of [
-			[9, 6, 2],
-			[12, 6, 3],
-			[6, 4, 3]
-		]) {
-			const w = ringWidth(sp, size, dpr);
-			expect(w === 0 || (w * dpr >= 2 && size / 2 + w <= sp / 2)).toBe(true);
-			// A square frame a fifth of the dot wide has about the dot's own area.
-			if (w > 0) expect(((size + 2 * w) ** 2 - size ** 2) / size ** 2).toBeCloseTo(0.96);
-		}
-	});
-
-	it('draws a pulse only where it fits like a ring', () => {
-		// A pulse reaches size + 3 px from the centre. Default zoom at 1x or 2x: dots 2.6 px apart.
-		expect(fits(2.6, 1.5, 1.5 + 3 - 0.75, 1)).toBe(false);
-		expect(fits(2.6, 1.5, 1.5 + 3 - 0.75, 2)).toBe(false);
-		// Zoomed in close: 6 px dots 20 px apart leave room.
-		expect(fits(20, 6, 6 + 3 - 3, 1)).toBe(true);
 	});
 });

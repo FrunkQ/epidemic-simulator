@@ -8,6 +8,7 @@
 	import { vaccineFor } from '../lib/sim/disease';
 	import { DEFAULT_PEOPLE_PER_DOT } from '../lib/sim/constants';
 	import { createSimulation } from '../lib/sim/engine';
+	import { DEFAULT_LOOK, type MapLook } from '../lib/sim/specks';
 	import type { DiseaseId, Scenario, RegionHistory, Speed, Telemetry } from '../lib/sim/types';
 	import {
 		frameTries,
@@ -37,6 +38,11 @@
 	const hasVaccine = $derived(loadDisease(diseaseId).vaccines[0].exists);
 	let seed = $state(1);
 	let speed: Speed = $state(DEFAULT_SPEED);
+	/**
+	 * The map view (specks.ts): drawing only, so it keeps its value across a disease switch, Restart
+	 * and New map.
+	 */
+	let mapLook: MapLook = $state(DEFAULT_LOOK);
 	const sim = createSimulation(microcosm(0), { seed: 1, diseaseId: 'measles' });
 	sim.send({ type: 'speed', value: DEFAULT_SPEED });
 	let telemetry: Telemetry | null = $state.raw(null);
@@ -362,6 +368,8 @@
 	// logs its scale and whether the strip was on the page then, for the first-frame check.
 	if (import.meta.env.VITE_LAYOUT_PROBE === '1') {
 		const probe = window as unknown as {
+			/** The simulation, for the map's frame-time check. */
+			__sim: typeof sim;
 			__layoutProbe: () => unknown;
 			__layoutLog: {
 				scale: number;
@@ -377,6 +385,7 @@
 				mark?: true;
 			}[];
 		};
+		probe.__sim = sim;
 		probe.__layoutProbe = () => ({
 			stage: { ...size },
 			discs: discsOnScreen(),
@@ -509,6 +518,7 @@
 	<div class="stage" bind:this={stageElement}>
 		<SimCanvas
 			{sim}
+			look={mapLook}
 			ontelemetry={setTelemetry}
 			onresize={(w, h) => {
 				size = { width: w, height: h };
@@ -595,7 +605,7 @@
 	<footer>
 		{#if telemetry}
 			<Charts {telemetry} history={histories} disease={DISEASES[diseaseId]} />
-			<Legend peoplePerDot={telemetry.peoplePerDot} {hasVaccine} {hasPartialCourse} />
+			<Legend peoplePerDot={telemetry.peoplePerDot} {hasVaccine} {hasPartialCourse} bind:look={mapLook} />
 		{/if}
 	</footer>
 </main>
