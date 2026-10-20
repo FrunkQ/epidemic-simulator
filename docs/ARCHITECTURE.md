@@ -93,6 +93,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 
 ## 5. Tick order (engine.ts; never reorder)
 1. Apply queued commands.
+1b. Who a lockdown keeps home (`Lockdown.advance`, 6.4): they neither move nor leave this tick.
 2. Departures.
 3. Movement (in a region and in transit).
 4. Rebuild the spatial grid.
@@ -101,7 +102,7 @@ Regions and routes are short arrays of plain objects (tens, not thousands), whic
 7. Waning immunity.
 7b. At a day boundary only: the vaccination campaign (6.16), regions in fixed order.
 8. Update telemetry counters. (Publishing to the UI is time-based, from the loop, about 10 Hz.)
-8b. At a day boundary only, after the daily sample: caution's deaths signal (6.18), regions in fixed order.
+8b. At a day boundary only, before the daily sample: caution's deaths signal (6.18), regions in fixed order, so the day's row holds the window ending that day.
 
 ## 6. Mechanics
 ### 6.1 Transmission
