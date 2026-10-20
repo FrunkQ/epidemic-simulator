@@ -99,13 +99,13 @@ export const BEHAVIOUR: BehaviourConfig = {
 		value: CAUTION_HALF_DEATHS_PER_100K,
 		sources: [],
 		provisional:
-			'No study gives a half-response in deaths per person. Weitz 2020 (PNAS, doi 10.1073/pnas.2009911117) uses the same saturating shape with a half-saturation constant, but sweeps it for illustration rather than fitting it; Rahmandad 2021 (Syst Dyn Rev, doi 10.1002/sdr.1673) fits a response to perceived death risk in 92 nations, in a supplement not yet read. Chosen so caution is about half on when deaths are clearly visible locally.'
+			'No study found gives a half-response in deaths per person. Weitz 2020 (PNAS, doi 10.1073/pnas.2009911117) uses the same shape when its sharpness k is 1 with a half-saturation constant, but sweeps it for illustration rather than fitting it; Rahmandad 2021 (Syst Dyn Rev, doi 10.1002/sdr.1673) fits a response to perceived death risk in 92 nations, in a supplement not yet read. Chosen so caution is about half on when deaths are clearly visible locally.'
 	},
 	cautionWindowDays: {
 		value: CAUTION_WINDOW_DAYS,
 		sources: [],
 		provisional:
-			'No study measures how many days of deaths people react to. Zhang 2025 (BMC Med Res Methodol, doi 10.1186/s12874-025-02696-x) finds US mobility followed deaths with a fading delay of about 3.2 weeks on average (Oct 2020-Jul 2021), which points to a longer memory than 14 days; ECDC reported COVID-19 deaths over 14 days, which is what people were shown, not how long they reacted.'
+			'No study found gives a fixed window of days of deaths people react to. Zhang 2025 (BMC Med Res Methodol, doi 10.1186/s12874-025-02696-x) finds US mobility followed deaths with a fading delay of about 3.2 weeks on average (Oct 2020-Jul 2021), which points to a longer memory than 14 days; ECDC reported COVID-19 deaths over 14 days, which is how ECDC reported them, not how long people reacted.'
 	},
 	hospitalBedsPerThousand: { value: EU_CURATIVE_BEDS_PER_1000, sources: ['eurostat-curative-beds-2023'] },
 	spareBedShare: { value: 1 - EU_CURATIVE_OCCUPANCY, sources: ['eurostat-curative-occupancy-2023'] },

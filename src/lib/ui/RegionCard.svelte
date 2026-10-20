@@ -588,7 +588,7 @@
 		{/if}
 		<h3>Caution</h3>
 		<p class="note">
-			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: the share worked out for people in a lockdown, since nobody has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported.`}
+			{`In the model, people who aren't key workers stay in by choice as deaths here rise, with about ${Math.round(CAUTION_CONTACT_CUT * 100)}% fewer contacts outside the home: worked out from a survey of all UK adults, people still going to work included, in the first week of the March 2020 lockdown; no study we found has measured it for people staying in by choice. They react only to deaths here, so caution comes late. It leaves out that in 2020 many people cut back before many deaths had been reported.`}
 		</p>
 		<p class="note">
 			In US data from spring 2020, people went out more again before deaths peaked (<a
@@ -624,7 +624,7 @@
 		{#if t}
 			<!-- Shown as text, so keyboard, touch and screen readers reach the numbers, not only the chart. -->
 			<p class="note">
-				{`Deaths here in the last ${CAUTION_WINDOW_DAYS} days: ${perHundredThousand(t.recentDeaths)} per 100,000; about ${pctOf(t.cautionShare)} of people who aren't key workers are staying in out of caution.`}
+				{`Deaths here in the last ${CAUTION_WINDOW_DAYS} days: ${perHundredThousand(t.recentDeaths)} per 100,000; about ${pctOf(t.cautionShare)} of people who aren't key workers are staying in out of caution${t.lockedDown ? ', besides those the lockdown keeps home' : ''}.`}
 			</p>
 		{/if}
 		{#if hadCaution && history}

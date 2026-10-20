@@ -153,7 +153,7 @@ describe('citations', () => {
 		}
 	});
 
-	it('names each UK figure that stands in for the general (EU) default, with its reason', () => {
+	it('names each one-country figure that stands in for the general (EU) default, with its reason', () => {
 		expect(COUNTRY_EXEMPTIONS.length).toBeGreaterThan(0);
 		// Each named exemption is still a use of that source, by an exact key, with its reason.
 		for (const e of COUNTRY_EXEMPTIONS) {

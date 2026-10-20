@@ -1,8 +1,8 @@
 /**
  * The papers the caution note names (6.18). They back wording only, never a number, so they live
  * here rather than in the citation list; each is linked where it is named. Every link was opened in
- * the build: Weitz's open full text on PMC, Gupta's full text on the publisher's site (its DOI could
- * not be opened), and Goolsbee's DOI as its RePEc record gives it.
+ * the build: Weitz's open full text on PMC, Gupta's final-paper PDF on the publisher's site (p. 269;
+ * its DOI could not be opened), and Goolsbee's DOI as its RePEc record gives it.
  */
 export interface Reading {
 	/** How the note names it. */
@@ -21,7 +21,7 @@ export const CAUTION_READING = {
 	},
 	gupta: {
 		name: 'Gupta 2020',
-		url: 'https://www.brookings.edu/articles/mandated-and-voluntary-social-distancing-during-the-covid-19-epidemic/',
+		url: 'https://www.brookings.edu/wp-content/uploads/2020/06/SU20_S4_Gupta-et-al_-final-paper.pdf',
 		quote: 'in the reopening phase mobility increased rapidly, mostly preceding official state reopenings'
 	},
 	goolsbee: {

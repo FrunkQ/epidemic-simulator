@@ -225,8 +225,8 @@ export const COVID_ERA_EXEMPTIONS: { id: string; key: string; reason: string }[]
 ];
 
 /**
- * The general default (4.2) uses EU figures. These named uses are the exceptions, where a UK figure
- * stands in as the general default, each with its reason; the citation test checks each is still
+ * The general default (4.2) uses EU figures. These named uses are the exceptions, where a figure from one
+ * country (UK or Swedish) stands in as the general default, each with its reason; the citation test checks each is still
  * in use.
  */
 export const COUNTRY_EXEMPTIONS: { id: string; key: string; reason: string }[] = [
@@ -260,7 +260,7 @@ export const COUNTRY_EXEMPTIONS: { id: string; key: string; reason: string }[] =
 		id: 'jarvis2020-comix-uk',
 		key: 'behaviour.cautionContactCut',
 		reason:
-			'UK survey used as the general default, borrowed from the lockdown measure; nobody has measured contacts for people staying in by choice.'
+			'UK survey used as the general default, borrowed from the lockdown measure; no study we found has measured contacts for people staying in by choice.'
 	},
 	{
 		id: 'woskie2021-europe-mobility',
@@ -1535,7 +1535,7 @@ export const CITATIONS: Citation[] = [
 		quote:
 			'We found a 74% reduction in the average daily number of contacts observed per participant (from 10.8 to 2.8). … The majority of contacts (57.6%) occurred at home, contrasting with 33.7% reported in the POLYMOD survey.',
 		location: `Abstract (Results) for the first sentence; Results, "Contact patterns", second paragraph, for the second; Table 2 (Overall row) for ${fmt(JARVIS_2020_CONTACTS.before, 1)} and ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)}`,
-		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${fmt(JARVIS_2020_CONTACTS.before, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% in POLYMOD, a UK survey from before the pandemic, against ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK adult average (${fmt(JARVIS_2020_PARTICIPANTS)} surveyed 24-27 March 2020, against POLYMOD), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed. Jarvis does not say whether POLYMOD's ${fmt(JARVIS_2020_CONTACTS.homeShareBefore * 100, 1)}% at home is over the same adults as its ${fmt(JARVIS_2020_CONTACTS.before, 1)}; the cut assumes it is. Liu 2021 describes the UK's fall in contacts at home as marginal; if home contacts fell less than this split implies, the cut away from home is larger, so ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% is the cautious reading. The UK figure is the general default; Liu 2021 (8 of its 12 studies European) is the cross-check. In the model, people staying in by choice (6.18) get the same cut (${fmt(CAUTION_CONTACT_CUT * 100)}%), borrowed from the lockdown measure, since nobody has measured contacts for people staying in by choice.`,
+		why: `People staying home in a lockdown have less contact with other dots (6.4). The model has no homes, so only contact outside the home counts: ${fmt(JARVIS_2020_CONTACTS.before, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareBefore) * 100, 1)}% in POLYMOD, a UK survey from before the pandemic, against ${fmt(JARVIS_2020_CONTACTS.lockdown, 1)} x ${fmt((1 - JARVIS_2020_CONTACTS.homeShareLockdown) * 100, 1)}% in the first lockdown week, a cut of ${fmt(LOCKDOWN_CONTACT_CUT * 100)}%. It is a UK adult average (${fmt(JARVIS_2020_PARTICIPANTS)} surveyed 24-27 March 2020, against POLYMOD), so it includes people still going to work, which probably understates the cut for people who truly stayed home; the paper notes people keeping to the rules may have been likelier to answer, which pulls the other way. No children were surveyed. Jarvis does not say whether POLYMOD's ${fmt(JARVIS_2020_CONTACTS.homeShareBefore * 100, 1)}% at home is over the same adults as its ${fmt(JARVIS_2020_CONTACTS.before, 1)}; the cut assumes it is. Liu 2021 describes the UK's fall in contacts at home as marginal; if home contacts fell less than this split implies, the cut away from home is larger, so ${fmt(LOCKDOWN_CONTACT_CUT * 100)}% is the cautious reading. The UK figure is the general default; Liu 2021 (8 of its 12 studies European) is the cross-check. In the model, people staying in by choice (6.18) get the same cut (${fmt(CAUTION_CONTACT_CUT * 100)}%), borrowed from the lockdown measure, since no study we found has measured contacts for people staying in by choice.`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'research thread (full text), research/lockdown-contacts.md',
@@ -1574,20 +1574,20 @@ export const CITATIONS: Citation[] = [
 		journal: 'PLoS ONE',
 		year: 2021,
 		evidence: 'study',
-		noReviewReason: `No meta-analysis or systematic review of the size of voluntary distancing exists. Sweden had the smallest fall of Woskie's ${WOSKIE_2021_COUNTRIES} European countries and relied mostly on advice rather than mandates (${WOSKIE_COUNTRIES_NO_STAY_HOME_MANDATE} of the ${WOSKIE_2021_COUNTRIES} had no mandatory stay-at-home up to 12 April 2020, OxCGRT), so it is the clearest view of people staying in without being told to.`,
+		noReviewReason: `No meta-analysis or systematic review of the size of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1). Sweden had the smallest fall of Woskie's ${WOSKIE_2021_COUNTRIES} European countries and relied mostly on advice rather than mandates (${WOSKIE_COUNTRIES_NO_STAY_HOME_MANDATE} of the ${WOSKIE_2021_COUNTRIES} had no mandatory stay-at-home up to 12 April 2020, by the Oxford COVID-19 Government Response Tracker: Hale 2021, Nat Hum Behav 5:529-538, doi 10.1038/s41562-021-01079-8, file compact_national_v1, C6M of 2 or more, national, 1 March-12 April), so it is the clearest view of people staying in without a stay-at-home mandate.`,
 		doi: '10.1371/journal.pone.0253071',
 		usedFor: ['behaviour.cautionShare'],
 		quote:
 			'Spain saw the largest decrease in aggregate population mobility (~70%), as measured by the time spent away from residence, while Sweden saw the smallest decrease (~20%).',
 		location:
 			'Abstract; Results: "approximately a 20% decline from baseline at the end of the study period (April 12th 2020)"',
-		why: `Sweden's time away from home fell about ${fmt(WOSKIE_2021_SWEDEN_AWAY_FALL * 100)}% in spring 2020, most of it before many deaths had been reported there. In the model, it is the most people who aren't key workers stay in by choice when deaths here are high (6.18); it is not a measured response to deaths. It is an average of hours away from home over everyone, key workers included, and is not converted to a share of people who aren't key workers. Other measures in Sweden fit: aggregate spending fell about ${SHERIDAN_2020_SWEDEN_SPENDING_FALL_PCT}% (Sheridan 2020, bank customers), and across about 100 countries information explains about ${MENDOLIA_2021_INFORMATION_PP} percentage points of the fall in mobility (Mendolia 2021). The Swedish figure is the general default, labelled "general estimate".`,
+		why: `Sweden's time away from home fell about ${fmt(WOSKIE_2021_SWEDEN_AWAY_FALL * 100)}% in spring 2020, most of it before many deaths had been reported there. In the model, it is the most people who aren't key workers stay in by choice when deaths here are high (6.18); it is not a measured response to deaths. It is an average of hours away from home over Google users who opted in to Location History, key workers included, and is not converted to a share of people who aren't key workers. Other measures, for comparison: aggregate spending fell about ${SHERIDAN_2020_SWEDEN_SPENDING_FALL_PCT}% (Sheridan 2020, bank customers), and across about 100 countries information explains about ${MENDOLIA_2021_INFORMATION_PP} percentage points of the fall in mobility (Mendolia 2021). The Swedish figure is the general default, labelled "general estimate".`,
 		context: 'COVID-19 era',
 		verified: {
 			by: 'citation check (research/caution-proposal-verify.md) and build thread (PMC8244916 full text)',
 			on: '2026-10-17',
 			ok: true,
-			note: 'Abstract and Results sentences read in the PMC open-data full text; Fig 2 shows Sweden near -20% by about 20-22 March. OxCGRT C6M count from the citation check.'
+			note: 'Abstract and Results sentences read in the PMC open-data full text; Fig 2 shows Sweden near -20% by about 20-22 March. OxCGRT C6M count from the citation check (Hale 2021, compact_national_v1). "Before many deaths had been reported" rests on WHO deaths via Our World in Data (38 in Sweden by 22 March 2020), not on Woskie.'
 		}
 	},
 	{
@@ -1599,7 +1599,7 @@ export const CITATIONS: Citation[] = [
 		year: 2020,
 		evidence: 'study',
 		noReviewReason:
-			'No review pools voluntary falls in spending; a cross-check on the caution default, not its source.',
+			'No review of voluntary distancing was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1); a cross-check on the caution default, not its source.',
 		doi: '10.1073/pnas.2010068117',
 		usedFor: ['behaviour.cautionShare'],
 		quote: 'We estimate that aggregate spending dropped by around 25% (95% CI: 24 to 26%) in Sweden',
@@ -1622,10 +1622,11 @@ export const CITATIONS: Citation[] = [
 		year: 2021,
 		evidence: 'study',
 		noReviewReason:
-			'No review pools how much of the fall in mobility was voluntary; a cross-check on the caution default, not its source.',
+			'No review of how much of the fall in mobility was voluntary was found (search, 8 Oct 2026, research/lockdown-movers.md §9.1); a cross-check on the caution default, not its source.',
 		doi: '10.1016/j.jebo.2021.01.023',
 		usedFor: ['behaviour.cautionShare'],
-		quote: 'about 15 percentage points',
+		quote:
+			'This channel can explain about 15 percentage points of the overall reduction in mobility across the affected countries.',
 		location:
 			'Abstract (184:199-231), the share of the overall fall in mobility explained by information about the pandemic',
 		why: `A cross-check on the caution default, in another measure: across about 100 countries in early 2020 (Google mobility), information about the pandemic explains about ${MENDOLIA_2021_INFORMATION_PP} percentage points of the fall in mobility, and government policies most of it.`,
