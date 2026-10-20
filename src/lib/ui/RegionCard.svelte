@@ -126,9 +126,12 @@
 	const cautionChartW = $derived(Math.max(140, Math.floor(cautionChartsWidth || 178)));
 	/** Whether caution has kept anyone in here yet this run: its chart shows from then on. */
 	const hadCaution = $derived(history ? history.series.cautionShare.some((v) => v > 0) : false);
-	/** Deaths per 100,000: whole numbers from 10, one decimal below, and never 0 for a death. */
+	/**
+	 * Deaths per 100,000: whole numbers from 10 (including what rounds to 10), one decimal below,
+	 * "0" for none, and never 0 for a death.
+	 */
 	const perHundredThousand = (v: number) =>
-		v >= 10 ? Math.round(v).toLocaleString() : v > 0 && v < 0.05 ? 'under 0.1' : v.toFixed(1);
+		v <= 0 ? '0' : v < 0.05 ? 'under 0.1' : v >= 9.95 ? Math.round(v).toLocaleString() : v.toFixed(1);
 	const lockStatus = $derived(lockOn ? `Locked down since day ${lockSince}` : 'No lockdown');
 	/** Whether this run has had a lockdown here yet: the charts show from then on. */
 	const hadLockdown = $derived((t?.personDays ?? 0) > 0 || (t?.lockedDown ?? false));
@@ -594,15 +597,15 @@
 			In US data from spring 2020, people went out more again before deaths peaked (<a
 				href={CAUTION_READING.weitz.url}
 				target="_blank"
-				rel="noopener">{CAUTION_READING.weitz.name}</a
+				rel="noopener">{CAUTION_READING.weitz.name}<span class="sr-only"> (opens in a new tab)</span></a
 			>) and mostly before official reopenings (<a
 				href={CAUTION_READING.gupta.url}
 				target="_blank"
-				rel="noopener">{CAUTION_READING.gupta.name}</a
+				rel="noopener">{CAUTION_READING.gupta.name}<span class="sr-only"> (opens in a new tab)</span></a
 			>), and visits to businesses fell more in counties with more reported deaths (<a
 				href={CAUTION_READING.goolsbee.url}
 				target="_blank"
-				rel="noopener">{CAUTION_READING.goolsbee.name}</a
+				rel="noopener">{CAUTION_READING.goolsbee.name}<span class="sr-only"> (opens in a new tab)</span></a
 			>).
 		</p>
 		{#each CAUTION_POLICY_FIELDS as f (f.key)}
@@ -787,6 +790,15 @@
 </section>
 
 <style>
+	/* Read out, not shown: the caution links open in a new tab. */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
 	.card {
 		position: absolute;
 		width: 230px;

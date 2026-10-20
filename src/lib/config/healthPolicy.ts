@@ -144,7 +144,7 @@ export const CAUTION_POLICY_FIELDS = [
 		max: 1,
 		step: 0.01,
 		format: (v: number) => `${Math.round(v * 100)}%`,
-		explain: `In the model, how many people who aren't key workers choose to stay in when deaths here are high: ${Math.round(WOSKIE_2021_SWEDEN_AWAY_FALL * 100)}% is at most 1 in ${Math.round(1 / WOSKIE_2021_SWEDEN_AWAY_FALL)}. A general estimate from Sweden, spring 2020. It acts once people die of it here.`
+		explain: `In the model, how many people who aren't key workers choose to stay in when deaths here are high. The default, ${Math.round(WOSKIE_2021_SWEDEN_AWAY_FALL * 100)}%, is at most 1 in ${Math.round(1 / WOSKIE_2021_SWEDEN_AWAY_FALL)}: a general estimate from Sweden, spring 2020. It acts once people die of it here.`
 	}
 ] as const satisfies readonly {
 	key: keyof HealthPolicy;

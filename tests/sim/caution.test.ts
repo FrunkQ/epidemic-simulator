@@ -19,6 +19,7 @@ interface Internals {
 	lockdown: { on: Uint8Array; signal: Float64Array; caution: Float64Array; ticks: Int32Array };
 	tick: number;
 	scenario: Scenario;
+	recentDeaths: Float64Array;
 }
 const inside = (sim: Simulation) => sim as unknown as Internals;
 
@@ -46,7 +47,6 @@ describe('the deaths signal', () => {
 		const regions = sim.snapshot().regions.length;
 		const daily: number[][] = Array.from({ length: regions }, () => []);
 		let last = sim.snapshot().regions.map((r) => r.deaths);
-		let left = 0;
 		for (let d = 0; d < 150; d++) {
 			sim.step(TICKS_PER_DAY);
 			const snap = sim.snapshot();
@@ -56,19 +56,67 @@ describe('the deaths signal', () => {
 				const sum = daily[r].slice(-window).reduce((s, n) => s + n, 0);
 				const people = now.dots * snap.peoplePerDot;
 				const per100k = (sum / people) * 100_000;
-				expect(now.recentDeaths, `day ${d + 1}, city ${r}`).toBeCloseTo(per100k, 9);
+				expect(inside(sim).recentDeaths[r], `day ${d + 1}, city ${r}`).toBeCloseTo(per100k, 9);
 				const signal = per100k > 0 ? per100k / (per100k + half) : 0;
 				expect(inside(sim).lockdown.signal[r]).toBeCloseTo(signal, 12);
-				// Deaths that have left the window no longer count.
-				if (per100k === 0 && daily[r].some((n) => n > 0)) left++;
 			}
 			last = snap.regions.map((r) => r.deaths);
 		}
 		expect(daily.flat().reduce((s, n) => s + n, 0)).toBeGreaterThan(0);
-		expect(left).toBeGreaterThan(0);
 	});
 
-	it('counts every death in some city, those on a trip in the city it began in', () => {
+	it("divides by the city's simulated people (dots x peoplePerDot), not its population", () => {
+		// 123,457 people make 1,234 dots of 100 (123,400 people), so the two divisors differ.
+		const sim = started(withCaution(singleCity({ population: 123_457 }), BEHAVIOUR.cautionShare.value), 4);
+		const snap0 = sim.snapshot();
+		const simulated = snap0.regions[0].dots * snap0.peoplePerDot;
+		const population = inside(sim).scenario.regions[0].population;
+		expect(simulated).not.toBe(population);
+		const window = BEHAVIOUR.cautionWindowDays.value;
+		const daily: number[] = [];
+		let last = snap0.regions[0].deaths;
+		let seen = 0;
+		for (let d = 0; d < 80; d++) {
+			sim.step(TICKS_PER_DAY);
+			const deaths = sim.snapshot().regions[0].deaths;
+			daily.push(deaths - last);
+			last = deaths;
+			const sum = daily.slice(-window).reduce((s, n) => s + n, 0);
+			expect(inside(sim).recentDeaths[0], `day ${d + 1}`).toBeCloseTo((sum / simulated) * 100_000, 9);
+			if (sum > 0) seen++;
+		}
+		expect(seen).toBeGreaterThan(0);
+	});
+
+	it('forgets deaths once they leave the window', () => {
+		// A small city whose outbreak burns out: once no one is infected, no one dies, and a window
+		// later the signal is 0 though people have died.
+		const sim = started(withCaution(singleCity({ population: 20_000 }), BEHAVIOUR.cautionShare.value), 1);
+		let day = 0;
+		while (sim.anyInfected() && day < 600) {
+			sim.step(TICKS_PER_DAY);
+			day++;
+		}
+		expect(sim.anyInfected()).toBe(false);
+		expect(sim.snapshot().deaths).toBeGreaterThan(0);
+		sim.step(BEHAVIOUR.cautionWindowDays.value * TICKS_PER_DAY + 1);
+		expect(inside(sim).recentDeaths[0]).toBe(0);
+		expect(inside(sim).lockdown.signal[0]).toBe(0);
+		expect(sim.snapshot().regions[0].recentDeaths).toBe(0);
+	});
+
+	it("keeps each day's window in the daily history, the day it ends", () => {
+		const sim = started(busyMap(BEHAVIOUR.cautionShare.value));
+		for (let d = 1; d <= 60; d++) {
+			sim.step(TICKS_PER_DAY);
+			for (let r = 0; r < inside(sim).scenario.regions.length; r++) {
+				const row = sim.history(r).series.recentDeaths;
+				expect(row[row.length - 1], `day ${d}, city ${r}`).toBe(inside(sim).recentDeaths[r]);
+			}
+		}
+	});
+
+	it("counts every death once across the cities' windows, those on a trip included", () => {
 		const sim = started(busyMap(BEHAVIOUR.cautionShare.value));
 		const window = BEHAVIOUR.cautionWindowDays.value;
 		const totals: number[] = [sim.snapshot().deaths];
@@ -77,7 +125,7 @@ describe('the deaths signal', () => {
 			const snap = sim.snapshot();
 			totals.push(snap.deaths);
 			const inWindow = snap.regions.reduce(
-				(s, r) => s + (r.recentDeaths * r.dots * snap.peoplePerDot) / 100_000,
+				(s, r, i) => s + (inside(sim).recentDeaths[i] * r.dots * snap.peoplePerDot) / 100_000,
 				0
 			);
 			expect(inWindow).toBeCloseTo(
@@ -308,6 +356,89 @@ it('a caution slider moved while paused runs exactly as one moved while running,
 	expect(state(true)).toBe(state(false));
 });
 
+it('the deaths figure shown is the one behind the caution level in use, even paused at a day boundary', () => {
+	const sim = started(busyMap(BEHAVIOUR.cautionShare.value));
+	const half = BEHAVIOUR.cautionHalfDeathsPer100k.value;
+	let boundaryChanges = 0;
+	for (let t = 0; t < 60 * TICKS_PER_DAY; t++) {
+		const before = Array.from(inside(sim).recentDeaths);
+		sim.step(1);
+		const snap = sim.snapshot();
+		snap.regions.forEach((reg, r) => {
+			const share = inside(sim).scenario.regions[r].policy.cautionShare.value;
+			const d = reg.recentDeaths;
+			expect(reg.cautionLevel, `tick ${t + 1}, city ${r}`).toBeCloseTo(
+				d > 0 ? (share * d) / (d + half) : 0,
+				12
+			);
+			if (inside(sim).recentDeaths[r] !== before[r] && d !== inside(sim).recentDeaths[r]) boundaryChanges++;
+		});
+	}
+	// The case the display fix is for: a day boundary that has moved the window but not yet the level.
+	expect(boundaryChanges).toBeGreaterThan(0);
+});
+
+/** FNV-1a over a run's dots and its cities' counts, the same on main before caution existed. */
+function runHash(locked: boolean, share = 0): string {
+	const scenario = withCaution(microcosm(0), share);
+	const sim = createSimulation(scenario, { seed: 7, diseaseId: 'covid19' });
+	sim.seedNow(0, 50);
+	sim.step(30 * TICKS_PER_DAY);
+	if (locked) sim.send({ type: 'lockdown', region: 0, on: true });
+	sim.step(60 * TICKS_PER_DAY);
+	const a = sim.agents;
+	let h = 2166136261;
+	const add = (bytes: Uint8Array) => {
+		for (let i = 0; i < bytes.length; i++) h = Math.imul(h ^ bytes[i], 16777619) >>> 0;
+	};
+	const caution = share > 0 ? [a.cautionRank] : [];
+	for (const v of [a.x, a.y, a.held, a.contact, a.dead, a.ill, a.region, a.route, a.routeS, ...caution])
+		add(new Uint8Array(v.buffer, v.byteOffset, a.activeCount * v.BYTES_PER_ELEMENT));
+	const snap = sim.snapshot();
+	add(new TextEncoder().encode(JSON.stringify(snap.regions.map((r) => [r.counts, r.deaths, r.personDays]))));
+	return h.toString(16).padStart(8, '0');
+}
+
+it('with the caution slider at 0, a run is exactly as on main before caution, unlocked and locked', () => {
+	// Recorded on main at 55d7970 (lockdown, slice 1), with the same seed, map and steps.
+	expect(runHash(false)).toBe('eac49ecb');
+	expect(runHash(true)).toBe('dfc073ad');
+});
+
+it('a run with caution on, and its ranks, are pinned too, so a change to the caution stream shows', () => {
+	// Recorded on this branch: at slider 0 the ranks never matter, so only a run with caution on
+	// can see the stream they come from.
+	expect(runHash(true, BEHAVIOUR.cautionShare.value)).toBe('01e23a3d');
+});
+
+it('a dot that is both kept home by the lockdown and cautious is counted as kept home by the lockdown', () => {
+	const sim = createSimulation(withCaution(microcosm(0), 1), { seed: 3, diseaseId: 'covid19' });
+	const a = sim.agents;
+	const policy = inside(sim).scenario.regions[0].policy;
+	const i = Array.from({ length: a.activeCount }, (_, k) => k).find((k) => a.ageBand[k] === 1)!;
+	const ticks = TICKS_PER_DAY;
+	const set = (key: number, comply: number, wary: number, fatigueZ = 0) => {
+		a.keyRank[i] = key;
+		a.complyRank[i] = comply;
+		a.cautionRank[i] = wary;
+		a.fatigueZ[i] = fatigueZ;
+	};
+	const lots = 1e6;
+	// Written out by hand: key worker, then the lockdown, then caution, then ignoring or tired.
+	set(0, 0, 0);
+	expect(outReason(a, i, policy, ticks, 0.5)).toBe(Out.KEY);
+	set(0.99, 0, 0);
+	expect(outReason(a, i, policy, ticks, 0.5)).toBe(Out.HOME);
+	set(0.99, 0.99, 0);
+	expect(outReason(a, i, policy, ticks, 0.5)).toBe(Out.CAUTION);
+	set(0.99, 0.99, 0.99);
+	expect(outReason(a, i, policy, ticks, 0.5)).toBe(Out.IGNORING);
+	set(0.99, 0, 0, -lots);
+	expect(outReason(a, i, policy, lots * TICKS_PER_DAY, 0.5)).toBe(Out.CAUTION);
+	set(0.99, 0, 0.99, -lots);
+	expect(outReason(a, i, policy, lots * TICKS_PER_DAY, 0.5)).toBe(Out.TIRED);
+});
+
 it('a restart empties the deaths window', () => {
 	const scenario = singleCity({ population: 200_000 });
 	const sim = createSimulation(scenario, { seed: 1, diseaseId: 'covid19' });
@@ -318,6 +449,8 @@ it('a restart empties the deaths window', () => {
 	sim.seedNow(0, 10);
 	// No one has died since the restart, so nothing from before it may count.
 	sim.step(TICKS_PER_DAY);
+	expect(inside(sim).recentDeaths[0]).toBe(0);
+	sim.step(1);
 	expect(sim.snapshot().regions[0].recentDeaths).toBe(0);
 	expect(inside(sim).lockdown.signal[0]).toBe(0);
 });

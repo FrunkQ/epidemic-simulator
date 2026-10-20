@@ -48,7 +48,7 @@ export function outReason(
 	i: number,
 	policy: HealthPolicy,
 	ticks: number,
-	caution = 0
+	caution: number
 ): OutReason {
 	if (isKeyWorker(a, i, policy)) return Out.KEY;
 	const complies = a.complyRank[i] < policy.lockdownCompliance.value;

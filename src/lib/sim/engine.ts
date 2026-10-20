@@ -183,6 +183,12 @@ export class Simulation {
 	private deathRing!: Float64Array;
 	private deathsAtBoundary!: Float64Array;
 	private recentDeaths!: Float64Array;
+	/**
+	 * The deaths figure behind the caution level in use: recentDeaths as the lockdown last read its
+	 * signal, so a snapshot taken between a day boundary and the next tick shows the two from the
+	 * same moment. Display only.
+	 */
+	private shownDeaths!: Float64Array;
 	private ringHead = 0;
 	/** A dot stops for illness once this share of its people are ill (Scenario.illStopShare). */
 	private illStopShare = 0.5;
@@ -331,6 +337,7 @@ export class Simulation {
 		this.deathRing = new Float64Array(regions.length * BEHAVIOUR.cautionWindowDays.value);
 		this.deathsAtBoundary = new Float64Array(regions.length);
 		this.recentDeaths = new Float64Array(regions.length);
+		this.shownDeaths = new Float64Array(regions.length);
 		this.ringHead = 0;
 		this.illStopShare = scenario.illStopShare ?? 0.5;
 
@@ -453,6 +460,7 @@ export class Simulation {
 		const sub = this.subsystems;
 		// 1b. Who a lockdown keeps home (6.4); they neither move nor leave.
 		this.lockdown.advance(a, this.scenario.regions, this.radii, this.tick, this.rng);
+		this.shownDeaths.set(this.recentDeaths);
 		// 2. Departures.
 		if (sub.travel) this.transit.depart(a, this.routeList, this.scenario.regions, this.tick, this.rng);
 		// 3. Movement, in a region and in transit.
@@ -481,9 +489,10 @@ export class Simulation {
 		this.updatePressure();
 		this.countsStale = true;
 		if (this.tick % TICKS_PER_DAY === 0) {
-			this.sample(this.day);
-			// 8b. At a day boundary: caution's deaths signal, regions in fixed order (6.18).
+			// 8b. At a day boundary: caution's deaths signal, regions in fixed order (6.18), then the
+			// daily sample, so the day's row holds the window ending that day.
 			this.updateCaution();
+			this.sample(this.day);
 		}
 	}
 
@@ -590,7 +599,9 @@ export class Simulation {
 			out[r * LOCK_SLOTS + 7] = this.lockStart[r];
 			const notKey = out[r * LOCK_SLOTS + 9];
 			out[r * LOCK_SLOTS + 9] = notKey > 0 ? out[r * LOCK_SLOTS + 8] / notKey : 0;
-			out[r * LOCK_SLOTS + 10] = this.recentDeaths[r];
+			// The daily sample keeps the window ending that day; a snapshot shows the one behind the
+			// caution level in use.
+			out[r * LOCK_SLOTS + 10] = day ? this.recentDeaths[r] : this.shownDeaths[r];
 		}
 		return out;
 	}

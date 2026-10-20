@@ -337,7 +337,7 @@ it('walkers on their way home and held dots have the held contact; everyone kept
 		for (let i = 0; i < a.activeCount; i++) {
 			// Who stays home is worked out at the start of the tick, before this tick's arrivals land.
 			if (a.landedTick[i] === inner.tick) continue;
-			const home = a.region[i] === 0 && outReason(a, i, policy, ticks) === Out.HOME;
+			const home = a.region[i] === 0 && outReason(a, i, policy, ticks, 0) === Out.HOME;
 			// A walker that reached its spot this tick is held from the next one.
 			const reached = a.held[i] === 0 && a.x[i] === a.goalX[i] && a.y[i] === a.goalY[i];
 			if (!reached) expect(a.held[i] + a.walking[i]).toBe(home ? 1 : 0);

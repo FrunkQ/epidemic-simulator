@@ -1044,6 +1044,50 @@ test.describe('with classic scrollbars', () => {
 });
 
 /*
+ * Caution in an open card once deaths have kept people in (Ebola, which kills soon): the chart
+ * shows and fits, the deaths line and the share are visible text, the slider says its value, and
+ * the three papers' links open in a new tab and say so to a screen reader.
+ */
+for (const font of [undefined, 'DejaVu Sans']) {
+	test(`1366x768${font ? ` in ${font}` : ''}: caution's chart, deaths line, slider and links in an open card`, async ({
+		page
+	}) => {
+		test.setTimeout(120_000);
+		if (font) await forceFont(page, font);
+		await open(page, 1366, 768);
+		if (font) await requireFont(page, font);
+		await page.selectOption('select', 'ebola');
+		await settle(page);
+		const card = page.locator('section.card').first();
+		// Paused, so the cases all start together, and ten of them, so the outbreak never fizzles.
+		await page.getByRole('button', { name: 'Paused' }).click();
+		for (let k = 0; k < 10; k++) await card.getByRole('button', { name: /^Bring in/ }).click();
+		await card.getByRole('button', { name: 'Health policy' }).click();
+		await page.getByRole('button', { name: /\(8×\)/ }).click();
+		const chart = card.locator('.lockcharts figure', { hasText: 'Kept in by caution' });
+		await expect(chart).toBeVisible({ timeout: 60_000 });
+		await page.getByRole('button', { name: 'Paused' }).click();
+		await settle(page);
+		await chart.scrollIntoViewIfNeeded();
+		expect(await chartRow(page, 'section.card .lockcharts figure')).toEqual([]);
+		const line = card.getByText(
+			/^Deaths here in the last \d+ days: (\d[\d,.]*|under 0\.1) per 100,000; about (\d+%|under 1%) of people who aren't key workers are staying in out of caution\.$/
+		);
+		await expect(line).toBeVisible();
+		// With deaths in the window, some people are staying in.
+		await expect(line).not.toHaveText(/: 0 per 100,000/);
+		const slider = card.getByRole('slider', { name: /^Stay in when deaths are high/ });
+		await expect(slider).toHaveAttribute('aria-valuetext', /^\d+%$/);
+		await expect(card.getByText(/The default, \d+%, is at most 1 in \d+/)).toBeVisible();
+		for (const name of ['Weitz 2020', 'Gupta 2020', 'Goolsbee 2021']) {
+			const link = card.getByRole('link', { name: `${name} (opens in a new tab)` });
+			await expect(link).toHaveAttribute('target', '_blank');
+			await expect(link).toHaveAttribute('href', /^https:\/\//);
+		}
+	});
+}
+
+/*
  * Going backwards with Shift+Tab, each control in an open card, and the label line naming it, shows
  * in full below the card's sticky header (WCAG 2.4.11). Also with scrollbars drawn as on a desktop
  * without overlay scrollbars (headless Chromium hides them) and a locked city, whose lockdown
