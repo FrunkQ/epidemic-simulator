@@ -1119,6 +1119,9 @@ for (const classic of [false, true]) {
 						await expect(card.getByText(/^Locked down since day \d+$/)).toBeVisible();
 					}
 					await card.getByRole('button', { name: 'Health policy' }).click();
+					// The lockdown's charts mount once its first tick is shown, a tick and a telemetry
+					// publish after the button press: walk the controls only once they are there.
+					if (classic) await expect(card.locator('.lockcharts')).not.toHaveCount(0);
 					await settle(page);
 					// Start at the card's last control and go back up through it with Shift+Tab.
 					await card.evaluate((el) => {
@@ -1165,6 +1168,44 @@ for (const classic of [false, true]) {
 		}
 	}
 }
+
+test("charts that appear below a focused control in an open card don't leave it out of view", async ({
+	page
+}) => {
+	await open(page, 1366, 768);
+	const card = page.locator('section.card').first();
+	await page.getByRole('button', { name: 'Paused' }).click();
+	await card.getByRole('button', { name: 'Health policy' }).click();
+	await settle(page);
+	// Keyboard focus on the card's last control: focus the one before it, then Tab.
+	await card.evaluate((el) => {
+		const all = el.querySelectorAll<HTMLElement>('button, input, select, a[href], [tabindex="0"]');
+		all[all.length - 2].focus();
+	});
+	await page.keyboard.press('Tab');
+	const inView = () =>
+		card.evaluate((el) => {
+			const f = document.activeElement as HTMLElement;
+			const r = f.getBoundingClientRect();
+			const head = el.querySelector('header')!.getBoundingClientRect();
+			const bottom = el.getBoundingClientRect().top + el.clientTop + el.clientHeight;
+			return el.contains(f) && r.top >= head.bottom - 0.5 && r.bottom <= bottom + 0.5;
+		});
+	expect(await inView()).toBe(true);
+	// Lock the city and run a tick without moving focus, so the lockdown's charts mount above it.
+	await card.evaluate((el) => {
+		[...el.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Lockdown')!.click();
+	});
+	await page.evaluate(() =>
+		[...document.querySelectorAll('button')]
+			.find((b) => /\(1×\)/.test(b.getAttribute('aria-label') ?? b.textContent ?? ''))!
+			.click()
+	);
+	await expect(card.locator('.lockcharts')).not.toHaveCount(0);
+	await page.evaluate(() => document.querySelector<HTMLButtonElement>('[aria-label="Paused"]')!.click());
+	await settle(page);
+	expect(await inView(), 'the focused control is still in view').toBe(true);
+});
 
 /*
  * Keyboard focus scrolls a slider's label line into view, but pressing the mouse on a slider, or

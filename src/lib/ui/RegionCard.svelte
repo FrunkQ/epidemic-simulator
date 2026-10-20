@@ -152,6 +152,20 @@
 		if (!open || !(e.target as Element).matches(':focus-visible')) return;
 		(e.target as Element).closest('label')?.scrollIntoView({ block: 'nearest' });
 	}
+	/**
+	 * Charts that mount while a control in this card has keyboard focus (the lockdown's once its
+	 * first tick is shown, caution's once deaths keep anyone in) push everything below them down,
+	 * which could leave the focused control out of view. Once they are laid out, scroll it (and its
+	 * label line) back into view, as the focus handler does.
+	 */
+	function keepFocusInView(charts: HTMLElement) {
+		requestAnimationFrame(() => {
+			const f = document.activeElement;
+			if (!charts.isConnected) return;
+			if (!element?.contains(f) || !f?.matches(':focus-visible')) return;
+			(f.closest('label') ?? f).scrollIntoView({ block: 'nearest' });
+		});
+	}
 	/** Which settings panel is open, if any. */
 	let panel: 'vaccination' | 'policy' | null = $state(null);
 	$effect(() => {
@@ -519,7 +533,7 @@
 			</label>
 		{/each}
 		{#if hadLockdown && history && t}
-			<div class="lockcharts" bind:clientWidth={lockChartsWidth}>
+			<div class="lockcharts" bind:clientWidth={lockChartsWidth} use:keepFocusInView>
 				<StackedAreaChart
 					title="{region.name}: people out during the lockdown, by reason"
 					caption="Out in lockdown"
@@ -631,7 +645,7 @@
 			</p>
 		{/if}
 		{#if hadCaution && history}
-			<div class="lockcharts" bind:clientWidth={cautionChartsWidth}>
+			<div class="lockcharts" bind:clientWidth={cautionChartsWidth} use:keepFocusInView>
 				<LineChart
 					title="{region.name}: people kept in by caution, as a share of people who aren't key workers"
 					caption="Kept in by caution"
